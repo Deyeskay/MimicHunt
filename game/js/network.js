@@ -3,7 +3,7 @@ const Network = {
 
     startGameBroadcast: function() {
         gameState.phase = 'HIDING';
-        gameState.timer = HIDING_DURATION;
+        gameState.timer = HIDING_DURATION();
         connections.forEach(conn => {
             if(conn.open) conn.send({ type: 'gameStart', gameState });
         });
@@ -102,7 +102,8 @@ const Network = {
             gameState.timer--;
             if (gameState.timer <= 0) {
                 if (gameState.phase === 'HIDING') {
-                    gameState.phase = 'HUNTING'; gameState.timer = ROUND_DURATION;
+                    gameState.phase = 'HUNTING'; 
+                    gameState.timer = ROUND_DURATION();
                 } else if (gameState.phase === 'HUNTING') {
                     gameState.phase = 'ENDED'; 
                     UI.showModal("Time's Up!", "Hiders Win! Time expired.", () => { Network.exitRoom(); });

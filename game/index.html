@@ -45,6 +45,7 @@
         <div class="menu-card">
             <h1>3D Hide & Hunt</h1>
             <p>Modular WebRTC Prototype</p>
+            <button id="btn-settings" class="secondary" style="margin-bottom:15px;">⚙ Settings</button>
             <div class="form-group">
                 <button id="btn-host">Host New Session</button>
                 <div style="font-size:0.8rem; margin: 5px 0;">— OR —</div>
@@ -52,6 +53,30 @@
                 <button id="btn-join" class="secondary">Join Room</button>
             </div>
             <div id="status-msg" style="margin-top:15px; font-size:0.85rem; color: var(--accent-blue);"></div>
+        </div>
+    </div>
+
+    <div id="settings-screen" class="menu-screen" style="display:none;"> 
+        <div class="menu-card"> 
+            <h2>Settings</h2> 
+            <div class="form-group"> 
+                <label>Hiding Time (sec)</label>
+                <input id="setting-hide-time" type="number" value="20"> 
+                <label>Hunting Time (sec)</label>
+                <input id="setting-hunt-time" type="number" value="90"> 
+                <label>Mouse Sensitivity</label>
+                <input id="setting-sensitivity" type="number" step="0.001" value="0.002"> 
+                <label>
+                    <input id="setting-invert-y" type="checkbox">
+                    Invert Camera
+                </label> 
+                <label>
+                    <input id="setting-mobile-ui" type="checkbox" checked>
+                    Show Mobile Controls
+                </label> 
+                <button id="btn-save-settings" class="success"> Save </button> 
+                <button id="btn-back-menu" class="secondary"> Back </button> 
+            </div>
         </div>
     </div>
 

@@ -23,16 +23,18 @@ const Mechanics = {
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === canvas) {
 
-                cameraYaw -= e.movementX * MOUSE_SENSITIVITY;
+                cameraYaw -=
+                    e.movementX *
+                    GAME_SETTINGS.mouseSensitivity;
 
                 cameraPitch +=
-                    (INVERT_Y ? -1 : 1) *
+                    (GAME_SETTINGS.invertY ? -1 : 1) *
                     e.movementY *
-                    MOUSE_SENSITIVITY;
+                    GAME_SETTINGS.mouseSensitivity;
 
                 cameraPitch = Math.max(
-                    -Math.PI / 2 + 0.1,
-                    Math.min(Math.PI / 2 - 0.1, cameraPitch)
+                    CAMERA_MAX_LOOK_DOWN,
+                    Math.min(CAMERA_MAX_LOOK_UP, cameraPitch)
                 );
             }
         });

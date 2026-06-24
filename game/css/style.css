@@ -111,4 +111,10 @@ button.leave { background: rgba(255, 71, 87, 0.2); color: var(--accent-red); bor
     border: 2px solid var(--accent-blue); color: white; font-weight: bold; font-size: 0.9rem;
 }
 
+.hide-mobile-controls .mobile-controls {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
 @media (pointer: coarse) { .mobile-controls { display: flex; } }

@@ -1,6 +1,14 @@
 // --- CONFIGURATION ---
-const HIDING_DURATION = 20;
-const ROUND_DURATION = 90;
+let GAME_SETTINGS = {
+    hidingTime: 20,
+    huntingTime: 90,
+    mouseSensitivity: 0.002,
+    invertY: false,
+    showMobileControls: true
+};
+
+const HIDING_DURATION = () => GAME_SETTINGS.hidingTime;
+const ROUND_DURATION = () => GAME_SETTINGS.huntingTime;
 
 // --- GAME STATE ---
 let gameState = { phase: 'LOBBY', timer: 0, players: {} };
@@ -25,6 +33,8 @@ const JUMP_STRENGTH = 0.35;
 let isGrounded = false;
 const MOUSE_SENSITIVITY = 0.002;
 const INVERT_Y = false;
+const CAMERA_MAX_LOOK_UP = 70 * Math.PI / 180;
+const CAMERA_MAX_LOOK_DOWN = -10 * Math.PI / 180;
 
 // --- INPUTS ---
 let keys = {};
