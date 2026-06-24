@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Hide & Hunt Level Editor</title>
+
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    font-family:Arial;
+}
+
+#toolbar{
+    position:absolute;
+    left:10px;
+    top:10px;
+    width:250px;
+    background:#222;
+    color:white;
+    padding:10px;
+    border-radius:10px;
+    z-index:100;
+}
+
+button{
+    width:100%;
+    margin:4px 0;
+    padding:10px;
+}
+
+textarea{
+    width:100%;
+    height:250px;
+}
+
+.help-btn
+{
+    position:fixed;
+
+    right:20px;
+    bottom:20px;
+
+    width:50px;
+    height:50px;
+
+    border:none;
+    border-radius:50%;
+
+    font-size:28px;
+    font-weight:bold;
+
+    cursor:pointer;
+
+    z-index:9999;
+
+    background:#2196f3;
+    color:white;
+}
+
+.help-modal
+{
+    display:none;
+
+    position:fixed;
+
+    left:0;
+    top:0;
+
+    width:100%;
+    height:100%;
+
+    background:rgba(0,0,0,.7);
+
+    z-index:10000;
+}
+
+.help-card
+{
+    position:absolute;
+
+    top:50%;
+    left:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:400px;
+
+    background:white;
+
+    border-radius:10px;
+
+    padding:20px;
+}
+
+.help-card ul
+{
+    padding-left:20px;
+}
+
+.help-card li
+{
+    margin-bottom:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="toolbar">
+
+<h3>Level Editor</h3>
+<button id="helpBtn" class="help-btn">?</button>
+<button onclick="selectedModel='tree'">Tree</button>
+<button onclick="selectedModel='rock'">Rock</button>
+<button onclick="selectedModel='bush'">Bush</button>
+
+<hr>
+
+<button onclick="deleteSelected()">Delete Selected</button>
+
+<button onclick="exportLevel()">Export Level</button>
+<div id="inspector">Selected: None</div>
+<textarea id="output"></textarea>
+
+</div>
+
+<div id="helpModal" class="help-modal">
+
+    <div class="help-card">
+
+        <h2>Editor Controls</h2>
+
+        <ul>
+            <li><b>Left Click</b> → Place Object</li>
+            <li><b>Left Click Object</b> → Select Object</li>
+            <li><b>Escape</b> → Deselect Object</li>
+            <li><b>Right Mouse Drag</b> → Orbit Camera</li>
+            <li><b>Middle Mouse Drag</b> → Pan Camera</li>
+            <li><b>Mouse Wheel</b> → Zoom</li>
+            <li><b>Delete</b> → Delete Selected Object</li>
+            <li><b>Q/E</b> → Rotate Selected Object</li>
+            <li><b>Arrow Keys</b> → Move Selected Object</li>
+            <li><b>Export Level</b> → Generate mapProps3D[]</li>
+        </ul>
+
+        <button id="closeHelp">
+            Close
+        </button>
+
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<script>
+
+let scene;
+let camera;
+let renderer;
+
+let raycaster = new THREE.Raycaster();
+let mouse = new THREE.Vector2();
+let moveSpeed = 0.5;
+
+let ground;
+
+let selectedModel = "tree";
+
+let selectedObject = null;
+let selectionBox = null;
+let selectionHelper = null;
+
+let placedObjects = [];
+
+let modelLibrary = {};
+
+let orbitYaw = 0;
+let orbitPitch = 0.5;
+let orbitDistance = 80;
+let orbitTarget =
+new THREE.Vector3(0,0,0);
+
+let rightMouseDown = false;
+let middleMouseDown = false;
+
+let lastMouseX = 0;
+let lastMouseY = 0;
+//////////////////////////////////////////////////////
+// Scene
+//////////////////////////////////////////////////////
+
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth/window.innerHeight,
+    0.1,
+    1000
+);
+
+camera.position.set(0,20,30);
+camera.lookAt(0,0,0);
+
+renderer = new THREE.WebGLRenderer({
+    antialias:true
+});
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+document.body.appendChild(
+    renderer.domElement
+);
+
+renderer.domElement.addEventListener(
+    "mousedown",
+    e => e.preventDefault()
+);
+
+//////////////////////////////////////////////////////
+// Lights
+//////////////////////////////////////////////////////
+
+scene.add(
+    new THREE.AmbientLight(
+        0xffffff,
+        0.8
+    )
+);
+
+const sun =
+new THREE.DirectionalLight(
+    0xffffff,
+    1
+);
+
+sun.position.set(
+    20,
+    40,
+    20
+);
+
+scene.add(sun);
+
+//////////////////////////////////////////////////////
+// Ground
+//////////////////////////////////////////////////////
+
+ground =
+new THREE.Mesh(
+    new THREE.PlaneGeometry(
+        200,
+        200
+    ),
+    new THREE.MeshLambertMaterial({
+        color:0x228B22
+    })
+);
+
+ground.rotation.x =
+    -Math.PI/2;
+
+scene.add(ground);
+
+//////////////////////////////////////////////////////
+// Grid
+//////////////////////////////////////////////////////
+
+scene.add(
+    new THREE.GridHelper(
+        200,
+        50
+    )
+);
+
+//////////////////////////////////////////////////////
+// Models
+//////////////////////////////////////////////////////
+
+const loader =
+new THREE.GLTFLoader();
+
+function loadModel(name,path)
+{
+    loader.load(
+        path,
+        gltf =>
+        {
+            modelLibrary[name] =
+                gltf.scene;
+        }
+    );
+}
+
+loadModel(
+    "tree",
+    "assets/models/tree1.glb"
+);
+
+loadModel(
+    "rock",
+    "assets/models/rock1.glb"
+);
+
+loadModel(
+    "bush",
+    "assets/models/bush1.glb"
+);
+
+
+//////////////////////////////////////////////////////
+// Mouse events
+//////////////////////////////////////////////////////
+window.addEventListener(
+    "mousedown",
+    e =>
+    {
+        if(e.button === 1)
+        {
+            middleMouseDown = true;
+
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    }
+);
+window.addEventListener(
+    "mouseup",
+    e =>
+    {
+        if(e.button === 1)
+        {
+            middleMouseDown = false;
+        }
+    }
+);
+
+window.addEventListener(
+    "contextmenu",
+    e =>
+    {
+        e.preventDefault();
+    }
+);
+
+window.addEventListener(
+    "mousedown",
+    e =>
+    {
+        if(e.button === 2)
+        {
+            rightMouseDown = true;
+        }
+    }
+);
+
+window.addEventListener(
+    "mouseup",
+    e =>
+    {
+        if(e.button === 2)
+        {
+            rightMouseDown = false;
+        }
+    }
+);
+
+window.addEventListener(
+    "mousemove",
+    e =>
+    {
+        // Right Mouse Orbit
+        if(rightMouseDown)
+        {
+            orbitYaw -= e.movementX * 0.005;
+
+            orbitPitch += e.movementY * 0.005;
+
+            orbitPitch = Math.max(
+                -1.4,
+                Math.min(
+                    1.4,
+                    orbitPitch
+                )
+            );
+        }
+
+        // Middle Mouse Pan
+        if(middleMouseDown)
+        {
+            const dx =
+                e.clientX - lastMouseX;
+
+            const dy =
+                e.clientY - lastMouseY;
+
+            const panSpeed = 0.05;
+
+            const forward =
+                new THREE.Vector3();
+
+            camera.getWorldDirection(
+                forward
+            );
+
+            forward.y = 0;
+            forward.normalize();
+
+            const right =
+                new THREE.Vector3();
+
+            right.crossVectors(
+                forward,
+                camera.up
+            );
+
+            orbitTarget.addScaledVector(
+                right,
+                -dx * panSpeed
+            );
+
+            orbitTarget.addScaledVector(
+                forward,
+                dy * panSpeed
+            );
+
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    }
+);
+
+//////////////////////////////////////////////////////
+// Place Objects
+//////////////////////////////////////////////////////
+
+window.addEventListener(
+    "mousedown",
+    e =>
+    {
+        const toolbar = document.getElementById("toolbar");
+
+        const helpModal = document.getElementById("helpModal");
+
+        if(toolbar.contains(e.target))    
+        {
+            return;
+        }
+
+        if(helpModal.contains(e.target))
+        {
+            return;
+        }
+
+        if(e.button === 2)
+        {
+            return;
+        }
+
+        if(e.button !== 0)
+        {
+            return;
+        }
+
+        mouse.x =
+            (e.clientX/window.innerWidth)*2-1;
+
+        mouse.y =
+            -(e.clientY/window.innerHeight)*2+1;
+
+        raycaster.setFromCamera(
+            mouse,
+            camera
+        );
+
+        const objectHits =
+        raycaster.intersectObjects(
+            scene.children,
+            true
+        );
+
+        for(let hit of objectHits)
+        {
+            if(hit.object.userData.editorObject)
+            {
+                selectObject(hit.object.userData.root);
+
+                console.log(
+                    "Selected",
+                    selectedObject
+                );
+
+                return;
+            }
+        }
+
+        const groundHit =
+        raycaster.intersectObject(
+            ground
+        );
+
+        if(groundHit.length === 0)
+            return;
+
+        if(!modelLibrary[selectedModel])
+            return;
+
+        const clone =
+        modelLibrary[selectedModel]
+        .clone(true);
+
+        clone.position.copy(
+            groundHit[0].point
+        );
+
+        clone.scale.setScalar(1);
+
+        const box =
+            new THREE.Box3()
+            .setFromObject(clone);
+
+        const size =
+            new THREE.Vector3();
+
+        box.getSize(size);
+
+        clone.position.y -= box.min.y;
+
+        clone.userData =
+        {
+            editorObject:true,
+            root:clone,
+
+            data:
+            {
+                model:selectedModel,
+                radius:Math.max(size.x,size.z) * 0.5,
+                height:size.y,
+                scale:1
+            }
+        };
+
+        clone.traverse(c=>
+        {
+            c.userData.editorObject=true;
+            c.userData.root=clone;
+        });
+
+        scene.add(clone);
+
+        placedObjects.push(clone);
+    }
+);
+
+
+///////////////////////////////////////////////////////
+// DeSelect Object
+///////////////////////////////////////////////////////
+window.addEventListener(
+    "keydown",
+    e =>
+    {
+        if(e.key === "Delete")
+        {
+            deleteSelected();
+            return;
+        }
+
+        if(selectedObject)
+        {
+            if(e.key==="ArrowUp")
+                selectedObject.position.z -= moveSpeed;
+
+            if(e.key==="ArrowDown")
+                selectedObject.position.z += moveSpeed;
+
+            if(e.key==="ArrowLeft")
+                selectedObject.position.x -= moveSpeed;
+
+            if(e.key==="ArrowRight")
+                selectedObject.position.x += moveSpeed;
+
+            if(e.key==="PageUp") 
+                selectedObject.position.y += 0.5; 
+
+            if(e.key==="PageDown") 
+                selectedObject.position.y -= 0.5; 
+        }
+        if(e.key === "Escape")
+        {
+            if(selectedObject?.userData?.axesHelper)
+            {
+                selectedObject.remove(
+                    selectedObject.userData.axesHelper
+                );
+            }
+
+            selectedObject = null;
+
+            if(selectionHelper)
+            {
+                scene.remove(selectionHelper);
+                selectionHelper = null;
+            }
+        }
+        
+    }
+);
+
+/////////////////////////////////////////////////////
+// Select Object
+/////////////////////////////////////////////////////
+function selectObject(obj)
+{
+    if(selectionHelper)
+    {
+        scene.remove(selectionHelper);
+    }
+
+    if(selectedObject?.userData?.axesHelper)
+    {
+        selectedObject.remove(selectedObject.userData.axesHelper);
+    }
+
+    selectedObject = obj;
+
+    selectionHelper = new THREE.BoxHelper( obj, 0xffff00 );
+
+    scene.add(selectionHelper);
+
+    const axes = new THREE.AxesHelper(5);
+
+    selectedObject.add(axes);
+
+    selectedObject.userData.axesHelper = axes;
+
+    document.getElementById("inspector").innerHTML =`Selected: ${obj.userData.data.model}<br>Scale: ${obj.scale.x.toFixed(2)}`;
+}
+
+
+//////////////////////////////////////////////////////
+// Delete
+//////////////////////////////////////////////////////
+
+function deleteSelected()
+{
+    if(!selectedObject)
+        return;
+
+    if(selectionHelper)
+    {
+        scene.remove(selectionHelper);
+        selectionHelper = null;
+    }
+
+    if(selectedObject.userData.axesHelper)
+    {
+        selectedObject.remove(
+            selectedObject.userData.axesHelper
+        );
+    }
+
+    scene.remove(selectedObject);
+
+    placedObjects =
+        placedObjects.filter(
+            x => x !== selectedObject
+        );
+
+    selectedObject = null;
+
+    document.getElementById(
+        "inspector"
+    ).innerHTML =
+    "Selected: None";
+}
+
+//////////////////////////////////////////////////////
+// Rotate
+//////////////////////////////////////////////////////
+
+window.addEventListener(
+    "keydown",
+    e =>
+    {
+        if(!selectedObject)
+            return;
+
+        if(e.key==="q")
+        {
+            selectedObject.rotation.y +=
+                THREE.MathUtils.degToRad(5);
+        }
+
+        if(e.key==="e")
+        {
+            selectedObject.rotation.y -=
+                THREE.MathUtils.degToRad(5);
+        }
+    }
+);
+
+//////////////////////////////////////////////////////
+// Scale
+//////////////////////////////////////////////////////
+
+window.addEventListener(
+    "wheel",
+    e =>
+    {
+        if(selectedObject)
+        {
+            let s =
+                selectedObject.scale.x;
+
+            s +=
+                e.deltaY > 0
+                ? -0.1
+                : 0.1;
+
+            s = Math.max(
+                0.1,
+                s
+            );
+
+            selectedObject.scale.setScalar(s);
+
+            return;
+        }
+
+        orbitDistance +=
+            e.deltaY * 0.02;
+
+        orbitDistance =
+            Math.max(
+                5,
+                orbitDistance
+            );
+    }
+);
+
+//////////////////////////////////////////////////////
+// Export
+//////////////////////////////////////////////////////
+
+function exportLevel()
+{
+    const result = [];
+
+    placedObjects.forEach(
+        obj =>
+        {
+            result.push(
+            {
+                x:Number(
+                    obj.position.x.toFixed(2)
+                ),
+
+                z:Number(
+                    obj.position.z.toFixed(2)
+                ),
+
+                model:
+                    obj.userData.data.model,
+
+                radius:
+                    obj.userData.data.radius,
+
+                height:
+                    obj.userData.data.height,
+
+                scale:Number(
+                    obj.scale.x.toFixed(2)
+                ),
+
+                rotation:Number((THREE.MathUtils.radToDeg(obj.rotation.y)).toFixed(1))
+            });
+        }
+    );
+
+    document
+    .getElementById("output")
+    .value =
+    JSON.stringify(
+        result,
+        null,
+        4
+    );
+}
+
+ 
+
+//////////////////////////////////////////////////////
+// Render
+//////////////////////////////////////////////////////
+
+function animate()
+{
+    if(selectionHelper)
+    {
+        selectionHelper.update();
+    }
+
+    requestAnimationFrame(
+        animate
+    );
+
+    camera.position.x =
+        orbitTarget.x +
+        orbitDistance *
+        Math.cos(orbitPitch) *
+        Math.sin(orbitYaw);
+
+    camera.position.y =
+        orbitTarget.y +
+        orbitDistance *
+        Math.sin(orbitPitch);
+
+    camera.position.z =
+        orbitTarget.z +
+        orbitDistance *
+        Math.cos(orbitPitch) *
+        Math.cos(orbitYaw);
+
+    camera.lookAt(
+        orbitTarget
+    );
+
+    renderer.render(
+        scene,
+        camera
+    );
+}
+
+animate();
+
+
+//help button script
+document
+.getElementById("helpBtn")
+.addEventListener(
+    "click",
+    () =>
+    {
+        document
+        .getElementById("helpModal")
+        .style.display =
+        "block";
+    }
+);
+
+document
+.getElementById("closeHelp")
+.addEventListener(
+    "click",
+    () =>
+    {
+        document
+        .getElementById("helpModal")
+        .style.display =
+        "none";
+    }
+);
+</script>
+</body>
+</html>
