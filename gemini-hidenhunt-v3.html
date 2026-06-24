@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>P2P Hide & Hunt</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-color: #1a1a24;
+            --accent-red: #ff4757;
+            --accent-green: #2ed573;
+            --accent-blue: #1e90ff;
+            --text-main: #ffffff;
+            --text-muted: #a4b0be;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+        
+        body {
+            background: var(--bg-color);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- UI Overlays --- */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: none; /* Hidden during lobby */
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+        }
+
+        .interactive { pointer-events: auto; }
+
+        /* --- Menu & Lobby Screens --- */
+        .menu-screen {
+            position: absolute;
+            inset: 0;
+            background: #121214;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .menu-card {
+            background: var(--panel-color);
+            width: 100%;
+            max-width: 400px;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            border: 1px solid #2f3542;
+        }
+
+        h1 { font-size: 2rem; color: var(--accent-red); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        h2 { font-size: 1.5rem; margin-bottom: 10px; }
+        p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        input {
+            background: #09090b;
+            border: 2px solid #2f3542;
+            padding: 14px;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+        input:focus { border-color: var(--accent-blue); outline: none; }
+
+        button {
+            background: var(--accent-red);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        button:disabled { background: #2f3542 !important; color: #57606f; cursor: not-allowed; opacity: 0.6; transform: none !important; }
+        button:active:not(:disabled) { transform: scale(0.98); }
+        button.secondary { background: #2f3542; }
+        button.success { background: var(--accent-green); }
+        button.leave { background: rgba(255, 71, 87, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); padding: 8px 15px; font-size: 0.85rem;}
+
+        /* --- Player List UI --- */
+        .player-list {
+            margin: 15px 0;
+            text-align: left;
+            background: #09090b;
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 180px;
+            overflow-y: auto;
+            border: 1px solid #2f3542;
+        }
+        .player-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid #2f3542;
+            font-size: 0.95rem;
+        }
+        .player-item:last-child { border-bottom: none; }
+        .status-badge { font-weight: bold; font-size: 0.85rem; }
+        .status-ready { color: var(--accent-green); }
+        .status-not { color: #ffa502; }
+
+        /* --- HUD --- */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .hud-card {
+            background: rgba(26, 26, 36, 0.85);
+            padding: 10px 16px;
+            border-radius: 30px;
+            backdrop-filter: blur(8px);
+            font-weight: bold;
+            border: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #timer-display { font-size: 1.3rem; color: #ffa502; font-family: monospace; }
+
+        #blind-overlay {
+            position: absolute;
+            inset: 0; background: #000; z-index: 15;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+        }
+        #blind-overlay h2 { color: var(--accent-red); font-size: 2.5rem; margin-bottom: 10px; animation: pulse 1s infinite alternate; }
+        @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+
+        /* --- Canvas Engine --- */
+        canvas { 
+            display: none; /* Hard hidden until game starts */
+            width: 100%; height: 100%; 
+            object-fit: cover; background: #111216; 
+        }
+
+        /* --- Mobile Controls --- */
+        .mobile-controls {
+            display: none;
+            justify-content: space-between;
+            align-items: flex-end;
+            width: 100%;
+            padding-bottom: 20px;
+        }
+        #joystick-zone {
+            width: 120px; height: 120px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            position: relative;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        #joystick-nub {
+            width: 50px; height: 50px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            position: absolute;
+            top: 35px; left: 35px;
+            pointer-events: none;
+        }
+        #action-pad { display: flex; flex-direction: column; gap: 15px; }
+        .action-btn {
+            width: 70px; height: 70px;
+            border-radius: 50%;
+            background: rgba(30, 144, 255, 0.6);
+            border: 2px solid var(--accent-blue);
+            color: white; font-weight: bold; font-size: 0.9rem;
+        }
+
+        @media (pointer: coarse) { .mobile-controls { display: flex; } }
+    </style>
+</head>
+<body>
+
+    <div id="blind-overlay">
+        <h2>YOU ARE BLINDED</h2>
+        <p style="text-align:center;">Hiders are blending into the environment.<br>Stand by...</p>
+    </div>
+
+    <div id="ui-layer">
+        <div class="hud-header">
+            <div class="hud-card"><span id="role-badge">Spectator</span></div>
+            <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
+            <button id="btn-leave" class="interactive leave">Exit Match</button>
+        </div>
+
+        <div class="mobile-controls">
+            <div id="joystick-zone" class="interactive"><div id="joystick-nub"></div></div>
+            <div id="action-pad" class="interactive"><button class="action-btn" id="btn-action-disguise">PROP</button></div>
+        </div>
+    </div>
+
+    <div id="menu-screen" class="menu-screen">
+        <div class="menu-card">
+            <h1>Hide & Hunt</h1>
+            <p>P2P Real-Time Hide & Seek Engine</p>
+            
+            <div class="form-group">
+                <button id="btn-host">Host New Session</button>
+                <div style="font-size:0.8rem; margin: 5px 0;">— OR —</div>
+                <input type="text" id="input-room-id" placeholder="4-DIGIT CODE" maxlength="4">
+                <button id="btn-join" class="secondary">Join Room</button>
+            </div>
+            <div id="status-msg" style="margin-top:15px; font-size:0.85rem; color: var(--accent-blue);"></div>
+        </div>
+    </div>
+
+    <div id="lobby-screen" class="menu-screen" style="display: none;">
+        <div class="menu-card">
+            <h2 id="lobby-title" style="color: var(--accent-blue);">LOBBY ROOM</h2>
+            <p id="lobby-subtitle">Waiting for all players to ready up...</p>
+            
+            <div class="player-list" id="player-list-container">
+                </div>
+
+            <div class="form-group">
+                <button id="btn-lobby-action" class="success">Mark Ready</button>
+                <button id="btn-lobby-leave" class="secondary" style="margin-top: 5px;">Leave Lobby</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // System State
+        let peer = null;
+        let connections = [];
+        let connToHost = null;
+        let isHost = false;
+        let myId = null;
+        let shortCode = "";
+        let amIReady = false;
+
+        const HIDING_DURATION = 20;
+        const ROUND_DURATION = 90;
+        
+        let gameState = {
+            phase: 'LOBBY', 
+            timer: 0,
+            players: {}
+        };
+
+        const mapProps = [
+            { x: 200, y: 200, size: 45, type: 'square' },
+            { x: 300, y: 550, size: 30, type: 'circle' },
+            { x: 800, y: 150, size: 50, type: 'square' },
+            { x: 950, y: 600, size: 35, type: 'circle' },
+            { x: 600, y: 400, size: 40, type: 'square' },
+            { x: 1200, y: 300, size: 60, type: 'circle' }
+        ];
+
+        let localPos = { x: 100, y: 100 };
+        let localDisguise = { type: 'player', size: 18 };
+        let keys = {};
+        let touchVector = { x: 0, y: 0 };
+        let gameLoopInterval = null;
+
+        // --- Controls ---
+        window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { 
+            if(e.key === ' ') handleDisguiseSwap();
+            keys[e.key.toLowerCase()] = false; 
+        });
+
+        document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDisguiseSwap();
+        });
+
+        const joyZone = document.getElementById('joystick-zone');
+        const joyNub = document.getElementById('joystick-nub');
+        let joyActive = false;
+
+        joyZone.addEventListener('touchstart', (e) => { joyActive = true; handleJoystick(e); });
+        joyZone.addEventListener('touchmove', (e) => { if(joyActive) handleJoystick(e); });
+        joyZone.addEventListener('touchend', () => {
+            joyActive = false;
+            touchVector = { x: 0, y: 0 };
+            joyNub.style.transform = `translate(0px, 0px)`;
+        });
+
+        function handleJoystick(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = joyZone.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const dist = Math.hypot(dx, dy);
+            const maxDist = rect.width / 2;
+
+            if (dist > maxDist) {
+                dx = (dx / dist) * maxDist;
+                dy = (dy / dist) * maxDist;
+            }
+
+            joyNub.style.transform = `translate(${dx}px, ${dy}px)`;
+            touchVector = { x: dx / maxDist, y: dy / maxDist };
+        }
+
+        // --- Matchmaking Data Broker ---
+        function generate4DigitCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+
+
+
+        // --- LOBBY ACTIONS ---
+        document.getElementById('btn-lobby-action').addEventListener('click', () => {
+            if (isHost) {
+                // Host clicks "Start Game"
+                startGameTransition();
+            } else {
+                // Client clicks "Ready"
+                amIReady = !amIReady;
+                document.getElementById('btn-lobby-action').innerText = amIReady ? "Unready" : "Mark Ready";
+                document.getElementById('btn-lobby-action').className = amIReady ? "secondary" : "success";
+                if(connToHost && connToHost.open) {
+                    connToHost.send({ type: 'lobbyReady', readyState: amIReady });
+                }
+            }
+        });
+
+        function startGameTransition() {
+            gameState.phase = 'HIDING';
+            gameState.timer = HIDING_DURATION;
+            
+            // Send explicit start command
+            connections.forEach(conn => {
+                if(conn.open) conn.send({ type: 'gameStart', gameState });
+            });
+
+            // Reveal local canvas
+            transitionUItoGame();
+        }
+
+        function transitionUItoGame() {
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'flex';
+            document.getElementById('gameCanvas').style.display = 'block'; // Canvas ON
+            resizeCanvas();
+        }
+
+        function updateLobbyUI() {
+            const container = document.getElementById('player-list-container');
+            container.innerHTML = "";
+
+            const players = Object.keys(gameState.players);
+            let totalHidersCount = 0;
+            let readyHidersCount = 0;
+
+            players.forEach((id, index) => {
+                const p = gameState.players[id];
+                const item = document.createElement('div');
+                item.className = 'player-item';
+                
+                let displayName = id === myId ? "You" : `Player ${index + 1}`;
+                let statusText = p.isReady ? "READY" : "NOT READY";
+                let statusClass = p.isReady ? "status-ready" : "status-not";
+                
+                if (p.role === 'Seeker') {
+                    displayName += " [Host/Hunter]";
+                    statusText = "HOST";
+                    statusClass = "status-ready";
+                } else {
+                    totalHidersCount++;
+                    if(p.isReady) readyHidersCount++;
+                }
+
+                item.innerHTML = `<span>${displayName}</span><span class="status-badge ${statusClass}">${statusText}</span>`;
+                container.appendChild(item);
+            });
+
+            if (isHost) {
+                const actionBtn = document.getElementById('btn-lobby-action');
+                actionBtn.innerText = "Start Game";
+                
+                if (totalHidersCount > 0 && readyHidersCount === totalHidersCount) {
+                    actionBtn.disabled = false;
+                    actionBtn.className = "success";
+                } else {
+                    actionBtn.disabled = true;
+                }
+            }
+        }
+
+        // --- 1. REMOVE THE MATCHMAKING BROKER FUNCTIONS ---
+        // (Delete registerRoomToBroker and getPeerIdFromBroker completely)
+
+        function generate4DigitCode() {
+            return Math.floor(1000 + Math.random() * 9000).toString();
+        }
+
+        // --- 2. UPDATED NETWORK SETUP ---
+        document.getElementById('btn-host').addEventListener('click', () => {
+            updateStatus("Generating system link...");
+            isHost = true;
+            shortCode = generate4DigitCode();
+            
+            // Force PeerJS to use our exact code as the network ID
+            peer = new Peer('hnh-' + shortCode);
+            
+            peer.on('open', (id) => {
+                myId = id;
+                document.getElementById('menu-screen').style.display = 'none';
+                document.getElementById('lobby-screen').style.display = 'flex';
+                document.getElementById('lobby-title').innerText = `ROOM CODE: ${shortCode}`;
+                
+                initHostLogic();
+            });
+
+            peer.on('error', (err) => {
+                // If by rare chance the 4-digit code is taken by someone else online, auto-retry
+                if (err.type === 'unavailable-id') {
+                    document.getElementById('btn-host').click(); 
+                } else {
+                    alert("Network issue: " + err.type);
+                    exitRoom();
+                }
+            });
+        });
+
+        document.getElementById('btn-join').addEventListener('click', () => {
+            const inputCode = document.getElementById('input-room-id').value.trim();
+            if (inputCode.length !== 4) return alert("Enter exactly 4 digits.");
+
+            updateStatus("Locating host node...");
+            isHost = false;
+            
+            peer = new Peer();
+            peer.on('open', (id) => {
+                myId = id;
+                // Directly connect to the forced custom ID
+                connToHost = peer.connect('hnh-' + inputCode);
+                
+                connToHost.on('open', () => {
+                    document.getElementById('menu-screen').style.display = 'none';
+                    document.getElementById('lobby-screen').style.display = 'flex';
+                    document.getElementById('lobby-title').innerText = `ROOM CODE: ${inputCode}`;
+                    initClientLogic();
+                });
+
+                // Timeout fallback if the room doesn't exist
+                setTimeout(() => {
+                    if(!connToHost || !connToHost.open) {
+                        updateStatus("Room code not found.");
+                        exitRoom();
+                    }
+                }, 5000);
+            });
+        });
+
+        document.getElementById('btn-leave').addEventListener('click', exitRoom);
+        document.getElementById('btn-lobby-leave').addEventListener('click', exitRoom);
+        
+        function updateStatus(msg) { document.getElementById('status-msg').innerText = msg; }
+
+        function exitRoom() {
+            if (peer) peer.destroy();
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            
+            connections = [];
+            connToHost = null;
+            isHost = false;
+            amIReady = false;
+            gameState.phase = 'LOBBY';
+            gameState.players = {};
+
+            const actionBtn = document.getElementById('btn-lobby-action');
+            actionBtn.innerText = "Mark Ready";
+            actionBtn.className = "success";
+            actionBtn.disabled = false;
+
+            document.getElementById('gameCanvas').style.display = 'none';
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'none';
+            document.getElementById('blind-overlay').style.display = 'none';
+            document.getElementById('menu-screen').style.display = 'flex';
+            
+            updateStatus("");
+        }
+
+        // --- HOST LOGIC ---
+        function initHostLogic() {
+            gameState.phase = 'LOBBY';
+            gameState.players[myId] = { 
+                x: 400, y: 400, role: 'Seeker', isCaught: false, isReady: true,
+                disguiseType: 'player', disguiseSize: 18 
+            };
+            updateLobbyUI();
+
+            peer.on('connection', (conn) => {
+                // Reject connections if not in lobby
+                if (gameState.phase !== 'LOBBY') {
+                    conn.on('open', () => conn.close()); 
+                    return;
+                }
+
+                connections.push(conn);
+                gameState.players[conn.peer] = { 
+                    x: 200 + Math.random()*500, y: 200 + Math.random()*400, 
+                    role: 'Hider', isCaught: false, isReady: false,
+                    disguiseType: 'player', disguiseSize: 18 
+                };
+                updateLobbyUI();
+
+                conn.on('data', (data) => {
+                    if (data.type === 'lobbyReady') {
+                        gameState.players[conn.peer].isReady = data.readyState;
+                        updateLobbyUI();
+                    }
+                    if (data.type === 'clientMove' && gameState.players[conn.peer]) {
+                        let p = gameState.players[conn.peer];
+                        if(!p.isCaught) {
+                            p.x = data.x; p.y = data.y;
+                            p.disguiseType = data.disguiseType;
+                            p.disguiseSize = data.disguiseSize;
+                        }
+                    }
+                });
+
+                conn.on('close', () => {
+                    delete gameState.players[conn.peer];
+                    connections = connections.filter(c => c.peer !== conn.peer);
+                    updateLobbyUI();
+                });
+            });
+
+            // Master Match Time Clock
+            setInterval(() => {
+                if(gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+
+                gameState.timer--;
+                if (gameState.timer <= 0) {
+                    if (gameState.phase === 'HIDING') {
+                        gameState.phase = 'HUNTING';
+                        gameState.timer = ROUND_DURATION;
+                    } else if (gameState.phase === 'HUNTING') {
+                        gameState.phase = 'ENDED';
+                        alert("Time expired! Hiders Win.");
+                        exitRoom();
+                    }
+                }
+            }, 1000);
+
+            // Host Engine Loop (40 FPS)
+            gameLoopInterval = setInterval(() => {
+                // Only Sync while in Lobby (Don't run rendering/movement)
+                if(gameState.phase === 'LOBBY') {
+                    connections.forEach(conn => {
+                        if (conn.open) conn.send({ type: 'lobbySync', players: gameState.players });
+                    });
+                    return;
+                }
+
+                handleLocalMovement();
+                gameState.players[myId].x = localPos.x;
+                gameState.players[myId].y = localPos.y;
+
+                if (gameState.phase === 'HUNTING') checkCollisions();
+
+                connections.forEach(conn => {
+                    if (conn.open) conn.send({ type: 'sync', gameState });
+                });
+
+                updateVisualHUD();
+                render();
+            }, 1000 / 40);
+        }
+
+        // --- CLIENT LOGIC ---
+        function initClientLogic() {
+            localPos = { x: 300 + Math.random()*400, y: 300 + Math.random()*300 };
+
+            connToHost.on('data', (data) => {
+                if (data.type === 'lobbySync') {
+                    gameState.players = data.players;
+                    updateLobbyUI();
+                }
+                if (data.type === 'gameStart') {
+                    gameState = data.gameState;
+                    transitionUItoGame();
+                }
+                if (data.type === 'sync') {
+                    gameState = data.gameState;
+                    if (gameState.phase !== 'LOBBY') {
+                        updateVisualHUD();
+                        render();
+                    }
+                }
+            });
+
+            connToHost.on('close', () => {
+                alert("Host left the match.");
+                exitRoom();
+            });
+
+            gameLoopInterval = setInterval(() => {
+                if(gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+
+                handleLocalMovement();
+
+                if(connToHost && connToHost.open) {
+                    connToHost.send({
+                        type: 'clientMove',
+                        x: localPos.x, y: localPos.y,
+                        disguiseType: localDisguise.type,
+                        disguiseSize: localDisguise.size
+                    });
+                }
+            }, 1000 / 40);
+        }
+
+        // --- MOVEMENT & MECHANICS ---
+        function handleLocalMovement() {
+            let pData = gameState.players[myId];
+            if (!pData || pData.isCaught) return;
+            if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
+
+            const speed = 5;
+            let moveX = 0; let moveY = 0;
+
+            if (keys['arrowup'] || keys['w']) moveY = -1;
+            if (keys['arrowdown'] || keys['s']) moveY = 1;
+            if (keys['arrowleft'] || keys['a']) moveX = -1;
+            if (keys['arrowright'] || keys['d']) moveX = 1;
+
+            if (joyActive) {
+                moveX = touchVector.x; moveY = touchVector.y;
+            }
+
+            localPos.x += moveX * speed;
+            localPos.y += moveY * speed;
+
+            if (localPos.x < 30) localPos.x = 30;
+            if (localPos.x > 1500) localPos.x = 1500;
+            if (localPos.y < 30) localPos.y = 30;
+            if (localPos.y > 1000) localPos.y = 1000;
+        }
+
+        function handleDisguiseSwap() {
+            let pData = gameState.players[myId];
+            if (!pData || pData.role !== 'Hider' || pData.isCaught) return;
+
+            for (let prop of mapProps) {
+                if (Math.hypot(localPos.x - prop.x, localPos.y - prop.y) < 65) {
+                    localDisguise.type = prop.type;
+                    localDisguise.size = prop.size;
+                    return;
+                }
+            }
+            localDisguise.type = 'player';
+            localDisguise.size = 18;
+        }
+
+        function checkCollisions() {
+            const players = Object.values(gameState.players);
+            const seeker = players.find(p => p.role === 'Seeker');
+            if (!seeker) return;
+
+            for (let id in gameState.players) {
+                let target = gameState.players[id];
+                if (target.role === 'Hider' && !target.isCaught) {
+                    if (Math.hypot(seeker.x - target.x, seeker.y - target.y) < (target.disguiseSize + 15)) {
+                        gameState.players[id].isCaught = true;
+                        checkWinConditions();
+                    }
+                }
+            }
+        }
+
+        function checkWinConditions() {
+            const players = Object.values(gameState.players);
+            const hidersLeft = players.filter(p => p.role === 'Hider' && !p.isCaught).length;
+            if (hidersLeft === 0 && players.filter(p => p.role === 'Hider').length > 0) {
+                gameState.phase = 'ENDED';
+                alert("Hunters Win! All props found.");
+                exitRoom();
+            }
+        }
+
+        // --- RENDERERS ---
+        function updateVisualHUD() {
+            const me = gameState.players[myId];
+            if (!me) return;
+
+            document.getElementById('role-badge').innerText = `${me.role.toUpperCase()} ${me.isCaught ? '(CAUGHT)' : ''}`;
+            document.getElementById('role-badge').style.color = me.role === 'Seeker' ? 'var(--accent-red)' : 'var(--accent-green)';
+
+            let m = Math.floor(gameState.timer / 60).toString().padStart(2, '0');
+            let s = (gameState.timer % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${gameState.phase}: ${m}:${s}`;
+
+            if (gameState.phase === 'HIDING' && me.role === 'Seeker') {
+                document.getElementById('blind-overlay').style.display = 'flex';
+            } else {
+                document.getElementById('blind-overlay').style.display = 'none';
+            }
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(canvas.width / 2 - localPos.x, canvas.height / 2 - localPos.y);
+
+            ctx.strokeStyle = '#2f3542';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(0, 0, 1550, 1050);
+
+            mapProps.forEach(p => {
+                ctx.fillStyle = '#57606f';
+                ctx.beginPath();
+                if (p.type === 'square') {
+                    ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+                } else {
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            for (let id in gameState.players) {
+                const p = gameState.players[id];
+                
+                if (p.role === 'Seeker') {
+                    ctx.fillStyle = 'var(--accent-red)';
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    if (p.isCaught) {
+                        ctx.fillStyle = '#2f3542';
+                    } else {
+                        const me = gameState.players[myId];
+                        if (me && me.role === 'Seeker' && p.disguiseType !== 'player') {
+                            ctx.fillStyle = '#57606f'; 
+                        } else {
+                            ctx.fillStyle = (id === myId) ? 'var(--accent-green)' : 'var(--accent-blue)';
+                        }
+                    }
+
+                    ctx.beginPath();
+                    if (p.disguiseType === 'square') {
+                        ctx.fillRect(p.x - p.disguiseSize/2, p.y - p.disguiseSize/2, p.disguiseSize, p.disguiseSize);
+                    } else {
+                        ctx.arc(p.x, p.y, p.disguiseType === 'circle' ? p.disguiseSize : 18, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            ctx.restore();
+        }
+    </script>
+</body>
+</html>
