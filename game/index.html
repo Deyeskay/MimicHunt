@@ -27,9 +27,17 @@
             <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
             <button id="btn-leave" class="interactive leave">Exit Match</button>
         </div>
+        
+        <div id="mouse-hint" style="position:absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none;">
+            Click screen to Lock Mouse. Press ESC to unlock.
+        </div>
+
         <div class="mobile-controls">
             <div id="joystick-zone" class="interactive"><div id="joystick-nub"></div></div>
-            <div id="action-pad" class="interactive"><button class="action-btn" id="btn-action-disguise">PROP</button></div>
+            <div id="action-pad" class="interactive" style="flex-direction: row; gap: 10px;">
+                <button class="action-btn" id="btn-action-jump">JUMP</button>
+                <button class="action-btn" id="btn-action-disguise" style="background: var(--accent-red); border-color: #ff6b81;">PROP (F)</button>
+            </div>
         </div>
     </div>
 

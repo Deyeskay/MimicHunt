@@ -82,19 +82,25 @@ const Level = {
                 playerMeshes[id] = mesh;
             }
 
-            let meshHeight = (p.role === 'Seeker' || p.disguiseType === 'player') ? 2 : p.disguiseSize/2;
-            playerMeshes[id].position.set(p.x, meshHeight, p.z);
+            // Apply Y positions from network
+            playerMeshes[id].position.set(p.x, p.y, p.z);
+            // Rotate mesh to face camera yaw (Optional, but looks nice)
             playerMeshes[id].rotation.y = p.rotY;
         }
 
-        // Camera chases the local player
+        // --- THIRD PERSON CAMERA RIG ---
         if (gameState.players[myId]) {
             const camDistance = 15;
-            const camHeight = 8;
-            camera.position.x = localPos.x + Math.sin(localRotY) * camDistance;
-            camera.position.z = localPos.z + Math.cos(localRotY) * camDistance;
-            camera.position.y = camHeight;
-            camera.lookAt(localPos.x, 2, localPos.z);
+            
+            // Calculate orbit positions
+            let hDist = camDistance * Math.cos(cameraPitch);
+            let vDist = camDistance * Math.sin(cameraPitch);
+            
+            camera.position.x = localPos.x + hDist * Math.sin(cameraYaw);
+            camera.position.z = localPos.z + hDist * Math.cos(cameraYaw);
+            camera.position.y = localPos.y + vDist + 2; // +2 offsets looking at feet
+
+            camera.lookAt(localPos.x, localPos.y + 1.5, localPos.z);
         }
 
         renderer.render(scene, camera);

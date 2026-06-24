@@ -2,20 +2,49 @@ const Mechanics = {
     initInputs: function() {
         window.addEventListener('keydown', (e) => { 
             keys[e.key.toLowerCase()] = true; 
-            if(e.key === ' ') this.handleDisguiseSwap();
+            if(e.key.toLowerCase() === 'f') this.handleDisguiseSwap();
+            if(e.key === ' ' && isGrounded) this.jump();
         });
         window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-        // Touch logic
+        const canvas = document.getElementById('gameCanvas');
+        canvas.addEventListener('click', () => {
+            if (gameState.phase !== 'LOBBY') canvas.requestPointerLock();
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            if (document.pointerLockElement === canvas) {
+                document.getElementById('mouse-hint').style.display = 'none';
+            } else {
+                if(gameState.phase !== 'LOBBY') document.getElementById('mouse-hint').style.display = 'block';
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (document.pointerLockElement === canvas) {
+
+                cameraYaw -= e.movementX * MOUSE_SENSITIVITY;
+
+                cameraPitch +=
+                    (INVERT_Y ? -1 : 1) *
+                    e.movementY *
+                    MOUSE_SENSITIVITY;
+
+                cameraPitch = Math.max(
+                    -Math.PI / 2 + 0.1,
+                    Math.min(Math.PI / 2 - 0.1, cameraPitch)
+                );
+            }
+        });
+
         const joyZone = document.getElementById('joystick-zone');
         const joyNub = document.getElementById('joystick-nub');
         joyZone.addEventListener('touchstart', (e) => { joyActive = true; this.handleJoystick(e, joyZone, joyNub); });
         joyZone.addEventListener('touchmove', (e) => { if(joyActive) this.handleJoystick(e, joyZone, joyNub); });
         joyZone.addEventListener('touchend', () => { joyActive = false; touchVector = { x: 0, y: 0 }; joyNub.style.transform = `translate(0px, 0px)`; });
 
-        document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => {
-            e.preventDefault(); this.handleDisguiseSwap();
-        });
+        document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { e.preventDefault(); this.handleDisguiseSwap(); });
+        document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if(isGrounded) this.jump(); });
     },
 
     handleJoystick: function(e, zone, nub) {
@@ -33,28 +62,81 @@ const Mechanics = {
         touchVector = { x: dx / maxDist, y: dy / maxDist };
     },
 
+    jump: function() {
+        velocityY = JUMP_STRENGTH;
+        isGrounded = false;
+    },
+
     handleLocalMovement: function() {
         let pData = gameState.players[myId];
         if (!pData || pData.isCaught) return;
         if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
 
-        const moveSpeed = 0.3; const rotSpeed = 0.05;
-
-        // Note: Change this logic here when integrating mouse look later
-        if (keys['a'] || keys['arrowleft']) localRotY += rotSpeed;
-        if (keys['d'] || keys['arrowright']) localRotY -= rotSpeed;
-        if (keys['w'] || keys['arrowup']) { localPos.x -= Math.sin(localRotY) * moveSpeed; localPos.z -= Math.cos(localRotY) * moveSpeed; }
-        if (keys['s'] || keys['arrowdown']) { localPos.x += Math.sin(localRotY) * moveSpeed; localPos.z += Math.cos(localRotY) * moveSpeed; }
+        const moveSpeed = 0.3;
+        let moveX = 0; let moveZ = 0;
+        
+        // BUG FIX: Corrected Camera-Relative Math. 
+        // Camera looks at (-sin, -cos). Left is (-cos, +sin). Right is (+cos, -sin).
+        if (keys['w'] || keys['arrowup']) { moveX -= Math.sin(cameraYaw); moveZ -= Math.cos(cameraYaw); }
+        if (keys['s'] || keys['arrowdown']) { moveX += Math.sin(cameraYaw); moveZ += Math.cos(cameraYaw); }
+        if (keys['a'] || keys['arrowleft']) { moveX -= Math.cos(cameraYaw); moveZ += Math.sin(cameraYaw); }
+        if (keys['d'] || keys['arrowright']) { moveX += Math.cos(cameraYaw); moveZ -= Math.sin(cameraYaw); }
 
         if (joyActive) {
-            localPos.x -= Math.sin(localRotY) * touchVector.y * moveSpeed;
-            localPos.z -= Math.cos(localRotY) * touchVector.y * moveSpeed;
-            localRotY -= touchVector.x * rotSpeed;
+            let fwd = -touchVector.y;
+            let rgt = touchVector.x;
+            moveX = fwd * (-Math.sin(cameraYaw)) + rgt * Math.cos(cameraYaw);
+            moveZ = fwd * (-Math.cos(cameraYaw)) + rgt * (-Math.sin(cameraYaw));
         }
 
+        let length = Math.hypot(moveX, moveZ);
+        if (length > 0) {
+            moveX = (moveX / length) * moveSpeed;
+            moveZ = (moveZ / length) * moveSpeed;
+            
+            // BONUS FIX: Make the 3D model physically turn to face the direction you are walking
+            localRotY = Math.atan2(moveX, moveZ);
+        }
+
+        let targetX = localPos.x + moveX;
+        let targetZ = localPos.z + moveZ;
+
         // Map Bounds Clamp
-        if (localPos.x < -100) localPos.x = -100; if (localPos.x > 100) localPos.x = 100;
-        if (localPos.z < -100) localPos.z = -100; if (localPos.z > 100) localPos.z = 100;
+        if (targetX < -100) targetX = -100; if (targetX > 100) targetX = 100;
+        if (targetZ < -100) targetZ = -100; if (targetZ > 100) targetZ = 100;
+
+        // Prop Collision Check
+        let isColliding = false;
+        let myRadius = localDisguise.type === 'player' ? 1 : localDisguise.size / 2;
+
+        for (let prop of mapProps3D) {
+            let propRadius = prop.size / 2;
+            let dist = Math.hypot(targetX - prop.x, targetZ - prop.z);
+            
+            // If overlapping on X/Z axis, and we aren't jumping OVER it
+            if (dist < (myRadius + propRadius) && localPos.y < (prop.size + 1)) {
+                isColliding = true; break;
+            }
+        }
+
+        // Apply horizontal movement if path is clear
+        if (!isColliding) {
+            localPos.x = targetX;
+            localPos.z = targetZ;
+        }
+
+        // Apply Vertical Movement (Gravity)
+        velocityY += GRAVITY;
+        localPos.y += velocityY;
+
+        let baseHeight = localDisguise.type === 'player' ? 2 : localDisguise.size / 2;
+        if (localPos.y <= baseHeight) {
+            localPos.y = baseHeight;
+            velocityY = 0;
+            isGrounded = true;
+        } else {
+            isGrounded = false;
+        }
     },
 
     handleDisguiseSwap: function() {
