@@ -116,7 +116,7 @@ const Mechanics = {
             let dist = Math.hypot(targetX - prop.x, targetZ - prop.z);
             
             // If overlapping on X/Z axis, and we aren't jumping OVER it
-            if (dist < (myRadius + propRadius) && localPos.y < (prop.size + 1)) {
+            if (dist < (myRadius + propRadius) && localPos.y < (prop.size)) {
                 isColliding = true; break;
             }
         }
@@ -127,18 +127,62 @@ const Mechanics = {
             localPos.z = targetZ;
         }
 
-        // Apply Vertical Movement (Gravity)
-        velocityY += GRAVITY;
-        localPos.y += velocityY;
+        
+        let baseHeight = localDisguise.type === 'player' ? 1.5 : localDisguise.size / 2;
+        let standingOnSurface = false;
+        let surfaceHeight = 0;
+        //Scan all props to see if we are standing on top of one. If so, set the surfaceHeight to that prop's top.
+        for(let prop of mapProps3D)
+        {
+            let propRadius = prop.size / 2;
 
-        let baseHeight = localDisguise.type === 'player' ? 2 : localDisguise.size / 2;
-        if (localPos.y <= baseHeight) {
-            localPos.y = baseHeight;
-            velocityY = 0;
-            isGrounded = true;
-        } else {
+            let distXZ = Math.hypot(
+                localPos.x - prop.x,
+                localPos.z - prop.z
+            );
+
+            let propTop = prop.size;
+
+            if(
+                distXZ < propRadius + myRadius &&
+                Math.abs(
+                    localPos.y -
+                    (propTop + baseHeight)
+                ) < 0.15
+            )
+            {
+                standingOnSurface = true;
+                surfaceHeight = propTop + baseHeight;
+                break;
+            }
+        }
+        // Apply Vertical Movement (Gravity)
+        if(!standingOnSurface)
+        {
+            velocityY += GRAVITY;
+            localPos.y += velocityY;
+
             isGrounded = false;
         }
+        else
+        {
+            localPos.y = surfaceHeight;
+            velocityY = 0;
+
+            isGrounded = true;
+        }
+ 
+
+        if(localPos.y <= baseHeight)
+        {
+            localPos.y = baseHeight;
+
+            velocityY = 0;
+
+            isGrounded = true;
+        }
+
+        
     },
 
     handleDisguiseSwap: function() {

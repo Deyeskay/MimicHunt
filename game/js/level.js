@@ -21,7 +21,7 @@ const Level = {
         mapProps3D = [
             { x: 10, z: -15, type: 'box', size: 3, color: 0x8B4513 },
             { x: -20, z: -10, type: 'cylinder', size: 2, color: 0x556B2F },
-            { x: 15, z: 20, type: 'box', size: 4, color: 0x8B4513 },
+            { x: 15, z: 20, type: 'box', size: 6, color: 0x8B4513 },
             { x: -10, z: 25, type: 'sphere', size: 3, color: 0x696969 },
             { x: 0, z: -30, type: 'cylinder', size: 2.5, color: 0x556B2F }
         ];
@@ -84,6 +84,7 @@ const Level = {
 
             // Apply Y positions from network
             playerMeshes[id].position.set(p.x, p.y, p.z);
+ 
             // Rotate mesh to face camera yaw (Optional, but looks nice)
             playerMeshes[id].rotation.y = p.rotY;
         }
@@ -95,12 +96,14 @@ const Level = {
             // Calculate orbit positions
             let hDist = camDistance * Math.cos(cameraPitch);
             let vDist = camDistance * Math.sin(cameraPitch);
-            
-            camera.position.x = localPos.x + hDist * Math.sin(cameraYaw);
-            camera.position.z = localPos.z + hDist * Math.cos(cameraYaw);
-            camera.position.y = localPos.y + vDist + 2; // +2 offsets looking at feet
+           
+            const p = gameState.players[myId];
 
-            camera.lookAt(localPos.x, localPos.y + 1.5, localPos.z);
+            camera.position.x = p.x + hDist * Math.sin(cameraYaw);
+            camera.position.z = p.z + hDist * Math.cos(cameraYaw);
+            camera.position.y = p.y + vDist + 2; // +2 offsets looking at feet
+
+            camera.lookAt(p.x, p.y + 1.5, p.z);
         }
 
         renderer.render(scene, camera);
