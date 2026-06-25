@@ -240,6 +240,56 @@ textarea{
         Y <input id="scaleY" type="number" step="0.1" />
         Z <input id="scaleZ" type="number" step="0.1" />
     </div>
+    <hr>
+
+<div>
+
+    <b>Gameplay</b>
+
+    <br><br>
+
+    <label>
+        <input type="checkbox" id="chkCollision">
+        Collision
+    </label>
+
+    <br>
+
+    <label>
+        <input type="checkbox" id="chkClimbable">
+        Climbable
+    </label>
+
+    <br>
+
+    <label>
+        <input type="checkbox" id="chkHideSpot">
+        Hide Spot
+    </label>
+
+    <br>
+
+    <label>
+        <input type="checkbox" id="chkSpawnPoint">
+        Spawn Point
+    </label>
+
+    <br>
+
+    <label>
+        <input type="checkbox" id="chkSeekerSpawn">
+        Seeker Spawn
+    </label>
+
+    <br>
+
+    <label>
+        <input type="checkbox" id="chkHiderSpawn">
+        Hider Spawn
+    </label>
+
+</div>
+
 </div>
 <div id="helpModal" class="help-modal">
 
@@ -379,6 +429,42 @@ function attachInspectorInputListeners() {
     scaleX.addEventListener('change', () => { if(selectedObject) selectedObject.scale.x = parseFloat(scaleX.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.x, selectedObject.scale.x, selectedObject.scale.x); updateInspectorFields(); } });
     scaleY.addEventListener('change', () => { if(selectedObject) selectedObject.scale.y = parseFloat(scaleY.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.y, selectedObject.scale.y, selectedObject.scale.y); updateInspectorFields(); } });
     scaleZ.addEventListener('change', () => { if(selectedObject) selectedObject.scale.z = parseFloat(scaleZ.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.z, selectedObject.scale.z, selectedObject.scale.z); updateInspectorFields(); } });
+
+    document.getElementById("chkCollision").addEventListener("change",e=>
+    {
+        if(selectedObject)
+            selectedObject.userData.data.collision = e.target.checked;
+    });
+
+    document.getElementById("chkClimbable").addEventListener("change",e=>
+    {
+        if(selectedObject)
+            selectedObject.userData.data.climbable = e.target.checked;
+    });
+
+    document.getElementById("chkHideSpot").addEventListener("change",e=>
+    {
+        if(selectedObject)
+            selectedObject.userData.data.hideSpot = e.target.checked;
+    });
+
+    document.getElementById("chkSpawnPoint").addEventListener("change",e=>
+    {
+        if(selectedObject)
+            selectedObject.userData.data.spawnPoint = e.target.checked;
+    });
+
+    document.getElementById("chkSeekerSpawn").addEventListener("change",e=>
+    {
+        if(selectedObject)
+            selectedObject.userData.data.seekerSpawn = e.target.checked;
+    });
+
+    document.getElementById("chkHiderSpawn").addEventListener("change",e=>
+    {
+        if(selectedObject)
+            selectedObject.userData.data.hiderSpawn = e.target.checked;
+    });
 }
 
 // Attach the inspector input listeners once the DOM is ready
@@ -399,6 +485,12 @@ function clearInspector() {
     document.getElementById('scaleY').value = '';
     document.getElementById('scaleZ').value = '';
     uniformCheckbox.checked = false;
+    document.getElementById("chkCollision").checked = false;
+    document.getElementById("chkClimbable").checked = false;
+    document.getElementById("chkHideSpot").checked = false;
+    document.getElementById("chkSpawnPoint").checked = false;
+    document.getElementById("chkSeekerSpawn").checked = false;
+    document.getElementById("chkHiderSpawn").checked = false;
 }
 
 let isTransforming = false;
@@ -749,7 +841,19 @@ window.addEventListener(
 
                     height:size.y,
 
-                    scale:1
+                    scale:1,
+
+                    collision:true,
+
+                    climbable:false,
+
+                    hideSpot:false,
+
+                    spawnPoint:false,
+
+                    seekerSpawn:false,
+
+                    hiderSpawn:false
                 }
         };
 
@@ -951,6 +1055,15 @@ function updateInspectorFields() {
     document.getElementById('scaleX').value = selectedObject.scale.x.toFixed(2);
     document.getElementById('scaleY').value = selectedObject.scale.y.toFixed(2);
     document.getElementById('scaleZ').value = selectedObject.scale.z.toFixed(2);
+
+    //game params
+    document.getElementById("chkCollision").checked = selectedObject.userData.data.collision;
+    document.getElementById("chkClimbable").checked = selectedObject.userData.data.climbable;
+    document.getElementById("chkHideSpot").checked = selectedObject.userData.data.hideSpot;
+    document.getElementById("chkSpawnPoint").checked = selectedObject.userData.data.spawnPoint;
+    document.getElementById("chkSeekerSpawn").checked = selectedObject.userData.data.seekerSpawn;
+    document.getElementById("chkHiderSpawn").checked = selectedObject.userData.data.hiderSpawn;
+
 }
 
 
@@ -1142,8 +1255,14 @@ function exportLevel()
         {
             result.push(
             {
+                id: obj.userData.data.name,
+
                 x:Number(
                     obj.position.x.toFixed(2)
+                ),
+
+                y:Number(
+                    obj.position.y.toFixed(2)
                 ),
 
                 z:Number(
@@ -1152,6 +1271,23 @@ function exportLevel()
 
                 model:
                     obj.userData.data.model,
+                collision:
+                    obj.userData.data.collision,
+
+                climbable:
+                    obj.userData.data.climbable,
+
+                hideSpot:
+                    obj.userData.data.hideSpot,
+
+                spawnPoint:
+                    obj.userData.data.spawnPoint,
+
+                seekerSpawn:
+                    obj.userData.data.seekerSpawn,
+
+                hiderSpawn:
+                    obj.userData.data.hiderSpawn,    
 
                 radius:
                     obj.userData.data.radius,
@@ -1166,7 +1302,20 @@ function exportLevel()
                     z:Number(obj.scale.z.toFixed(2))
                 },
 
-                rotation:Number((THREE.MathUtils.radToDeg(obj.rotation.y)).toFixed(1))
+                rotation:
+                {
+                    x:Number(
+                        THREE.MathUtils.radToDeg(obj.rotation.x).toFixed(1)
+                    ),
+
+                    y:Number(
+                        THREE.MathUtils.radToDeg(obj.rotation.y).toFixed(1)
+                    ),
+
+                    z:Number(
+                        THREE.MathUtils.radToDeg(obj.rotation.z).toFixed(1)
+                    )
+                }
             });
         }
     );

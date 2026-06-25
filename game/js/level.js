@@ -14,10 +14,20 @@ const Level = {
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
-        const gridHelper = new THREE.GridHelper(200, 50, 0x444444, 0x888888);
-        scene.add(gridHelper);
+        // Ground plane
+        const groundGeo = new THREE.PlaneGeometry(200, 200);
+        const groundMat = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = false;
+        scene.add(ground);
 
-        // Define your level geometry here
+        //const gridHelper = new THREE.GridHelper(200, 50, 0x444444, 0x888888);
+        //scene.add(gridHelper);
+
+        // Define your level geometry her
+        /*
         mapProps3D = [
             { x: 10, z: -15, type: 'box', size: 3, color: 0x8B4513 },
             { x: -20, z: -10, type: 'cylinder', size: 2, color: 0x556B2F },
@@ -25,17 +35,105 @@ const Level = {
             { x: -10, z: 25, type: 'sphere', size: 3, color: 0x696969 },
             { x: 0, z: -30, type: 'cylinder', size: 2.5, color: 0x556B2F }
         ];
+        */
 
-        mapProps3D.forEach(prop => {
-            let geo, mat;
-            mat = new THREE.MeshLambertMaterial({ color: prop.color });
-            if (prop.type === 'box') geo = new THREE.BoxGeometry(prop.size, prop.size, prop.size);
-            if (prop.type === 'cylinder') geo = new THREE.CylinderGeometry(prop.size/2, prop.size/2, prop.size);
-            if (prop.type === 'sphere') geo = new THREE.SphereGeometry(prop.size/1.5, 16, 16);
-            
-            let mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(prop.x, prop.size/2, prop.z);
+        mapProps3D = [
+            { x:10,z:-15,model:"tree",radius:2,height:8,scale:1 },
+            { x:-15,z:5,model:"rock",radius:2,height:2,scale:1 },
+            { x:5,z:20,model:"bush",radius:1.5,height:2,scale:1 }
+        ];
+
+        mapProps3D.forEach(prop =>
+        {
+            if(!modelLibrary[prop.model])
+            {
+                console.warn("Missing model:", prop.model);
+                return;
+            }
+
+            const mesh =
+                modelLibrary[prop.model].clone(true);
+
+            mesh.position.set(
+                prop.x,
+                prop.y || 0,
+                prop.z
+            );
+
+            if(typeof prop.scale === "number")
+            {
+                mesh.scale.setScalar(prop.scale);
+            }
+            else
+            {
+                mesh.scale.set(
+                    prop.scale.x,
+                    prop.scale.y,
+                    prop.scale.z
+                );
+            }
+
+            if(prop.rotation)
+            {
+                mesh.rotation.set(
+                    THREE.MathUtils.degToRad(prop.rotation.x || 0),
+                    THREE.MathUtils.degToRad(prop.rotation.y || 0),
+                    THREE.MathUtils.degToRad(prop.rotation.z || 0)
+                );
+            }
+
             scene.add(mesh);
+        });
+        
+       console.log(modelLibrary);
+    },
+
+    loadModels: function(callback)
+    {
+        const loader = new THREE.GLTFLoader();
+        const files = [
+            {
+                key: "tree",
+                path: "assets/models/tree1.glb"
+            },
+            {
+                key: "rock",
+                path: "assets/models/rock1.glb"
+            },
+            {
+                key: "bush",
+                path: "assets/models/bush1.glb"
+            }
+        ];
+
+        let loaded = 0;
+
+        files.forEach(file =>
+        {
+            loader.load(
+                file.path,
+
+                (gltf) =>
+                {
+                    console.log("Loaded:", file.path);
+
+                    modelLibrary[file.key] = gltf.scene;
+
+                    loaded++;
+
+                    if(loaded === files.length)
+                    {
+                        callback();
+                    }
+                },
+
+                undefined,
+
+                (err) =>
+                {
+                    console.error("Failed:",file.path,err);
+                }
+            );
         });
     },
 
@@ -54,6 +152,7 @@ const Level = {
             if (!gameState.players[id]) { scene.remove(playerMeshes[id]); delete playerMeshes[id]; }
         }
 
+        console.log(gameState.players);
         // Draw active players
         for (let id in gameState.players) {
             let p = gameState.players[id];
@@ -62,29 +161,64 @@ const Level = {
                 scene.remove(playerMeshes[id]); delete playerMeshes[id];
             }
 
-            if (!playerMeshes[id]) {
-                let geo, mat;
-                let pColor = p.isCaught ? 0x333333 : p.color;
+            if (!playerMeshes[id])
+            {
+                let mesh;
 
-                if (p.role === 'Seeker') { 
-                    geo = new THREE.BoxGeometry(2, 4, 2); 
-                } else {
-                    if (p.disguiseType === 'box') geo = new THREE.BoxGeometry(p.disguiseSize, p.disguiseSize, p.disguiseSize);
-                    else if (p.disguiseType === 'cylinder') geo = new THREE.CylinderGeometry(p.disguiseSize/2, p.disguiseSize/2, p.disguiseSize);
-                    else if (p.disguiseType === 'sphere') geo = new THREE.SphereGeometry(p.disguiseSize/1.5, 16, 16);
-                    else geo = new THREE.CylinderGeometry(1, 1, 3, 16); // Default character
+                if(p.role === "Seeker")
+                {
+                    mesh = new THREE.Mesh(
+                        new THREE.BoxGeometry(2,4,2),
+                        new THREE.MeshLambertMaterial({
+                            color:p.isCaught ? 0x333333 : p.color
+                        })
+                    );
+                }
+                else
+                {
+                    if(p.disguiseType !== "player" && modelLibrary[p.disguiseType])
+                    {
+                        mesh = modelLibrary[p.disguiseType].clone(true);
+                        mesh.scale.setScalar(p.propScale || 1);
+                    }
+                    else
+                    {
+                        mesh = new THREE.Mesh(
+                            new THREE.CylinderGeometry(1,1,3,16),
+                            new THREE.MeshLambertMaterial({
+                                color:p.color
+                            })
+                        );
+                    }
                 }
 
-                mat = new THREE.MeshLambertMaterial({ color: pColor });
-                let mesh = new THREE.Mesh(geo, mat);
-                mesh.userData = { disguiseType: p.disguiseType };
+                mesh.userData =
+                {
+                    disguiseType:p.disguiseType
+                };
+
                 scene.add(mesh);
+
                 playerMeshes[id] = mesh;
             }
 
             // Apply Y positions from network
-            playerMeshes[id].position.set(p.x, p.y, p.z);
- 
+            if (p.disguiseType !== "player")
+            {
+                playerMeshes[id].position.set(
+                    p.x,
+                    p.y - (p.propHeight || 0) / 2,
+                    p.z
+                );
+            }
+            else
+            {
+                playerMeshes[id].position.set(
+                    p.x,
+                    p.y,
+                    p.z
+                );
+            }
             // Rotate mesh to face camera yaw (Optional, but looks nice)
             playerMeshes[id].rotation.y = p.rotY;
         }

@@ -122,6 +122,8 @@ const Network = {
             gameState.players[myId].y = localPos.y;
             gameState.players[myId].z = localPos.z;
             gameState.players[myId].rotY = cameraYaw;
+            gameState.players[myId].disguiseType = localDisguise.type;
+            gameState.players[myId].disguiseSize = localDisguise.size;
 
             if (gameState.phase === 'HUNTING') Mechanics.checkCollisions();
 

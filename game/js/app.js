@@ -47,9 +47,12 @@ function animate() {
 
 // --- INITIALIZE APPLICATION ---
 window.addEventListener('resize', () => Level.resize());
-Level.init();
-Mechanics.initInputs();
-animate();
+Level.loadModels(() =>
+{
+    Level.init();
+    Mechanics.initInputs();
+    animate();
+});
 
 const savedSettings = localStorage.getItem('hidehunt_settings');
 

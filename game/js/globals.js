@@ -45,3 +45,4 @@ let touchVector = { x: 0, y: 0 };
 let scene, camera, renderer;
 let playerMeshes = {}; 
 let mapProps3D = [];
+let modelLibrary = {};

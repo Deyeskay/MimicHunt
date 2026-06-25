@@ -70,6 +70,11 @@ const Mechanics = {
     },
 
     handleLocalMovement: function() {
+        if(!joyActive)
+        {
+            touchVector.x = 0;
+            touchVector.y = 0;
+        }
         let pData = gameState.players[myId];
         if (!pData || pData.isCaught) return;
         if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
@@ -84,7 +89,8 @@ const Mechanics = {
         if (keys['a'] || keys['arrowleft']) { moveX -= Math.cos(cameraYaw); moveZ += Math.sin(cameraYaw); }
         if (keys['d'] || keys['arrowright']) { moveX += Math.cos(cameraYaw); moveZ -= Math.sin(cameraYaw); }
 
-        if (joyActive) {
+        if( joyActive && (Math.abs(touchVector.x) > 0.05 || Math.abs(touchVector.y) > 0.05))
+        {
             let fwd = -touchVector.y;
             let rgt = touchVector.x;
             moveX = fwd * (-Math.sin(cameraYaw)) + rgt * Math.cos(cameraYaw);
@@ -112,11 +118,12 @@ const Mechanics = {
         let myRadius = localDisguise.type === 'player' ? 1 : localDisguise.size / 2;
 
         for (let prop of mapProps3D) {
-            let propRadius = prop.size / 2;
+            //let propRadius = prop.size / 2;
+            let propRadius = prop.radius;
             let dist = Math.hypot(targetX - prop.x, targetZ - prop.z);
             
             // If overlapping on X/Z axis, and we aren't jumping OVER it
-            if (dist < (myRadius + propRadius) && localPos.y < (prop.size)) {
+            if (dist < (myRadius + propRadius) && localPos.y < (prop.height)) {
                 isColliding = true; break;
             }
         }
@@ -134,14 +141,15 @@ const Mechanics = {
         //Scan all props to see if we are standing on top of one. If so, set the surfaceHeight to that prop's top.
         for(let prop of mapProps3D)
         {
-            let propRadius = prop.size / 2;
+            //let propRadius = prop.size / 2;
+            let propRadius = prop.radius;
 
             let distXZ = Math.hypot(
                 localPos.x - prop.x,
                 localPos.z - prop.z
             );
 
-            let propTop = prop.size;
+            let propTop = prop.height;
 
             if(
                 distXZ < propRadius + myRadius &&
@@ -186,16 +194,34 @@ const Mechanics = {
     },
 
     handleDisguiseSwap: function() {
+         
         let pData = gameState.players[myId];
         if (!pData || pData.role !== 'Hider' || pData.isCaught) return;
 
         for (let prop of mapProps3D) {
             let dist = Math.hypot(localPos.x - prop.x, localPos.z - prop.z);
-            if (dist < prop.size * 2 + 2) {
-                localDisguise.type = prop.type; localDisguise.size = prop.size; localDisguise.color = prop.color; return;
+            if (dist < prop.radius  * 2 + 2) {
+                localDisguise.type = prop.model;
+                localDisguise.size = 1;
+
+                gameState.players[myId].disguiseType = prop.model;
+                gameState.players[myId].disguiseSize = 1;
+
+                gameState.players[myId].propScale = prop.scale;
+                gameState.players[myId].propHeight = prop.height;
+                gameState.players[myId].propRadius = prop.radius;
+                //localDisguise.color = prop.color; // temporary
+                return;
             }
         }
-        localDisguise.type = 'player'; localDisguise.size = 2; localDisguise.color = 0x2ed573;
+        localDisguise.type = 'player'; 
+        localDisguise.size = 2; 
+        gameState.players[myId].disguiseType = "player";
+        gameState.players[myId].disguiseSize = 2;
+        //localDisguise.color = 0x2ed573;
+        gameState.players[myId].propScale = 1;
+        gameState.players[myId].propHeight = 2;
+        gameState.players[myId].propRadius = 1;
     },
 
     checkCollisions: function() {
