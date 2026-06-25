@@ -22,11 +22,76 @@ body{
     border-radius:10px;
     z-index:100;
 }
+#hierarchy
+{
+    position:absolute;
+
+    top:10px;
+    right:10px;
+
+    width:260px;
+    height:500px;
+
+    background:#222;
+    color:white;
+
+    border-radius:10px;
+
+    overflow:hidden;
+
+    z-index:100;
+}
+
+.hierarchy-header
+{
+    background:#333;
+
+    padding:10px;
+
+    font-weight:bold;
+}
+
+#hierarchyList
+{
+    height:460px;
+
+    overflow-y:auto;
+}
+
+.hierarchy-item
+{
+    padding:8px 12px;
+
+    cursor:pointer;
+
+    border-bottom:1px solid #444;
+}
+
+.hierarchy-item:hover
+{
+    background:#3b3b3b;
+}
+
+.hierarchy-item.active
+{
+    background:#2196f3;
+}
 
 button{
     width:100%;
     margin:4px 0;
     padding:10px;
+}
+.propBtn.active
+{
+    background:#2196f3;
+    color:white;
+    border:2px solid white;
+}
+
+.propBtn
+{
+    transition:.2s;
 }
 
 textarea{
@@ -111,9 +176,11 @@ textarea{
 
 <h3>Level Editor</h3>
 <button id="helpBtn" class="help-btn">?</button>
-<button onclick="selectedModel='tree'">Tree</button>
-<button onclick="selectedModel='rock'">Rock</button>
-<button onclick="selectedModel='bush'">Bush</button>
+<button class="propBtn" onclick="selectModel('tree',this)">Tree</button>
+<button class="propBtn" onclick="selectModel('rock',this)">Rock</button>
+<button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
+<button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
+
 
 <hr>
 
@@ -124,7 +191,17 @@ textarea{
 <textarea id="output"></textarea>
 
 </div>
+<div id="hierarchy">
 
+    <div class="hierarchy-header">
+        Hierarchy
+    </div>
+
+    <div id="hierarchyList">
+
+    </div>
+
+</div>
 <div id="helpModal" class="help-modal">
 
     <div class="help-card">
@@ -157,7 +234,7 @@ textarea{
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 
 <script>
-
+//Globals
 let scene;
 let camera;
 let renderer;
@@ -169,13 +246,14 @@ let moveSpeed = 0.5;
 
 let ground;
 
-let selectedModel = "tree";
+let selectedModel = null;
 
 let selectedObject = null;
 let selectionBox = null;
 let selectionHelper = null;
 
 let placedObjects = [];
+let objectId = 1;
 
 let modelLibrary = {};
 
@@ -521,33 +599,38 @@ window.addEventListener(
             }
         }
 
-        const groundHit =
-        raycaster.intersectObject(
-            ground
-        );
+        // No placement tool selected
+        if(!selectedModel)
+        {
+            return;
+        }
+        const groundHit = raycaster.intersectObject(ground);
 
         if(groundHit.length === 0)
             return;
 
-        if(!modelLibrary[selectedModel])
-            return;
+        let clone;
 
-        const clone =
-        modelLibrary[selectedModel]
-        .clone(true);
+        if(selectedModel === "wall")
+        {
+            clone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8b59a}));
+            clone.scale.set(4,3,0.3);
+        }
+        else
+        {
+            if(!modelLibrary[selectedModel])
+                return;
 
-        clone.position.copy(
-            groundHit[0].point
-        );
+            clone = modelLibrary[selectedModel].clone(true);
+        }
+
+        clone.position.copy(groundHit[0].point);
 
         clone.scale.setScalar(1);
 
-        const box =
-            new THREE.Box3()
-            .setFromObject(clone);
+        const box = new THREE.Box3().setFromObject(clone);
 
-        const size =
-            new THREE.Vector3();
+        const size = new THREE.Vector3();
 
         box.getSize(size);
 
@@ -559,12 +642,17 @@ window.addEventListener(
             root:clone,
 
             data:
-            {
-                model:selectedModel,
-                radius:Math.max(size.x,size.z) * 0.5,
-                height:size.y,
-                scale:1
-            }
+                {
+                    name:selectedModel + "_" + objectId++,
+
+                    model:selectedModel,
+
+                    radius:Math.max(size.x,size.z)*0.5,
+
+                    height:size.y,
+
+                    scale:1
+                }
         };
 
         clone.traverse(c=>
@@ -576,6 +664,7 @@ window.addEventListener(
         scene.add(clone);
 
         placedObjects.push(clone);
+        refreshHierarchy();
     }
 );
 
@@ -622,8 +711,18 @@ window.addEventListener(
                 );
             }
 
+            transformControls.detach(); 
+            // Clear any active gizmo state
+            transformControls.axis = null; 
             selectedObject = null;
-            transformControls.detach();
+            // Exit placement mode
+            selectedModel = null;
+
+            refreshHierarchy();
+
+            // Remove active state from all prop buttons
+            document.querySelectorAll(".propBtn").forEach(btn => btn.classList.remove("active"));
+            document.getElementById("inspector").innerHTML = "Selected: None";
 
             if(selectionHelper)
             {
@@ -636,10 +735,55 @@ window.addEventListener(
 );
 
 /////////////////////////////////////////////////////
+//  Button active state
+/////////////////////////////////////////////////////
+function selectModel(model, button)
+{
+    selectedModel = model;
+
+    document
+        .querySelectorAll(".propBtn")
+        .forEach(btn => btn.classList.remove("active"));
+
+    button.classList.add("active");
+}
+
+/////////////////////////////////////////////////////
+//  Refresh Hierarchy List
+/////////////////////////////////////////////////////
+function refreshHierarchy()
+{
+    const list =
+        document.getElementById("hierarchyList");
+
+    list.innerHTML = "";
+
+    placedObjects.forEach(obj=>
+    {
+        const item =
+            document.createElement("div");
+
+        item.className = "hierarchy-item";
+
+        item.innerText =
+            obj.userData.data.name;
+
+        if(obj===selectedObject)
+            item.classList.add("active");
+
+        item.onclick=()=>
+        {
+            selectObject(obj);
+        };
+
+        list.appendChild(item);
+    });
+}
+/////////////////////////////////////////////////////
 // Select Object
 /////////////////////////////////////////////////////
 function selectObject(obj)
-{
+{ 
     if(selectionHelper)
     {
         scene.remove(selectionHelper);
@@ -651,6 +795,10 @@ function selectObject(obj)
     }
 
     selectedObject = obj;
+    // Exit placement mode when an object is selected
+    selectedModel = null; 
+    // Remove active state from all prop buttons
+    document.querySelectorAll(".propBtn").forEach(btn => btn.classList.remove("active"));
     transformControls.attach(selectedObject);
 
     selectionHelper = new THREE.BoxHelper( obj, 0xffff00 );
@@ -664,6 +812,8 @@ function selectObject(obj)
     selectedObject.userData.axesHelper = axes;
 
     document.getElementById("inspector").innerHTML =`Selected: ${obj.userData.data.model}<br>Scale: ${obj.scale.x.toFixed(2)}`;
+
+    refreshHierarchy();
 }
 
 
@@ -691,10 +841,8 @@ function deleteSelected()
 
     scene.remove(selectedObject);
 
-    placedObjects =
-        placedObjects.filter(
-            x => x !== selectedObject
-        );
+    placedObjects = placedObjects.filter(x => x !== selectedObject);
+    refreshHierarchy();
 
     transformControls.detach();
     selectedObject = null;
@@ -796,13 +944,12 @@ function exportLevel()
                 height:
                     obj.userData.data.height,
 
-                scale:Number(
-                    obj.scale.x.toFixed(2)
-                    /*
+                scale:
+                {
                     x:Number(obj.scale.x.toFixed(2)),
                     y:Number(obj.scale.y.toFixed(2)),
-                    z:Number(obj.scale.z.toFixed(2)) */
-                ),
+                    z:Number(obj.scale.z.toFixed(2))
+                },
 
                 rotation:Number((THREE.MathUtils.radToDeg(obj.rotation.y)).toFixed(1))
             });
