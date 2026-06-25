@@ -588,12 +588,14 @@ window.addEventListener(
         {
             if(hit.object.userData.editorObject)
             {
-                selectObject(hit.object.userData.root);
+                let obj = hit.object;
 
-                console.log(
-                    "Selected",
-                    selectedObject
-                );
+                while(obj.parent && !placedObjects.includes(obj))
+                {
+                    obj = obj.parent;
+                }
+
+                selectObject(obj);
 
                 return;
             }
@@ -639,7 +641,6 @@ window.addEventListener(
         clone.userData =
         {
             editorObject:true,
-            root:clone,
 
             data:
                 {
@@ -658,7 +659,7 @@ window.addEventListener(
         clone.traverse(c=>
         {
             c.userData.editorObject=true;
-            c.userData.root=clone;
+            //c.userData.root=clone;
         });
 
         scene.add(clone);
@@ -670,17 +671,12 @@ window.addEventListener(
 
 
 ///////////////////////////////////////////////////////
-// DeSelect Object
+// Object Manual movements + Escape to Deselect 
 ///////////////////////////////////////////////////////
 window.addEventListener(
     "keydown",
     e =>
     {
-        if(e.key === "Delete")
-        {
-            deleteSelected();
-            return;
-        }
 
         if(selectedObject)
         {
@@ -818,6 +814,73 @@ function selectObject(obj)
 
 
 //////////////////////////////////////////////////////
+// Duplicate
+//////////////////////////////////////////////////////
+function duplicateSelected()
+{
+    if (!selectedObject)
+        return;
+
+    const model = selectedObject.userData.data.model;
+
+    let clone;
+
+    // Wall
+    if(model === "wall")
+    {
+        clone = new THREE.Mesh(
+            new THREE.BoxGeometry(1,1,1),
+            new THREE.MeshLambertMaterial({
+                color:0xc8b59a
+            })
+        );
+    }
+    else
+    {
+        if(!modelLibrary[model])
+            return;
+
+        clone = modelLibrary[model].clone(true);
+    }
+
+    // Copy transform
+    clone.position.copy(selectedObject.position);
+    clone.rotation.copy(selectedObject.rotation);
+    clone.scale.copy(selectedObject.scale);
+
+    // Offset slightly
+    clone.position.x += 2;
+    clone.position.z += 2;
+
+    // Editor data
+    clone.userData =
+    {
+        editorObject:true,
+
+        data:
+        {
+            name:model + "_" + objectId++,
+            model:model,
+            radius:selectedObject.userData.data.radius,
+            height:selectedObject.userData.data.height,
+            scale:selectedObject.userData.data.scale
+        }
+    };
+
+    clone.traverse(child=>
+    {
+        child.userData.editorObject = true;
+    });
+
+    scene.add(clone);
+
+    placedObjects.push(clone);
+
+    selectObject(clone);
+
+    refreshHierarchy();
+}
+//////////////////////////////////////////////////////
 // Delete
 //////////////////////////////////////////////////////
 
@@ -854,17 +917,30 @@ function deleteSelected()
 }
 
 //////////////////////////////////////////////////////
-// Rotate
+// keydown - shoertcuts
 //////////////////////////////////////////////////////
-
- 
-
 window.addEventListener(
     "keydown",
     e =>
     {
         if(!selectedObject)
             return;
+
+        
+        if(e.key === "Delete")
+        {
+            deleteSelected();
+            return;
+        }    
+
+        if(e.ctrlKey && e.key.toLowerCase()=="d")
+        {
+            e.preventDefault();
+
+            duplicateSelected();
+
+            return;
+        }    
 
         switch(e.key.toLowerCase())
         {
