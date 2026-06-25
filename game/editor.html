@@ -25,20 +25,28 @@ body{
 #hierarchy
 {
     position:absolute;
-
     top:10px;
     right:10px;
-
     width:260px;
     height:500px;
-
     background:#222;
     color:white;
-
     border-radius:10px;
-
     overflow:hidden;
+    z-index:100;
+}
 
+/* Inspector panel */
+#inspector {
+    position:absolute;
+    top:520px; /* below hierarchy */
+    right:10px;
+    width:260px;
+    background:#222;
+    color:white;
+    border-radius:10px;
+    padding:10px;
+    overflow:auto;
     z-index:100;
 }
 
@@ -187,10 +195,10 @@ textarea{
 <button onclick="deleteSelected()">Delete Selected</button>
 
 <button onclick="exportLevel()">Export Level</button>
-<div id="inspector">Selected: None</div>
 <textarea id="output"></textarea>
 
 </div>
+<!-- Removed duplicate toolbar buttons -->
 <div id="hierarchy">
 
     <div class="hierarchy-header">
@@ -201,6 +209,37 @@ textarea{
 
     </div>
 
+</div>
+
+<!-- Inspector Panel (Unity style) -->
+<div id="inspector">
+    <h3>Inspector</h3>
+    <div>
+        <b>Name</b>
+        <div id="objName">None</div>
+    </div>
+    <hr>
+    <div>
+        <b>Position</b><br>
+        X <input id="posX" type="number" step="0.1" />
+        Y <input id="posY" type="number" step="0.1" />
+        Z <input id="posZ" type="number" step="0.1" />
+    </div>
+    <hr>
+    <div>
+        <b>Rotation</b><br>
+        Y <input id="rotY" type="number" />
+    </div>
+    <hr>
+    <div>
+        <label>
+            <input type="checkbox" id="uniformScale" /> Uniform Scale
+        </label>
+        <br>
+        X <input id="scaleX" type="number" step="0.1" />
+        Y <input id="scaleY" type="number" step="0.1" />
+        Z <input id="scaleZ" type="number" step="0.1" />
+    </div>
 </div>
 <div id="helpModal" class="help-modal">
 
@@ -303,6 +342,64 @@ transformControls = new THREE.TransformControls(
     camera,
     renderer.domElement
 );
+
+// Uniform scaling handling (checkbox)
+const uniformCheckbox = document.getElementById('uniformScale');
+uniformCheckbox.addEventListener('change', () => {
+    if (selectedObject && uniformCheckbox.checked) {
+        const s = selectedObject.scale.x;
+        selectedObject.scale.set(s, s, s);
+        updateInspectorFields();
+    }
+});
+
+// Keep scaling uniform during transform if checkbox is checked
+transformControls.addEventListener('objectChange', () => {
+    if (selectedObject && uniformCheckbox.checked) {
+        const s = selectedObject.scale.x;
+        selectedObject.scale.set(s, s, s);
+    }
+    updateInspectorFields();
+});
+
+// Input listeners to edit object properties
+function attachInspectorInputListeners() {
+    const posX = document.getElementById('posX');
+    const posY = document.getElementById('posY');
+    const posZ = document.getElementById('posZ');
+    const rotY = document.getElementById('rotY');
+    const scaleX = document.getElementById('scaleX');
+    const scaleY = document.getElementById('scaleY');
+    const scaleZ = document.getElementById('scaleZ');
+
+    posX.addEventListener('change', () => { if(selectedObject) selectedObject.position.x = parseFloat(posX.value); });
+    posY.addEventListener('change', () => { if(selectedObject) selectedObject.position.y = parseFloat(posY.value); });
+    posZ.addEventListener('change', () => { if(selectedObject) selectedObject.position.z = parseFloat(posZ.value); });
+    rotY.addEventListener('change', () => { if(selectedObject) selectedObject.rotation.y = THREE.MathUtils.degToRad(parseFloat(rotY.value)); });
+    scaleX.addEventListener('change', () => { if(selectedObject) selectedObject.scale.x = parseFloat(scaleX.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.x, selectedObject.scale.x, selectedObject.scale.x); updateInspectorFields(); } });
+    scaleY.addEventListener('change', () => { if(selectedObject) selectedObject.scale.y = parseFloat(scaleY.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.y, selectedObject.scale.y, selectedObject.scale.y); updateInspectorFields(); } });
+    scaleZ.addEventListener('change', () => { if(selectedObject) selectedObject.scale.z = parseFloat(scaleZ.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.z, selectedObject.scale.z, selectedObject.scale.z); updateInspectorFields(); } });
+}
+
+// Attach the inspector input listeners once the DOM is ready
+if (document.readyState !== 'loading') {
+    attachInspectorInputListeners();
+} else {
+    document.addEventListener('DOMContentLoaded', attachInspectorInputListeners);
+}
+
+// Clear inspector fields
+function clearInspector() {
+    document.getElementById('objName').innerText = 'None';
+    document.getElementById('posX').value = '';
+    document.getElementById('posY').value = '';
+    document.getElementById('posZ').value = '';
+    document.getElementById('rotY').value = '';
+    document.getElementById('scaleX').value = '';
+    document.getElementById('scaleY').value = '';
+    document.getElementById('scaleZ').value = '';
+    uniformCheckbox.checked = false;
+}
 
 let isTransforming = false;
 
@@ -681,22 +778,35 @@ window.addEventListener(
         if(selectedObject)
         {
             if(e.key==="ArrowUp")
+            {
                 selectedObject.position.z -= moveSpeed;
-
+                updateInspectorFields();
+            } 
             if(e.key==="ArrowDown")
+            {
                 selectedObject.position.z += moveSpeed;
-
+                updateInspectorFields();
+            } 
             if(e.key==="ArrowLeft")
+            {
                 selectedObject.position.x -= moveSpeed;
-
+                updateInspectorFields();
+            } 
             if(e.key==="ArrowRight")
+            {
                 selectedObject.position.x += moveSpeed;
-
-            if(e.key==="PageUp") 
+                updateInspectorFields();
+            } 
+            if(e.key==="PageUp")
+            {
                 selectedObject.position.y += 0.5; 
-
-            if(e.key==="PageDown") 
+                updateInspectorFields();
+            }  
+            if(e.key==="PageDown")
+            {
                 selectedObject.position.y -= 0.5; 
+                updateInspectorFields();
+            } 
         }
         if(e.key === "Escape")
         {
@@ -718,7 +828,8 @@ window.addEventListener(
 
             // Remove active state from all prop buttons
             document.querySelectorAll(".propBtn").forEach(btn => btn.classList.remove("active"));
-            document.getElementById("inspector").innerHTML = "Selected: None";
+            // Clear inspector fields on deselect
+            clearInspector();
 
             if(selectionHelper)
             {
@@ -735,8 +846,37 @@ window.addEventListener(
 /////////////////////////////////////////////////////
 function selectModel(model, button)
 {
+    // Enter Placement Mode
     selectedModel = model;
 
+    // Exit Selection Mode
+    if(selectedObject)
+    {
+        // Remove transform gizmo
+        transformControls.detach();
+
+        // Remove yellow selection box
+        if(selectionHelper)
+        {
+            scene.remove(selectionHelper);
+            selectionHelper = null;
+        }
+
+        // Remove axes helper
+        if(selectedObject.userData.axesHelper)
+        {
+            selectedObject.remove(selectedObject.userData.axesHelper);
+            delete selectedObject.userData.axesHelper;
+        }
+
+        selectedObject = null;
+
+        refreshHierarchy();
+
+        clearInspector();
+    }
+
+    // Update toolbar buttons
     document
         .querySelectorAll(".propBtn")
         .forEach(btn => btn.classList.remove("active"));
@@ -778,38 +918,39 @@ function refreshHierarchy()
 /////////////////////////////////////////////////////
 // Select Object
 /////////////////////////////////////////////////////
-function selectObject(obj)
-{ 
-    if(selectionHelper)
-    {
+function selectObject(obj) {
+    if (selectionHelper) {
         scene.remove(selectionHelper);
     }
-
-    if(selectedObject?.userData?.axesHelper)
-    {
+    if (selectedObject?.userData?.axesHelper) {
         selectedObject.remove(selectedObject.userData.axesHelper);
     }
-
     selectedObject = obj;
-    // Exit placement mode when an object is selected
-    selectedModel = null; 
-    // Remove active state from all prop buttons
-    document.querySelectorAll(".propBtn").forEach(btn => btn.classList.remove("active"));
+    selectedModel = null;
+    document.querySelectorAll('.propBtn').forEach(btn => btn.classList.remove('active'));
     transformControls.attach(selectedObject);
 
-    selectionHelper = new THREE.BoxHelper( obj, 0xffff00 );
-
+    selectionHelper = new THREE.BoxHelper(obj, 0xffff00);
     scene.add(selectionHelper);
-
+    
     const axes = new THREE.AxesHelper(5);
-
     selectedObject.add(axes);
-
     selectedObject.userData.axesHelper = axes;
-
-    document.getElementById("inspector").innerHTML =`Selected: ${obj.userData.data.model}<br>Scale: ${obj.scale.x.toFixed(2)}`;
-
+    // Populate inspector fields
+    updateInspectorFields();
     refreshHierarchy();
+}
+
+function updateInspectorFields() {
+    if (!selectedObject) return;
+    document.getElementById('objName').innerText = selectedObject.userData.data.name;
+    document.getElementById('posX').value = selectedObject.position.x.toFixed(2);
+    document.getElementById('posY').value = selectedObject.position.y.toFixed(2);
+    document.getElementById('posZ').value = selectedObject.position.z.toFixed(2);
+    document.getElementById('rotY').value = THREE.MathUtils.radToDeg(selectedObject.rotation.y).toFixed(1);
+    document.getElementById('scaleX').value = selectedObject.scale.x.toFixed(2);
+    document.getElementById('scaleY').value = selectedObject.scale.y.toFixed(2);
+    document.getElementById('scaleZ').value = selectedObject.scale.z.toFixed(2);
 }
 
 
@@ -910,10 +1051,8 @@ function deleteSelected()
     transformControls.detach();
     selectedObject = null;
 
-    document.getElementById(
-        "inspector"
-    ).innerHTML =
-    "Selected: None";
+        // Clear inspector fields instead of overwriting the panel
+        clearInspector();
 }
 
 //////////////////////////////////////////////////////
