@@ -154,12 +154,14 @@ textarea{
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 
 <script>
 
 let scene;
 let camera;
 let renderer;
+let transformControls;
 
 let raycaster = new THREE.Raycaster();
 let mouse = new THREE.Vector2();
@@ -185,6 +187,7 @@ new THREE.Vector3(0,0,0);
 
 let rightMouseDown = false;
 let middleMouseDown = false;
+
 
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -218,6 +221,22 @@ document.body.appendChild(
     renderer.domElement
 );
 
+transformControls = new THREE.TransformControls(
+    camera,
+    renderer.domElement
+);
+
+let isTransforming = false;
+
+transformControls.addEventListener(
+    "dragging-changed",
+    e =>
+    {
+        isTransforming = e.value;
+    }
+);
+
+scene.add(transformControls);
 renderer.domElement.addEventListener(
     "mousedown",
     e => e.preventDefault()
@@ -376,7 +395,7 @@ window.addEventListener(
     e =>
     {
         // Right Mouse Orbit
-        if(rightMouseDown)
+        if(rightMouseDown && !isTransforming)
         {
             orbitYaw -= e.movementX * 0.005;
 
@@ -392,7 +411,7 @@ window.addEventListener(
         }
 
         // Middle Mouse Pan
-        if(middleMouseDown)
+        if(middleMouseDown && !isTransforming)
         {
             const dx =
                 e.clientX - lastMouseX;
@@ -444,6 +463,12 @@ window.addEventListener(
     "mousedown",
     e =>
     {
+        // Don't place objects while using the transform gizmo
+        if (transformControls.axis !== null) 
+            return; 
+        if (isTransforming)
+            return;
+
         const toolbar = document.getElementById("toolbar");
 
         const helpModal = document.getElementById("helpModal");
@@ -479,11 +504,7 @@ window.addEventListener(
             camera
         );
 
-        const objectHits =
-        raycaster.intersectObjects(
-            scene.children,
-            true
-        );
+        const objectHits = raycaster.intersectObjects(placedObjects,true);
 
         for(let hit of objectHits)
         {
@@ -602,6 +623,7 @@ window.addEventListener(
             }
 
             selectedObject = null;
+            transformControls.detach();
 
             if(selectionHelper)
             {
@@ -629,6 +651,7 @@ function selectObject(obj)
     }
 
     selectedObject = obj;
+    transformControls.attach(selectedObject);
 
     selectionHelper = new THREE.BoxHelper( obj, 0xffff00 );
 
@@ -673,6 +696,7 @@ function deleteSelected()
             x => x !== selectedObject
         );
 
+    transformControls.detach();
     selectedObject = null;
 
     document.getElementById(
@@ -685,6 +709,8 @@ function deleteSelected()
 // Rotate
 //////////////////////////////////////////////////////
 
+ 
+
 window.addEventListener(
     "keydown",
     e =>
@@ -692,56 +718,51 @@ window.addEventListener(
         if(!selectedObject)
             return;
 
-        if(e.key==="q")
+        switch(e.key.toLowerCase())
         {
-            selectedObject.rotation.y +=
-                THREE.MathUtils.degToRad(5);
-        }
+            case "w":
+                transformControls.setMode("translate");
+                break;
 
-        if(e.key==="e")
-        {
-            selectedObject.rotation.y -=
-                THREE.MathUtils.degToRad(5);
+            case "e":
+                transformControls.setMode("rotate");
+                break;
+
+            case "r":
+                transformControls.setMode("scale");
+                break;
+
+            case "q":
+                transformControls.setSpace(transformControls.space === "world" ? "local" : "world" );
+                break;
+            case "f":
+                if(selectedObject)
+                {
+                    orbitTarget.copy(selectedObject.position);
+                    orbitDistance = 20;
+                }
+                break;    
         }
     }
 );
 
+
+
 //////////////////////////////////////////////////////
-// Scale
+// Mouse Wheel - Camera Zoom
 //////////////////////////////////////////////////////
 
 window.addEventListener(
     "wheel",
     e =>
     {
-        if(selectedObject)
-        {
-            let s =
-                selectedObject.scale.x;
+        orbitDistance += e.deltaY * 0.02;
 
-            s +=
-                e.deltaY > 0
-                ? -0.1
-                : 0.1;
-
-            s = Math.max(
-                0.1,
-                s
-            );
-
-            selectedObject.scale.setScalar(s);
-
-            return;
-        }
-
-        orbitDistance +=
-            e.deltaY * 0.02;
-
-        orbitDistance =
-            Math.max(
-                5,
-                orbitDistance
-            );
+        orbitDistance = THREE.MathUtils.clamp(
+            orbitDistance,
+            5,
+            300
+        );
     }
 );
 
@@ -777,6 +798,10 @@ function exportLevel()
 
                 scale:Number(
                     obj.scale.x.toFixed(2)
+                    /*
+                    x:Number(obj.scale.x.toFixed(2)),
+                    y:Number(obj.scale.y.toFixed(2)),
+                    z:Number(obj.scale.z.toFixed(2)) */
                 ),
 
                 rotation:Number((THREE.MathUtils.radToDeg(obj.rotation.y)).toFixed(1))
