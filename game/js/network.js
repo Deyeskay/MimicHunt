@@ -123,6 +123,86 @@ const Network = {
     },
 
     /*=================================================================
+      Snapshot buffer (entity interpolation)
+      ---------------------------------------------------------------
+      Rather than chasing the single latest snapshot, we keep a short
+      time-stamped history and render REMOTE players slightly behind real
+      time (INTERP_DELAY). Each frame we sample the transform at
+      (now - INTERP_DELAY) by linearly interpolating between the two
+      snapshots that bracket that instant. This absorbs packet-timing
+      jitter and dropped packets far better than easing toward "latest".
+
+      Snapshots are stamped with LOCAL arrival time (this.now()), so the
+      math never depends on the host/client clocks agreeing. The host
+      buffers its own outgoing snapshots too, so both ends render through
+      the identical pipeline. Local player is always predicted, never
+      sampled from here.
+    =================================================================*/
+    INTERP_DELAY: 100,        // ms behind real time (~2 snapshots @ 20 Hz)
+    _snapshotBuffer: [],
+
+    pushSnapshot(players) {
+        const t = this.now();
+        this._snapshotBuffer.push({ t, players });
+
+        // Drop history older than ~1s, but always keep at least two frames
+        // so interpolation has something to work with.
+        const cutoff = t - 1000;
+        while (this._snapshotBuffer.length > 2 &&
+               this._snapshotBuffer[0].t < cutoff) {
+            this._snapshotBuffer.shift();
+        }
+    },
+
+    // Returns an { id: {x,y,z,rotY} } map interpolated at renderTime, or null
+    // if nothing is buffered yet. Holds at the oldest/newest frame outside the
+    // buffered range (no extrapolation — a starved buffer pauses, not jitters).
+    sampleSnapshot(renderTime) {
+        const buf = this._snapshotBuffer;
+        if (buf.length === 0) return null;
+        if (buf.length === 1) return buf[0].players;
+        if (renderTime <= buf[0].t) return buf[0].players;
+
+        const last = buf[buf.length - 1];
+        if (renderTime >= last.t) return last.players;
+
+        for (let i = 0; i < buf.length - 1; i++) {
+            const a = buf[i];
+            const b = buf[i + 1];
+            if (renderTime >= a.t && renderTime <= b.t) {
+                const span = b.t - a.t;
+                const alpha = span > 0 ? (renderTime - a.t) / span : 0;
+                return this._lerpPlayers(a.players, b.players, alpha);
+            }
+        }
+        return last.players;
+    },
+
+    _lerpPlayers(a, b, alpha) {
+        const out = {};
+        for (const id in b) {
+            const pb = b[id];
+            const pa = a[id];
+            if (!pa) { out[id] = { x: pb.x, y: pb.y, z: pb.z, rotY: pb.rotY }; continue; }
+            out[id] = {
+                x: pa.x + (pb.x - pa.x) * alpha,
+                y: pa.y + (pb.y - pa.y) * alpha,
+                z: pa.z + (pb.z - pa.z) * alpha,
+                rotY: this._lerpAngle(pa.rotY, pb.rotY, alpha)
+            };
+        }
+        return out;
+    },
+
+    // Shortest-path angular interpolation (handles the -PI/+PI wrap).
+    _lerpAngle(from, to, t) {
+        let diff = to - from;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        return from + diff * t;
+    },
+
+    /*=================================================================
       Send the local player's disguise to the host as a discrete event
       (only when it actually changes — see Mechanics.handleDisguiseSwap).
       No-ops on the host, which has no connToHost.
@@ -357,7 +437,11 @@ const Network = {
         // travel separately as discrete events, not in this hot path.
         networkInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
-            this.broadcast(this.buildSnapshot());
+            const snap = this.buildSnapshot();
+            this.broadcast(snap);
+            // Buffer locally too, so the host renders remote players through the
+            // same interpolated, render-behind pipeline the clients use.
+            this.pushSnapshot(snap.players);
         }, 1000 / NETWORK_SEND_RATE);
     },
 
@@ -391,10 +475,12 @@ const Network = {
                 break;
 
             case 'snapshot': {
-                // Lightweight movement update. Surgically patch only remote
-                // players' transforms — our own record is left untouched so our
-                // 60 FPS prediction is never overwritten. Authoritative non-
-                // transform state (disguise/caught/ready) arrives via events.
+                // Lightweight movement update. We don't write transforms into
+                // gameState directly — we buffer them and let the render loop
+                // sample an interpolated, render-behind transform per remote
+                // player. Our own player is predicted at 60 FPS, never sampled.
+                // Authoritative non-transform state (disguise/caught/ready)
+                // arrives via discrete events.
 
                 // Timestamp guard: ignore stale / out-of-order snapshots.
                 if (data.t !== undefined &&
@@ -405,16 +491,7 @@ const Network = {
                 gameState.phase = data.phase;
                 gameState.timer = data.timer;
 
-                for (const id in data.players) {
-                    if (id === myId) continue;            // never clobber our prediction
-                    const local = gameState.players[id];
-                    if (!local) continue;                  // roster is fixed at gameStart
-                    const incoming = data.players[id];
-                    local.x = incoming.x;
-                    local.y = incoming.y;
-                    local.z = incoming.z;
-                    local.rotY = incoming.rotY;
-                }
+                this.pushSnapshot(data.players);
 
                 if (gameState.phase !== 'LOBBY') UI.updateHUD();
                 break;
@@ -510,8 +587,9 @@ const Network = {
         if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 
-        // Reset packet-ordering state for the next match
+        // Reset packet-ordering / interpolation state for the next match
         this._lastSnapshotT = undefined;
+        this._snapshotBuffer = [];
 
         // Remove meshes
         for (let id in playerMeshes) scene.remove(playerMeshes[id]);

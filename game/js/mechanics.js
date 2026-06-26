@@ -251,9 +251,10 @@ const Mechanics = {
         const hidersLeft = players.filter(p => p.role === 'Hider' && !p.isCaught).length;
         if (hidersLeft === 0 && players.filter(p => p.role === 'Hider').length > 0) {
             gameState.phase = 'ENDED';
-            UI.showModal("Game Over", "Seeker Wins! All props found.", () => {
-                Network.cleanup();
-            });
+            // finishMatch broadcasts gameOver to every client (so hiders also
+            // see the end screen) and shows the host's modal — previously this
+            // path only opened the modal on the host.
+            Network.finishMatch("Game Over", "Seeker Wins! All props found.");
         }
     }
 };

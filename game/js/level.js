@@ -101,30 +101,6 @@ const Level = {
         );
     },
 
-    // Shortest-path angular interpolation (handles the -PI/+PI wrap).
-    lerpAngle: function(from, to, t) {
-        let diff = to - from;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        return from + diff * t;
-    },
-
-    // Remote-player interpolation speed (higher = snappier catch-up). Network
-    // snapshots arrive at NETWORK_SEND_RATE (20 Hz); each render frame we ease
-    // the rendered transform toward the latest snapshot so remote players glide
-    // instead of teleporting every ~50 ms. The per-frame blend factor is
-    // derived from real frame time below, so the feel is identical at 30, 60,
-    // or 144 FPS. ~16 reproduces the old fixed 0.25-per-frame feel at 60 FPS.
-    INTERP_SPEED: 16,
-
-    // Frame-rate-independent smoothing factor: alpha = 1 - e^(-speed * dt).
-    // This is the exact exponential form (the linear speed*dt approximation
-    // overshoots at low FPS); clamped to [0,1] for safety on long frames.
-    interpAlpha: function(dt) {
-        const a = 1 - Math.exp(-this.INTERP_SPEED * dt);
-        return a < 0 ? 0 : (a > 1 ? 1 : a);
-    },
-
     updatePlayerMeshTransform: function(mesh, p) {
         if (p.disguiseType !== "player" && p.role !== "Seeker") {
             const baseHeight = PropLevel.getDisguiseBaseHeight(p);
@@ -147,13 +123,10 @@ const Level = {
     render: function() {
         if (!gameState || !gameState.players) return;
 
-        // Real elapsed frame time (seconds), for frame-rate-independent interp.
-        const nowMs = (typeof performance !== 'undefined' && performance.now)
-            ? performance.now() : Date.now();
-        let dt = (nowMs - (this._lastFrameTime || nowMs)) / 1000;
-        this._lastFrameTime = nowMs;
-        if (dt > 0.1) dt = 0.1;            // clamp after tab-out / hitch
-        const alpha = this.interpAlpha(dt);
+        // Sample remote players from the snapshot buffer at a fixed delay behind
+        // real time. Interpolation between buffered snapshots (in Network) does
+        // the smoothing, so the render loop just applies the result.
+        const sampled = Network.sampleSnapshot(Network.now() - Network.INTERP_DELAY);
 
         for (let id in playerMeshes) {
             if (!gameState.players[id]) {
@@ -185,29 +158,17 @@ const Level = {
 
             const mesh = playerMeshes[id];
 
-            // The local player is already simulated at 60 FPS, so render it
-            // exactly. Remote players only update at the network rate, so
-            // interpolate their rendered transform toward the latest snapshot.
+            // The local player is simulated at 60 FPS, so render it exactly.
+            // Remote players are drawn from the interpolated snapshot buffer;
+            // until a sample exists we fall back to their last known record.
             if (id === myId) {
                 this.updatePlayerMeshTransform(mesh, p);
             } else {
-                const ud = mesh.userData;
-                if (ud.renderX === undefined) {
-                    ud.renderX = p.x; ud.renderY = p.y; ud.renderZ = p.z;
-                    ud.renderRotY = p.rotY;
-                }
-                ud.renderX += (p.x - ud.renderX) * alpha;
-                ud.renderY += (p.y - ud.renderY) * alpha;
-                ud.renderZ += (p.z - ud.renderZ) * alpha;
-                ud.renderRotY = this.lerpAngle(ud.renderRotY, p.rotY, alpha);
-
-                this.updatePlayerMeshTransform(mesh, {
-                    ...p,
-                    x: ud.renderX,
-                    y: ud.renderY,
-                    z: ud.renderZ,
-                    rotY: ud.renderRotY
-                });
+                const s = sampled && sampled[id];
+                this.updatePlayerMeshTransform(
+                    mesh,
+                    s ? { ...p, x: s.x, y: s.y, z: s.z, rotY: s.rotY } : p
+                );
             }
         }
 
