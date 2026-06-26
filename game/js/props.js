@@ -205,6 +205,11 @@ const PropLevel = {
         const bounds = this.computeBounds(object);
         const data = object.userData.data;
 
+        // Only fields the runtime actually consumes are exported. centerX/Z,
+        // topY, radius and height are recomputed by enrichProp() at load time,
+        // so emitting them here would just be stale duplicate data. bottomY is
+        // kept because applyPropTransform() uses it to ground the prop before
+        // those bounds get recomputed.
         return {
             id: data.name,
             x: Number(object.position.x.toFixed(2)),
@@ -217,12 +222,7 @@ const PropLevel = {
             spawnPoint: data.spawnPoint,
             seekerSpawn: data.seekerSpawn,
             hiderSpawn: data.hiderSpawn,
-            radius: Number(bounds.radius.toFixed(2)),
-            height: Number(bounds.height.toFixed(2)),
-            topY: Number(bounds.topY.toFixed(2)),
             bottomY: Number(bounds.bottomY.toFixed(2)),
-            centerX: Number(bounds.centerX.toFixed(2)),
-            centerZ: Number(bounds.centerZ.toFixed(2)),
             scale: {
                 x: Number(object.scale.x.toFixed(2)),
                 y: Number(object.scale.y.toFixed(2)),

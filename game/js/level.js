@@ -30,6 +30,11 @@ const Level = {
     },
 
     spawnProp: function(prop) {
+        // Spawn markers are placement metadata only — they stay in mapProps3D so
+        // PropLevel.getSpawnPositions can find them, but they have no in-game
+        // mesh and are never rendered or collided with.
+        if (prop.model === 'spawn') return;
+
         const mesh = PropLevel.createPropMesh(prop, modelLibrary);
         if (!mesh) {
             console.warn("Missing model:", prop.model);

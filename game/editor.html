@@ -188,6 +188,7 @@ textarea{
 <button class="propBtn" onclick="selectModel('rock',this)">Rock</button>
 <button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
 <button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
+<button class="propBtn" onclick="selectModel('spawn',this)">Spawn</button>
 
 
 <hr>
@@ -196,6 +197,11 @@ textarea{
 
 <button onclick="exportLevel()">Export Level</button>
 <textarea id="output"></textarea>
+
+<hr>
+
+<button onclick="importLevel()">Load Level</button>
+<textarea id="importInput" placeholder="Paste an exported level here, then click Load Level" style="height:120px"></textarea>
 
 </div>
 <!-- Removed duplicate toolbar buttons -->
@@ -802,23 +808,20 @@ window.addEventListener(
         if(groundHit.length === 0)
             return;
 
-        let clone;
+        const clone = createEditorMesh(selectedModel);
 
-        if(selectedModel === "wall")
-        {
-            clone = PropLevel.createWallMesh();
-        }
-        else
-        {
-            if(!modelLibrary[selectedModel])
-                return;
+        if(!clone)
+            return;
 
-            clone = modelLibrary[selectedModel].clone(true);
+        if(selectedModel !== "wall" && selectedModel !== "spawn")
             clone.scale.setScalar(1);
-        }
 
         clone.position.copy(groundHit[0].point);
         PropLevel.groundObject(clone, groundHit[0].point.y);
+
+        // Spawn markers are non-solid placement helpers; default them so they
+        // don't block movement and already count as a generic spawn point.
+        const isSpawn = selectedModel === "spawn";
 
         clone.userData =
         {
@@ -830,13 +833,13 @@ window.addEventListener(
 
                     model:selectedModel,
 
-                    collision:true,
+                    collision:!isSpawn,
 
                     climbable:false,
 
                     hideSpot:false,
 
-                    spawnPoint:false,
+                    spawnPoint:isSpawn,
 
                     seekerSpawn:false,
 
@@ -1066,19 +1069,10 @@ function duplicateSelected()
 
     const model = selectedObject.userData.data.model;
 
-    let clone;
+    const clone = createEditorMesh(model);
 
-    if(model === "wall")
-    {
-        clone = PropLevel.createWallMesh();
-    }
-    else
-    {
-        if(!modelLibrary[model])
-            return;
-
-        clone = modelLibrary[model].clone(true);
-    }
+    if(!clone)
+        return;
 
     clone.position.copy(selectedObject.position);
     clone.rotation.copy(selectedObject.rotation);
@@ -1235,8 +1229,188 @@ function exportLevel()
 {
     const result = placedObjects.map(obj => PropLevel.exportProp(obj));
 
+    // Emit the exact form the game loads: a `const forestLevel = [...]` that
+    // can be pasted straight into game/js/levels/forest.js (level.js reads the
+    // global `forestLevel`, not `mapProps3D`).
     document.getElementById("output").value =
-        "mapProps3D = " + JSON.stringify(result, null, 4) + ";";
+        "const forestLevel = " + JSON.stringify(result, null, 4) + ";";
+}
+
+//////////////////////////////////////////////////////
+// Import (re-open an exported level for editing)
+//////////////////////////////////////////////////////
+
+// Editor-only marker for a spawn point. Rendered as a translucent cone so it's
+// easy to see and move; it is never exported as geometry and the game skips it.
+function createSpawnMarkerMesh()
+{
+    return new THREE.Mesh(
+        new THREE.ConeGeometry(0.8, 2, 12),
+        new THREE.MeshBasicMaterial({
+            color:0xffd400,
+            transparent:true,
+            opacity:0.6
+        })
+    );
+}
+
+// Single source of truth for turning a model id into an editor mesh, shared by
+// click-to-place and Load Level. Returns null if a GLB model isn't loaded yet.
+function createEditorMesh(model)
+{
+    if(model === "wall")
+        return PropLevel.createWallMesh();
+
+    if(model === "spawn")
+        return createSpawnMarkerMesh();
+
+    if(!modelLibrary[model])
+        return null;
+
+    return modelLibrary[model].clone(true);
+}
+
+// Rebuild a single editor object from exported prop data. Mirrors the click-to-
+// place path so imported objects behave identically (select/move/scale/export).
+// Returns the created object, or null if its model isn't loaded yet.
+function buildEditorObject(prop)
+{
+    const clone = createEditorMesh(prop.model);
+
+    if(!clone)
+        return null;
+
+    clone.position.set(prop.x || 0, prop.y || 0, prop.z || 0);
+
+    if(prop.scale)
+    {
+        if(typeof prop.scale === "number")
+            clone.scale.setScalar(prop.scale);
+        else
+            clone.scale.set(prop.scale.x, prop.scale.y, prop.scale.z);
+    }
+
+    if(prop.rotation)
+    {
+        clone.rotation.set(
+            THREE.MathUtils.degToRad(prop.rotation.x || 0),
+            THREE.MathUtils.degToRad(prop.rotation.y || 0),
+            THREE.MathUtils.degToRad(prop.rotation.z || 0)
+        );
+    }
+
+    clone.userData =
+    {
+        editorObject:true,
+
+        data:
+            {
+                name:        prop.id || (prop.model + "_" + objectId++),
+                model:       prop.model,
+                collision:   prop.collision   ?? true,
+                climbable:   prop.climbable    ?? false,
+                hideSpot:    prop.hideSpot     ?? false,
+                spawnPoint:  prop.spawnPoint   ?? false,
+                seekerSpawn: prop.seekerSpawn  ?? false,
+                hiderSpawn:  prop.hiderSpawn   ?? false
+            }
+    };
+
+    PropLevel.syncBoundsToData(clone);
+
+    clone.traverse(c =>
+    {
+        c.userData.editorObject = true;
+    });
+
+    scene.add(clone);
+    placedObjects.push(clone);
+
+    return clone;
+}
+
+// Remove every placed object and reset selection/inspector state.
+function clearAllObjects()
+{
+    if(selectionHelper)
+    {
+        scene.remove(selectionHelper);
+        selectionHelper = null;
+    }
+
+    if(selectedObject?.userData?.axesHelper)
+        selectedObject.remove(selectedObject.userData.axesHelper);
+
+    transformControls.detach();
+    selectedObject = null;
+
+    placedObjects.forEach(o => scene.remove(o));
+    placedObjects = [];
+
+    clearInspector();
+}
+
+function importLevel()
+{
+    const raw = document.getElementById("importInput").value;
+
+    // Accept the raw `const forestLevel = [...]` / `mapProps3D = [...]` form or a
+    // plain JSON array by slicing out the outermost [ ... ] and parsing it.
+    const start = raw.indexOf("[");
+    const end   = raw.lastIndexOf("]");
+
+    if(start === -1 || end === -1 || end < start)
+    {
+        alert("Couldn't find a level array ([ ... ]) in the pasted text.");
+        return;
+    }
+
+    let props;
+    try
+    {
+        props = JSON.parse(raw.slice(start, end + 1));
+    }
+    catch(err)
+    {
+        alert("Invalid level data: " + err.message);
+        return;
+    }
+
+    if(!Array.isArray(props))
+    {
+        alert("Parsed data is not an array of props.");
+        return;
+    }
+
+    if(placedObjects.length &&
+       !confirm("Replace the current " + placedObjects.length +
+                " object(s) with the imported level?"))
+        return;
+
+    clearAllObjects();
+
+    let loaded = 0;
+    const missing = [];
+
+    props.forEach(p =>
+    {
+        if(buildEditorObject(p))
+            loaded++;
+        else
+            missing.push(p.model);
+    });
+
+    // Keep auto-generated names from colliding with imported ones.
+    objectId = Math.max(objectId, placedObjects.length + 1);
+
+    refreshHierarchy();
+
+    let msg = "Imported " + loaded + " object(s).";
+    if(missing.length)
+        msg += "  Skipped (model not loaded): " +
+               [...new Set(missing)].join(", ");
+
+    document.getElementById("output").value = msg;
 }
 
  
