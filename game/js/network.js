@@ -291,117 +291,193 @@ const Network = {
     runHostLogic() {
         // Phase: LOBBY
         gameState.phase = 'LOBBY';
-        const usedSpawns = [];
+        this._usedSpawns = [];
         gameState.players = {};
         connections = [];
 
         // Create host player (Seeker)
-        gameState.players[myId] = this.createPlayer('Seeker', usedSpawns);
+        gameState.players[myId] = this.createPlayer('Seeker', this._usedSpawns);
         localPos = { ...gameState.players[myId] };
 
         UI.updateLobby();
 
-        // Accept new connections
-        peer.on('connection', conn => {
+        // Accept new connections (and, after a migration, reconnecting survivors)
+        peer.on('connection', conn => this.acceptConnection(conn));
+
+        this.startHostLoops();
+    },
+
+    /*=================================================================
+      Accept an incoming connection as a host. Shared by the original
+      host, a migrated successor, and the successor's code-peer.
+      ---------------------------------------------------------------
+      We key on conn.peer: if that id already exists in our roster it's a
+      RECONNECTING survivor (host migration) — keep their record (role,
+      disguise, caught) and resync them. Otherwise it's a brand-new joiner,
+      allowed only in the lobby.
+    =================================================================*/
+    acceptConnection(conn) {
+        conn.on('open', () => {
+            const existing = gameState.players[conn.peer];
+
+            if (existing) {
+                // Reconnecting survivor — re-map, don't recreate.
+                if (!connections.includes(conn)) connections.push(conn);
+
+                const wasExpected = !!rejoinExpected[conn.peer];
+                if (wasExpected) {
+                    clearTimeout(rejoinExpected[conn.peer]);
+                    delete rejoinExpected[conn.peer];
+                }
+
+                conn.send({
+                    type: 'rejoinAck',
+                    players: gameState.players,
+                    phase: gameState.phase,
+                    timer: gameState.timer,
+                    hostId: myId,
+                    roomCode: pendingRoomCode
+                });
+
+                // If the hunter left and the round is being dissolved, tell the
+                // reconnecting survivor so they see the Hiders-win popup too.
+                if (wasExpected && this._pendingHidersWin) {
+                    conn.send({
+                        type: 'hidersWin',
+                        title: 'Hiders Win!',
+                        message: 'The hunter disconnected. Starting a new lobby.'
+                    });
+                }
+
+                if (gameState.phase === 'LOBBY') {
+                    UI.updateLobby();
+                    this.broadcast({ type: 'lobbySync', players: gameState.players });
+                }
+                return;
+            }
+
+            // Brand-new joiner — only allowed in the lobby.
             if (gameState.phase !== 'LOBBY') {
-                conn.on('open', () => conn.close());
+                conn.close();
                 return;
             }
             connections.push(conn);
-            gameState.players[conn.peer] = this.createPlayer('Hider', usedSpawns);
+            gameState.players[conn.peer] = this.createPlayer('Hider', this._usedSpawns || []);
             UI.updateLobby();
-
-            conn.on("open", () =>
-            {
-                conn.send({
-                    type: "lobbySync",
-                    players: gameState.players
-                });
-
-                this.broadcast({
-                    type: "lobbySync",
-                    players: gameState.players
-                });
-            });
-
-            // Incoming data from client
-            conn.on('data', data => {
-                switch (data.type) {
-                    case 'leave':
-                        // Client voluntarily left
-                        delete gameState.players[conn.peer];
-                        connections = connections.filter(c => c !== conn);
-                        UI.updateLobby();
-                        this.broadcast({
-                            type:"lobbySync",
-                            players:gameState.players
-                        });
-                        break;
-
-                    case 'lobbyReady':
-                        if (gameState.players[conn.peer]) {
-                            gameState.players[conn.peer].isReady = data.readyState;
-                            UI.updateLobby();
-                            // Immediately sync lobby to all clients
-                            this.broadcast({ type: 'lobbySync', players: gameState.players });
-                        }
-                        break;
-
-                    case 'clientMove': {
-                        // Frequent movement packet — transform only.
-                        const p = gameState.players[conn.peer];
-                        if (p && !p.isCaught) {
-                            // Drop stale / out-of-order packets (timestamp guard).
-                            if (data.t !== undefined &&
-                                p._lastMoveT !== undefined &&
-                                data.t <= p._lastMoveT) break;
-                            p._lastMoveT = data.t;
-                            p.x = data.x;
-                            p.y = data.y;
-                            p.z = data.z;
-                            p.rotY = data.rotY;
-                        }
-                        break;
-                    }
-
-                    case 'clientDisguise': {
-                        // Rare event packet — disguise change. Apply, then relay
-                        // to every OTHER client so they render this player right.
-                        const p = gameState.players[conn.peer];
-                        if (p) {
-                            p.disguiseType = data.disguiseType;
-                            p.disguiseSize = data.disguiseSize;
-                            p.propScale = data.propScale ?? 1;
-                            p.propHeight = data.propHeight ?? 2;
-                            p.propRadius = data.propRadius ?? 1;
-                            p.propRotation = data.propRotation ?? null;
-                            p.color = data.color;
-                            this.broadcastExcept({
-                                type: 'disguise',
-                                id: conn.peer,
-                                disguiseType: p.disguiseType,
-                                disguiseSize: p.disguiseSize,
-                                propScale: p.propScale,
-                                propHeight: p.propHeight,
-                                propRadius: p.propRadius,
-                                propRotation: p.propRotation,
-                                color: p.color
-                            }, conn.peer);
-                        }
-                        break;
-                    }
-                }
-            });
-
-                // Handle disconnects (unexpected)
-                conn.on('close', () => {
-                    delete gameState.players[conn.peer];
-                    connections = connections.filter(c => c.peer !== conn.peer);
-                    UI.updateLobby();
-                    // Sync updated lobby
-                    this.broadcast({ type: 'lobbySync', players: gameState.players });
-                });
+            conn.send({ type: 'lobbySync', players: gameState.players });
+            this.broadcast({ type: 'lobbySync', players: gameState.players });
         });
+
+        conn.on('data', data => this.handleClientData(conn, data));
+        conn.on('close', () => this.handleConnClose(conn));
+    },
+
+    /*=================================================================
+      Host-side: handle a packet from a connected client.
+    =================================================================*/
+    handleClientData(conn, data) {
+        switch (data.type) {
+            case 'leave':
+                // Client voluntarily left
+                delete gameState.players[conn.peer];
+                connections = connections.filter(c => c !== conn);
+                UI.updateLobby();
+                this.broadcast({ type: 'lobbySync', players: gameState.players });
+                this.checkHostAlone();
+                break;
+
+            case 'lobbyReady':
+                if (gameState.players[conn.peer]) {
+                    gameState.players[conn.peer].isReady = data.readyState;
+                    UI.updateLobby();
+                    this.broadcast({ type: 'lobbySync', players: gameState.players });
+                }
+                break;
+
+            case 'clientMove': {
+                // Frequent movement packet — transform only.
+                const p = gameState.players[conn.peer];
+                if (p && !p.isCaught) {
+                    // Drop stale / out-of-order packets (timestamp guard).
+                    if (data.t !== undefined &&
+                        p._lastMoveT !== undefined &&
+                        data.t <= p._lastMoveT) break;
+                    p._lastMoveT = data.t;
+                    p.x = data.x;
+                    p.y = data.y;
+                    p.z = data.z;
+                    p.rotY = data.rotY;
+                }
+                break;
+            }
+
+            case 'clientDisguise': {
+                // Rare event packet — disguise change. Apply, then relay
+                // to every OTHER client so they render this player right.
+                const p = gameState.players[conn.peer];
+                if (p) {
+                    p.disguiseType = data.disguiseType;
+                    p.disguiseSize = data.disguiseSize;
+                    p.propScale = data.propScale ?? 1;
+                    p.propHeight = data.propHeight ?? 2;
+                    p.propRadius = data.propRadius ?? 1;
+                    p.propRotation = data.propRotation ?? null;
+                    p.color = data.color;
+                    this.broadcastExcept({
+                        type: 'disguise',
+                        id: conn.peer,
+                        disguiseType: p.disguiseType,
+                        disguiseSize: p.disguiseSize,
+                        propScale: p.propScale,
+                        propHeight: p.propHeight,
+                        propRadius: p.propRadius,
+                        propRotation: p.propRotation,
+                        color: p.color
+                    }, conn.peer);
+                }
+                break;
+            }
+        }
+    },
+
+    /*=================================================================
+      Host-side: a client connection closed (left or crashed).
+    =================================================================*/
+    handleConnClose(conn) {
+        delete gameState.players[conn.peer];
+        connections = connections.filter(c => c.peer !== conn.peer);
+        // Stop awaiting a survivor that will never reconnect.
+        if (rejoinExpected[conn.peer]) {
+            clearTimeout(rejoinExpected[conn.peer]);
+            delete rejoinExpected[conn.peer];
+        }
+        UI.updateLobby();
+        this.broadcast({ type: 'lobbySync', players: gameState.players });
+        this.checkHostAlone();
+    },
+
+    /*=================================================================
+      Feature 1B: if every joiner has left during an active match and only
+      the host remains, tell the host and return them to the main menu.
+    =================================================================*/
+    checkHostAlone() {
+        const active = gameState.phase !== 'LOBBY' && gameState.phase !== 'ENDED';
+        if (active && connections.length === 0 && !isLeavingRoom) {
+            gameState.phase = 'ENDED';   // host loops early-return on ENDED
+            UI.showModal('All players left', 'Everyone has left the match.',
+                         () => this.cleanup());
+        }
+    },
+
+    /*=================================================================
+      Start (or restart) the three host loops: 1s timer, 60 FPS physics,
+      20 Hz snapshot broadcast. Clears any existing intervals first so a
+      migrated successor can never end up running two sets of loops.
+    =================================================================*/
+    startHostLoops() {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
+        if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
 
         // Timer loop (seconds)
         timerInterval = setInterval(() => {
@@ -449,13 +525,35 @@ const Network = {
       Client main loop
     =================================================================*/
     runClientLogic() {
-        // Receive packets from host
-        connToHost.on('data', data => {
-            
+        this.wireClientHandlers(connToHost);
+        this.startClientLoops();
+    },
+
+    /*=================================================================
+      Wire the data/close handlers for our connection to the host. Shared
+      by the initial join and by reconnection during host migration.
+    =================================================================*/
+    wireClientHandlers(conn) {
+        conn.on('data', data => this.handleHostData(data));
+        conn.on('close', () => this.onHostConnectionClose());
+    },
+
+    /*=================================================================
+      Client-side: handle a packet from the host.
+    =================================================================*/
+    handleHostData(data) {
         switch (data.type) {
 
             case 'lobbySync':
                 gameState.players = data.players;
+                if (data.roomCode) {
+                    pendingRoomCode = data.roomCode;
+                    const t = document.getElementById('lobby-title');
+                    if (t) t.innerText = `ROOM CODE: ${data.roomCode}`;
+                }
+                // A lobbySync can arrive after a migration while we were still
+                // in-game; make sure we're actually showing the lobby.
+                if (gameState.phase === 'LOBBY') UI.transitionToLobby();
                 UI.updateLobby();
                 break;
 
@@ -473,6 +571,36 @@ const Network = {
                 }
                 UI.transitionToGame();
                 break;
+
+            case 'rejoinAck': {
+                // Authoritative resync after reconnecting to a new host.
+                gameState.players = data.players;
+                gameState.phase = data.phase;
+                gameState.timer = data.timer;
+                this._snapshotBuffer = [];
+                this._lastSnapshotT = undefined;
+                migrating = false;
+                departedHostId = null;
+                if (data.roomCode) {
+                    pendingRoomCode = data.roomCode;
+                    const t = document.getElementById('lobby-title');
+                    if (t) t.innerText = `ROOM CODE: ${data.roomCode}`;
+                }
+                // Re-seed local prediction from our (preserved) record.
+                const me = gameState.players[myId];
+                if (me) {
+                    localPos = { x: me.x, y: me.y, z: me.z };
+                    cameraYaw = me.rotY || 0;
+                }
+                if (gameState.phase === 'LOBBY') {
+                    UI.transitionToLobby();
+                    UI.updateLobby();
+                } else {
+                    UI.transitionToGame();
+                    UI.updateHUD();
+                }
+                break;
+            }
 
             case 'snapshot': {
                 // Lightweight movement update. We don't write transforms into
@@ -519,35 +647,46 @@ const Network = {
                 break;
             }
 
+            case 'hidersWin':
+                // The hunter disconnected during migration. We're already (or
+                // about to be) dropped into the new host's lobby via lobbySync /
+                // rejoinAck, so this popup is purely informational.
+                UI.showModal(data.title, data.message, () => {});
+                break;
+
             case 'gameOver':
-                UI.showModal(data.title,data.message,() => this.cleanup());
+                // Terminal: the host will tear down; flag so the imminent
+                // connToHost 'close' does NOT kick off a host migration.
+                sessionEnding = true;
+                UI.showModal(data.title, data.message, () => this.cleanup());
                 break;
 
             case 'roomClosing':
-                UI.showModal('Room Closed','Host ended the match.',() => this.cleanup());
+                // Voluntary host shutdown — flag so the imminent connToHost
+                // 'close' does NOT trigger migration (this is not a crash).
+                sessionEnding = true;
+                UI.showModal('Room Closed', 'Host ended the match.', () => this.cleanup());
                 break;
-            }
-        });
+        }
+    },
 
-        // Host disconnects unexpectedly
-        connToHost.on('close', () => {
-            if (isLeavingRoom) return;
-            this.connectionLost();
-            //UI.showModal('Disconnected', 'Host left the match.', () => this.cleanup());
-        });
+    /*=================================================================
+      Start (or restart) the two client loops: 60 FPS prediction and the
+      20 Hz movement send. Clears existing intervals first (used on both
+      initial join and reconnection).
+    =================================================================*/
+    startClientLoops() {
+        if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
+        if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
 
-        // Physics / prediction loop — stays at 60 FPS for smooth local movement.
-        // Writes the predicted transform into our own player record every frame
-        // so rendering and the camera follow it smoothly between network updates.
+        // Physics / prediction loop — 60 FPS smooth local movement.
         gameLoopInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
             Mechanics.handleLocalMovement();
             this.applyLocalTransform(gameState.players[myId]);
         }, 1000 / 60);
 
-        // Network loop — send our movement to the host at NETWORK_SEND_RATE
-        // (20 Hz). Transform + timestamp only; disguise changes are sent
-        // separately as events (see Mechanics.handleDisguiseSwap).
+        // Network loop — send our movement to the host at NETWORK_SEND_RATE.
         networkInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
             this.sendToHost({
@@ -565,11 +704,223 @@ const Network = {
       Game start broadcast (host only)
     =================================================================*/
     startGameBroadcast() {
+        // A fresh round clears any leftover migration bookkeeping.
+        this._pendingHidersWin = false;
+        this._excluded = null;
+
         gameState.players[myId].isReady = true;
         gameState.phase = 'HIDING';
         gameState.timer = HIDING_DURATION();
         this.broadcast({ type: 'gameStart', gameState });
         UI.transitionToGame();
+    },
+
+    /*=================================================================
+      HOST MIGRATION
+      ---------------------------------------------------------------
+      When the host drops, every survivor independently runs the same
+      deterministic election over its roster, so exactly one promotes
+      itself and the rest reconnect to it. No voting messages needed.
+    =================================================================*/
+
+    // Called from a client's connToHost 'close'. Decides migrate vs. give up.
+    onHostConnectionClose() {
+        if (isLeavingRoom || migrating || sessionEnding) return;
+        migrating = true;
+        this._excluded = null;   // each migration starts with a clean exclusion set
+        departedHostId = (connToHost && connToHost.peer) || departedHostId;
+        connToHost = null;
+
+        if (departedHostId) delete gameState.players[departedHostId];
+
+        const successor = this.electSuccessor();
+        if (!successor) { migrating = false; this.connectionLost(); return; }
+
+        if (successor === myId) this.becomeSuccessor();
+        else this.reconnectToSuccessor(successor);
+    },
+
+    // Deterministic: first roster id (join order) that isn't the departed host
+    // and hasn't been excluded by a failed reconnect.
+    electSuccessor() {
+        const excluded = this._excluded || new Set();
+        const ids = Object.keys(gameState.players)
+            .filter(id => id !== departedHostId && !excluded.has(id));
+        return ids[0] || null;
+    },
+
+    // This client is the elected successor: take over hosting authority.
+    becomeSuccessor() {
+        isHost = true;
+        connections = [];
+        this._snapshotBuffer = [];
+        this._lastSnapshotT = undefined;
+
+        // Accept survivors reconnecting (and, in lobby, brand-new joiners).
+        peer.on('connection', conn => this.acceptConnection(conn));
+
+        // Await each remaining survivor; prune any that never return.
+        this._clearRejoinTimers();
+        rejoinExpected = {};
+        Object.keys(gameState.players).forEach(id => {
+            if (id === myId) return;
+            rejoinExpected[id] = setTimeout(() => this.dropMissingSurvivor(id), 8000);
+        });
+
+        const wasLobby = gameState.phase === 'LOBBY';
+        const seekers = Object.values(gameState.players)
+            .filter(p => p.role === 'Seeker').length;
+
+        if (!wasLobby && seekers === 0) {
+            // No hunter remains → dissolve the round, everyone to a fresh lobby.
+            this._pendingHidersWin = true;
+            this.returnToFreshLobby();
+            UI.showModal('Hiders Win!', 'The hunter disconnected. Starting a new lobby.', () => {});
+            migrating = false;
+            return;
+        }
+
+        // Lobby migration, or (future) in-game with a surviving seeker.
+        this._pendingHidersWin = false;
+        this.mintCodePeer();
+        this.startHostLoops();   // idle while LOBBY; resumes the match otherwise
+
+        if (wasLobby) {
+            // Ensure the lobby has a hunter to start: promote self to Seeker
+            // (the host is conventionally the Seeker; roles otherwise preserved).
+            const me = gameState.players[myId];
+            if (me && seekers === 0) {
+                me.role = 'Seeker';
+                me.isReady = true;
+                me.color = 0xff4757;
+                me.disguiseType = 'player';
+                me.disguiseSize = 2;
+            }
+            UI.transitionToLobby();
+            UI.updateLobby();
+            this.broadcast({ type: 'lobbySync', players: gameState.players, roomCode: pendingRoomCode });
+        }
+
+        migrating = false;
+    },
+
+    // A non-successor survivor: connect to the elected successor's peer id.
+    reconnectToSuccessor(successorId) {
+        let opened = false;
+        let conn;
+        try { conn = peer.connect(successorId); }
+        catch (e) { this._failReconnect(successorId); return; }
+        if (!conn) { this._failReconnect(successorId); return; }
+
+        conn.on('open', () => {
+            opened = true;
+            connToHost = conn;
+            migrating = false;
+            this.wireClientHandlers(conn);
+            this.startClientLoops();
+            // The successor finds our id in its roster and sends rejoinAck.
+        });
+
+        setTimeout(() => {
+            if (!opened) {
+                try { conn.close(); } catch (e) {}
+                this._failReconnect(successorId);
+            }
+        }, 5000);
+    },
+
+    // The chosen successor was unreachable: exclude it and re-elect.
+    _failReconnect(successorId) {
+        this._excluded = this._excluded || new Set();
+        this._excluded.add(successorId);
+        if (gameState.players[successorId]) delete gameState.players[successorId];
+
+        const next = this.electSuccessor();
+        if (!next) { migrating = false; this.connectionLost(); return; }
+        if (next === myId) this.becomeSuccessor();
+        else this.reconnectToSuccessor(next);
+    },
+
+    // Successor: a survivor we expected never reconnected — drop them.
+    dropMissingSurvivor(id) {
+        if (rejoinExpected[id]) { clearTimeout(rejoinExpected[id]); delete rejoinExpected[id]; }
+        if (gameState.players[id]) {
+            delete gameState.players[id];
+            UI.updateLobby();
+            this.broadcast({ type: 'lobbySync', players: gameState.players });
+        }
+        this.checkHostAlone();
+    },
+
+    // Reset the (now host) successor to a clean lobby and broadcast it.
+    returnToFreshLobby() {
+        isHost = true;
+        gameState.phase = 'LOBBY';
+        gameState.timer = 0;
+        this._usedSpawns = [];
+        this._snapshotBuffer = [];
+        this._lastSnapshotT = undefined;
+
+        Object.keys(gameState.players).forEach(id => {
+            const p = gameState.players[id];
+            const role = (id === myId) ? 'Seeker' : 'Hider';
+            const spawn = this.getSpawnForRole(role, this._usedSpawns);
+            this._usedSpawns.push(spawn);
+            p.role = role;
+            p.x = spawn.x; p.y = spawn.y; p.z = spawn.z; p.rotY = 0;
+            p.isCaught = false;
+            p.isReady = (role === 'Seeker');
+            p.disguiseType = 'player';
+            p.disguiseSize = 2;
+            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;
+            p.color = role === 'Seeker' ? 0xff4757 : 0x2ed573;
+            delete p._lastMoveT;
+        });
+
+        const me = gameState.players[myId];
+        if (me) { localPos = { x: me.x, y: me.y, z: me.z }; cameraYaw = 0; }
+        localDisguise = {
+            type: 'player', size: 2, color: 0x2ed573,
+            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null
+        };
+
+        this.mintCodePeer();
+        this.startHostLoops();   // idle while LOBBY
+
+        UI.transitionToLobby();
+        UI.updateLobby();
+        this.broadcast({ type: 'lobbySync', players: gameState.players, roomCode: pendingRoomCode });
+
+        departedHostId = null;
+        this._excluded = null;
+    },
+
+    // Create a fresh 4-digit code endpoint so brand-new players can still join
+    // after a migration (existing survivors reconnect via the successor's
+    // random id known from the roster). The original code dies with the host.
+    mintCodePeer() {
+        if (codePeer) { try { codePeer.destroy(); } catch (e) {} codePeer = null; }
+        const code = this.generateCode();
+        const cp = new Peer('hnh3d-' + code);
+        codePeer = cp;
+        cp.on('open', () => {
+            pendingRoomCode = code;
+            const t = document.getElementById('lobby-title');
+            if (t) t.innerText = `ROOM CODE: ${code}`;
+            // Tell connected clients the new joinable code.
+            this.broadcast({ type: 'lobbySync', players: gameState.players, roomCode: code });
+        });
+        cp.on('connection', conn => this.acceptConnection(conn));
+        cp.on('error', err => {
+            if (err && err.type === 'unavailable-id') this.mintCodePeer();
+        });
+    },
+
+    _clearRejoinTimers() {
+        for (const id in rejoinExpected) {
+            clearTimeout(rejoinExpected[id]);
+        }
+        rejoinExpected = {};
     },
 
     /*=================================================================
@@ -591,6 +942,15 @@ const Network = {
         this._lastSnapshotT = undefined;
         this._snapshotBuffer = [];
 
+        // Reset host-migration state
+        this._clearRejoinTimers();
+        migrating = false;
+        sessionEnding = false;
+        departedHostId = null;
+        pendingRoomCode = null;
+        this._excluded = null;
+        this._pendingHidersWin = false;
+
         // Remove meshes
         for (let id in playerMeshes) scene.remove(playerMeshes[id]);
         playerMeshes = {};
@@ -599,7 +959,8 @@ const Network = {
         connections = [];
         connToHost = null;
         if (peer) { peer.destroy(); peer = null; }
-        isHost = false; 
+        if (codePeer) { try { codePeer.destroy(); } catch (e) {} codePeer = null; }
+        isHost = false;
         amIReady = false;
 
         // Reset game globals

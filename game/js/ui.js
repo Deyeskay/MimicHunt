@@ -23,6 +23,16 @@ const UI = {
         setTimeout(() => { Level.resize(); }, 50); // Ensures Canvas resizes to screen
     },
 
+    transitionToLobby: function() {
+        // Used when a client is dropped into a (new) host's lobby — e.g. after a
+        // host migration ends the round. Hides the game view, shows the lobby.
+        document.getElementById('gameCanvas').style.display = 'none';
+        document.getElementById('ui-layer').style.display = 'none';
+        document.getElementById('blind-overlay').style.display = 'none';
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('lobby-screen').style.display = 'flex';
+    },
+
     transitionToMenu: function() {
         document.getElementById('gameCanvas').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'none';
@@ -101,5 +111,10 @@ const UI = {
         document.getElementById('timer-display').innerText = `${gameState.phase}: ${m}:${s}`;
 
         document.getElementById('blind-overlay').style.display = (gameState.phase === 'HIDING' && me.role === 'Seeker') ? 'flex' : 'none';
+
+        // Live player count (top-right pill). Keeps updating on host (60fps loop)
+        // and clients (snapshot handler), including after a host migration.
+        const pc = document.getElementById('player-count');
+        if (pc) pc.innerText = Object.keys(gameState.players).length;
     }
 };

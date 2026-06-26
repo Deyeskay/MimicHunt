@@ -23,6 +23,14 @@ let gameLoopInterval = null;   // 60 FPS physics loop
 let networkInterval = null;    // 20 Hz network send/broadcast loop
 let timerInterval = null;
 
+// --- HOST MIGRATION ---
+let migrating = false;         // a host-migration handshake is in flight
+let sessionEnding = false;     // a terminal transition (gameOver/roomClosing) is underway — suppress migration
+let departedHostId = null;     // peer id of the host that just dropped (excluded from election)
+let pendingRoomCode = null;    // 4-digit code minted by a successor for new joiners
+let rejoinExpected = {};       // successor: { peerId: timeoutHandle } of survivors we await
+let codePeer = null;           // successor's second Peer (code alias) accepting brand-new joiners
+
 // Network transmission rate (Hz). Physics/render stay at 60 FPS.
 const NETWORK_SEND_RATE = 20;
 
