@@ -35,6 +35,7 @@ let watchdogInterval = null;   // client: checks for host-message silence
 const HEARTBEAT_MS = 1000;     // host ping cadence
 const HOST_TIMEOUT_MS = 3000;  // client declares the host lost after this silence
 const WATCHDOG_MS = 500;       // client check cadence
+const CLIENT_TIMEOUT_MS = 3000;// host drops a client after this silence (ghost cleanup)
 let departedHostId = null;     // peer id of the host that just dropped (excluded from election)
 let pendingRoomCode = null;    // 4-digit code minted by a successor for new joiners
 let rejoinExpected = {};       // successor: { peerId: timeoutHandle } of survivors we await

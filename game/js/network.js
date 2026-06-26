@@ -318,6 +318,7 @@ const Network = {
     =================================================================*/
     acceptConnection(conn) {
         conn.on('open', () => {
+            conn._lastSeen = this.now();   // seed liveness for the host-side watchdog
             const existing = gameState.players[conn.peer];
 
             if (existing) {
@@ -376,7 +377,14 @@ const Network = {
       Host-side: handle a packet from a connected client.
     =================================================================*/
     handleClientData(conn, data) {
+        // Any packet from this client proves it's alive — reset its watchdog.
+        conn._lastSeen = this.now();
+
         switch (data.type) {
+            case 'clientPing':
+                // Lobby liveness heartbeat only — timestamp already refreshed.
+                break;
+
             case 'leave':
                 // Client voluntarily left
                 delete gameState.players[conn.peer];
@@ -444,6 +452,11 @@ const Network = {
       Host-side: a client connection closed (left or crashed).
     =================================================================*/
     handleConnClose(conn) {
+        // Dedupe: a watchdog-initiated drop and a later real 'close' must not
+        // both process the same connection.
+        if (conn._dropped) return;
+        conn._dropped = true;
+
         delete gameState.players[conn.peer];
         connections = connections.filter(c => c.peer !== conn.peer);
         // Stop awaiting a survivor that will never reconnect.
@@ -470,6 +483,25 @@ const Network = {
     },
 
     /*=================================================================
+      Host-side watchdog: drop clients that have gone silent past
+      CLIENT_TIMEOUT_MS. Catches abrupt client tab-close/crash where
+      conn.on('close') never fires, so ghost players don't linger in the
+      roster (wrong player count, ghost mesh, stuck host-alone).
+    =================================================================*/
+    sweepStaleClients() {
+        // Don't reap during the game-over window: clients have stopped sending
+        // and are about to leave anyway.
+        if (gameState.phase === 'ENDED') return;
+        const now = this.now();
+        connections.slice().forEach(conn => {
+            if (now - (conn._lastSeen || 0) > CLIENT_TIMEOUT_MS) {
+                try { conn.close(); } catch (e) {}
+                this.handleConnClose(conn);
+            }
+        });
+    },
+
+    /*=================================================================
       Start (or restart) the three host loops: 1s timer, 60 FPS physics,
       20 Hz snapshot broadcast. Clears any existing intervals first so a
       migrated successor can never end up running two sets of loops.
@@ -489,6 +521,9 @@ const Network = {
         // detectable by clients' watchdogs.
         heartbeatInterval = setInterval(() => {
             this.broadcast({ type: 'ping' });
+            // Same heartbeat tick also reaps clients that went silent (abrupt
+            // tab close where conn.on('close') never fired).
+            this.sweepStaleClients();
         }, HEARTBEAT_MS);
 
         // Timer loop (seconds)
@@ -726,6 +761,10 @@ const Network = {
         // closes/crashes where conn.on('close') never fires. Runs in all phases.
         this._lastHostMsgTime = this.now();
         watchdogInterval = setInterval(() => {
+            // Prove our own liveness to the host while in the lobby (in-game the
+            // 20 Hz clientMove already does this; the lobby has no other traffic).
+            if (gameState.phase === 'LOBBY') this.sendToHost({ type: 'clientPing' });
+
             if (isLeavingRoom || migrating || sessionEnding) return;
             if (this.now() - this._lastHostMsgTime > HOST_TIMEOUT_MS) {
                 this.onHostConnectionClose();
