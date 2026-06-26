@@ -40,6 +40,48 @@ const Level = {
 
         mapProps3D = JSON.parse(JSON.stringify(props || []));
         mapProps3D.forEach(prop => this.spawnProp(prop));
+
+        this.buildColliderGizmos();
+    },
+
+    // --- DEVELOPER MODE: collider visualization ---
+    // Draw a yellow cylinder outline matching each prop's ACTUAL collider:
+    // a circle of radius prop.radius centered at (centerX, centerZ), from the
+    // ground up to topY. This is exactly what mechanics.handleLocalMovement
+    // tests against, so it reveals over-sized / overlapping colliders.
+    buildColliderGizmos: function() {
+        if (this.colliderHelpers) this.colliderHelpers.forEach(h => scene.remove(h));
+        this.colliderHelpers = [];
+        if (!developer || !scene) return;
+
+        for (const prop of mapProps3D) {
+            if (prop.model === 'spawn') continue;
+            if (!PropLevel.hasCollision(prop)) continue;
+
+            const center = PropLevel.getPropCenter(prop);
+            const r = prop.radius || 0.5;
+            const h = Math.max(PropLevel.getPropTop(prop), 0.1);
+
+            const geo = new THREE.CylinderGeometry(r, r, h, 24);
+            const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+            mat.depthTest = false;   // draw over geometry like editor gizmos
+            const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+            helper.position.set(center.x, h / 2, center.z);
+            helper.renderOrder = 999;
+            scene.add(helper);
+            this.colliderHelpers.push(helper);
+            geo.dispose();
+        }
+    },
+
+    // Toggle developer gizmos at runtime (console or 'G' key).
+    setDeveloper: function(on) {
+        developer = !!on;
+        this.buildColliderGizmos();
+        if (!developer && this.playerColliderHelper) {
+            scene.remove(this.playerColliderHelper);
+            this.playerColliderHelper = null;
+        }
     },
 
     spawnProp: function(prop) {
@@ -185,6 +227,31 @@ const Level = {
                     s ? { ...p, x: s.x, y: s.y, z: s.z, rotY: s.rotY } : p
                 );
             }
+        }
+
+        // Developer: outline the local player's own collision radius (cyan) so
+        // you can see why you wedge in tight spaces — myRadius (1 for player,
+        // disguiseSize/2 when disguised) plus each prop radius is the no-go gap.
+        if (developer && gameState.players[myId]) {
+            const p = gameState.players[myId];
+            const myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
+            if (!this.playerColliderHelper || this.playerColliderHelper.userData.r !== myRadius) {
+                if (this.playerColliderHelper) scene.remove(this.playerColliderHelper);
+                const h = 3;
+                const geo = new THREE.CylinderGeometry(myRadius, myRadius, h, 24);
+                const mat = new THREE.LineBasicMaterial({ color: 0x00e5ff });
+                mat.depthTest = false;
+                this.playerColliderHelper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                this.playerColliderHelper.renderOrder = 999;
+                this.playerColliderHelper.userData.r = myRadius;
+                this.playerColliderHelper.userData.h = h;
+                scene.add(this.playerColliderHelper);
+                geo.dispose();
+            }
+            this.playerColliderHelper.position.set(p.x, this.playerColliderHelper.userData.h / 2, p.z);
+        } else if (!developer && this.playerColliderHelper) {
+            scene.remove(this.playerColliderHelper);
+            this.playerColliderHelper = null;
         }
 
         if (gameState.players[myId]) {

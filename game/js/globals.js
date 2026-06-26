@@ -1,3 +1,10 @@
+// --- DEVELOPER MODE ---
+// Hardcode to true to draw yellow collider gizmos (Unity-style) for every
+// prop in the scene, plus a cyan outline of the local player's own collision
+// radius. Set false to hide them. Can also be toggled live with the 'G' key
+// or Level.setDeveloper(true/false) from the console.
+let developer = true;
+
 // --- CONFIGURATION ---
 let GAME_SETTINGS = {
     hidingTime: 20,

@@ -3,6 +3,7 @@ const Mechanics = {
         window.addEventListener('keydown', (e) => {
             keys[e.key.toLowerCase()] = true;
             if (e.key.toLowerCase() === 'f') this.handleDisguiseSwap();
+            if (e.key.toLowerCase() === 'g') Level.setDeveloper(!developer);   // dev: toggle collider gizmos
             if (e.key === ' ' && isGrounded) this.jump();
         });
         window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
