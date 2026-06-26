@@ -327,7 +327,8 @@ textarea{
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
-<script src="js/props.js"></script>
+<script src="js/prefabs.js?v=2"></script>
+<script src="js/props.js?v=2"></script>
 
 <script>
 //Globals
@@ -819,9 +820,10 @@ window.addEventListener(
         clone.position.copy(groundHit[0].point);
         PropLevel.groundObject(clone, groundHit[0].point.y);
 
-        // Spawn markers are non-solid placement helpers; default them so they
-        // don't block movement and already count as a generic spawn point.
+        // Gameplay defaults come from the prefab for this model. Spawn markers
+        // additionally default to being a generic spawn point.
         const isSpawn = selectedModel === "spawn";
+        const def = PropLevel.getPrefab(selectedModel);
 
         clone.userData =
         {
@@ -833,11 +835,11 @@ window.addEventListener(
 
                     model:selectedModel,
 
-                    collision:!isSpawn,
+                    collision:def.collision,
 
-                    climbable:false,
+                    climbable:def.climbable,
 
-                    hideSpot:false,
+                    hideSpot:def.hideSpot,
 
                     spawnPoint:isSpawn,
 
@@ -1299,6 +1301,9 @@ function buildEditorObject(prop)
         );
     }
 
+    // Resolve omitted gameplay flags from the prefab (slim level files only
+    // store overrides); explicit values in the file always win.
+    const def = PropLevel.getPrefab(prop.model);
     clone.userData =
     {
         editorObject:true,
@@ -1307,9 +1312,9 @@ function buildEditorObject(prop)
             {
                 name:        prop.id || (prop.model + "_" + objectId++),
                 model:       prop.model,
-                collision:   prop.collision   ?? true,
-                climbable:   prop.climbable    ?? false,
-                hideSpot:    prop.hideSpot     ?? false,
+                collision:   prop.collision   ?? def.collision,
+                climbable:   prop.climbable    ?? def.climbable,
+                hideSpot:    prop.hideSpot     ?? def.hideSpot,
                 spawnPoint:  prop.spawnPoint   ?? false,
                 seekerSpawn: prop.seekerSpawn  ?? false,
                 hiderSpawn:  prop.hiderSpawn   ?? false

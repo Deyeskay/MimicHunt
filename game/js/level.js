@@ -32,8 +32,9 @@ const Level = {
     spawnProp: function(prop) {
         // Spawn markers are placement metadata only — they stay in mapProps3D so
         // PropLevel.getSpawnPositions can find them, but they have no in-game
-        // mesh and are never rendered or collided with.
-        if (prop.model === 'spawn') return;
+        // mesh and are never rendered or collided with. Still resolve their
+        // gameplay flags from the prefab (so collision=false is concrete).
+        if (prop.model === 'spawn') { PropLevel.resolveGameplay(prop); return; }
 
         const mesh = PropLevel.createPropMesh(prop, modelLibrary);
         if (!mesh) {

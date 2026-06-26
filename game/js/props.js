@@ -112,6 +112,26 @@ const PropLevel = {
         return object.userData.data;
     },
 
+    // Prefab lookup with a safe fallback for unknown models.
+    getPrefab: function(model) {
+        if (typeof PrefabLibrary !== 'undefined' && PrefabLibrary[model]) {
+            return PrefabLibrary[model];
+        }
+        return (typeof PREFAB_DEFAULT !== 'undefined')
+            ? PREFAB_DEFAULT
+            : { collision: true, climbable: false, hideSpot: false, canDisguise: false };
+    },
+
+    // Fill any gameplay metadata the instance didn't specify from its prefab.
+    // Instance values always win (they're explicit overrides).
+    resolveGameplay: function(prop) {
+        const def = this.getPrefab(prop.model);
+        if (prop.collision === undefined) prop.collision = def.collision;
+        if (prop.climbable === undefined) prop.climbable = def.climbable;
+        if (prop.hideSpot === undefined) prop.hideSpot = def.hideSpot;
+        return prop;
+    },
+
     enrichProp: function(prop, mesh) {
         const bounds = this.computeBounds(mesh);
 
@@ -122,9 +142,7 @@ const PropLevel = {
         prop.radius = bounds.radius;
         prop.height = bounds.height;
 
-        if (prop.collision === undefined) prop.collision = true;
-        if (prop.climbable === undefined) prop.climbable = true;
-        if (prop.hideSpot === undefined) prop.hideSpot = false;
+        this.resolveGameplay(prop);
 
         return prop;
     },
@@ -138,9 +156,8 @@ const PropLevel = {
     },
 
     canDisguiseAs: function(prop) {
-        if (prop.model === 'wall') return false;
-        if (prop.hideSpot) return true;
-        return ['tree', 'rock', 'bush'].includes(prop.model);
+        if (prop.hideSpot) return true;   // explicit hide spot is always disguisable
+        return this.getPrefab(prop.model).canDisguise === true;
     },
 
     getPropCenter: function(prop) {
@@ -204,24 +221,17 @@ const PropLevel = {
     exportProp: function(object) {
         const bounds = this.computeBounds(object);
         const data = object.userData.data;
+        const def = this.getPrefab(data.model);
 
-        // Only fields the runtime actually consumes are exported. centerX/Z,
-        // topY, radius and height are recomputed by enrichProp() at load time,
-        // so emitting them here would just be stale duplicate data. bottomY is
-        // kept because applyPropTransform() uses it to ground the prop before
-        // those bounds get recomputed.
-        return {
+        // Prefab-style export: always emit the identity + transform; centerX/Z,
+        // topY, radius and height are recomputed by enrichProp() at load (bottomY
+        // is kept because applyPropTransform() grounds the prop with it first).
+        const out = {
             id: data.name,
+            model: data.model,
             x: Number(object.position.x.toFixed(2)),
             y: Number(object.position.y.toFixed(2)),
             z: Number(object.position.z.toFixed(2)),
-            model: data.model,
-            collision: data.collision,
-            climbable: data.climbable,
-            hideSpot: data.hideSpot,
-            spawnPoint: data.spawnPoint,
-            seekerSpawn: data.seekerSpawn,
-            hiderSpawn: data.hiderSpawn,
             bottomY: Number(bounds.bottomY.toFixed(2)),
             scale: {
                 x: Number(object.scale.x.toFixed(2)),
@@ -234,6 +244,18 @@ const PropLevel = {
                 z: Number(THREE.MathUtils.radToDeg(object.rotation.z).toFixed(1))
             }
         };
+
+        // Gameplay flags: emit only when they differ from the prefab default.
+        if (data.collision !== def.collision) out.collision = data.collision;
+        if (data.climbable !== def.climbable) out.climbable = data.climbable;
+        if (data.hideSpot !== def.hideSpot) out.hideSpot = data.hideSpot;
+
+        // Spawn flags are per-instance — emit only when set.
+        if (data.spawnPoint) out.spawnPoint = true;
+        if (data.seekerSpawn) out.seekerSpawn = true;
+        if (data.hiderSpawn) out.hiderSpawn = true;
+
+        return out;
     },
 
     groundObject: function(object, groundY) {
