@@ -262,6 +262,33 @@ button{
 .help-card ul{ padding-left:18px; margin:0 0 18px; }
 .help-card li{ margin-bottom:9px; color:var(--muted); }
 .help-card li b{ color:var(--text); }
+.help-card code{ background:var(--bg); border:1px solid var(--border); border-radius:4px; padding:1px 5px; font-size:12px; }
+
+/* ---------- Export / Load modals ---------- */
+.modal-label{
+    display:block; font-size:11px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.6px; color:var(--muted); margin:2px 0 6px;
+}
+.modal-input{
+    width:100%; padding:9px 11px; background:var(--bg); border:1px solid var(--border);
+    border-radius:8px; color:var(--text); font-family:inherit; font-size:14px; margin-bottom:14px;
+}
+.modal-input:focus{ outline:none; border-color:var(--accent); }
+.help-card .modal-textarea{ height:170px; margin-top:0; }
+.modal-status{ min-height:16px; margin-top:10px; font-size:12.5px; font-weight:600; color:var(--accent); }
+.modal-actions{ display:flex; gap:10px; margin-top:16px; }
+.modal-actions .btn{ flex:1; }
+.modal-list{ max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:7px; margin-top:4px; }
+.modal-list-empty{ color:var(--muted); text-align:center; padding:24px 0; }
+.modal-list-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 13px; background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; cursor:pointer; transition:background .15s,border-color .15s;
+}
+.modal-list-item:hover{ background:#33333f; border-color:var(--accent); }
+.modal-list-item .lvl-name{ font-weight:600; font-size:14px; }
+.lvl-del{ background:transparent; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:3px 7px; border-radius:6px; }
+.lvl-del:hover{ color:#fca5a5; background:rgba(239,68,68,.15); }
 
 /* ---------- Responsive ---------- */
 @media (max-width:760px){
@@ -298,10 +325,8 @@ button{
 
     <div class="section">
         <div class="section-label">Level</div>
-        <button class="btn btn-primary" onclick="exportLevel()">⬇ Export Level</button>
-        <textarea id="output" placeholder="Exported level appears here…"></textarea>
-        <button class="btn btn-primary" style="margin-top:8px;" onclick="importLevel()">⬆ Load Level</button>
-        <textarea id="importInput" placeholder="Paste an exported level here, then Load Level"></textarea>
+        <button class="btn btn-primary" onclick="exportLevel()">💾 Save / Export Level</button>
+        <button class="btn" style="margin-top:8px;" onclick="openLoadModal()">📂 Load Level</button>
     </div>
 
 </div>
@@ -381,12 +406,43 @@ button{
             <li><b>Export Level</b> → Copy-ready <code>const forestLevel</code></li>
         </ul>
 
-        <button id="closeHelp">
+        <button id="closeHelp" class="btn">
             Close
         </button>
 
     </div>
 
+</div>
+
+<!-- Save / Export Level modal -->
+<div id="exportModal" class="help-modal">
+    <div class="help-card">
+        <h2>Save / Export Level</h2>
+
+        <label class="modal-label">Level name</label>
+        <input id="exportLevelName" class="modal-input" type="text" placeholder="e.g. forest-1" maxlength="40">
+
+        <label class="modal-label">Level data</label>
+        <textarea id="exportResponse" class="modal-textarea" spellcheck="false"></textarea>
+
+        <div id="exportStatus" class="modal-status"></div>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="saveLevelToStorage()">💾 Save</button>
+            <button class="btn" onclick="closeModal('exportModal')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Load Level modal -->
+<div id="loadModal" class="help-modal">
+    <div class="help-card">
+        <h2>Load Level</h2>
+        <div id="loadLevelList" class="modal-list"></div>
+        <div class="modal-actions">
+            <button class="btn" onclick="closeModal('loadModal')">Close</button>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -1299,15 +1355,62 @@ window.addEventListener(
 // Export
 //////////////////////////////////////////////////////
 
-function exportLevel()
+// --- localStorage-backed level store ---
+const LEVELS_KEY = 'hnh_editor_levels';
+let currentLevelName = '';
+
+function loadLevelsStore()
+{
+    try { return JSON.parse(localStorage.getItem(LEVELS_KEY)) || {}; }
+    catch(e) { return {}; }
+}
+
+function saveLevelsStore(store)
+{
+    localStorage.setItem(LEVELS_KEY, JSON.stringify(store));
+}
+
+function openModal(id)  { document.getElementById(id).style.display = 'block'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// Emit the exact form the game loads: `const forestLevel = [...]`.
+function buildLevelString()
 {
     const result = placedObjects.map(obj => PropLevel.exportProp(obj));
+    return "const forestLevel = " + JSON.stringify(result, null, 4) + ";";
+}
 
-    // Emit the exact form the game loads: a `const forestLevel = [...]` that
-    // can be pasted straight into game/js/levels/forest.js (level.js reads the
-    // global `forestLevel`, not `mapProps3D`).
-    document.getElementById("output").value =
-        "const forestLevel = " + JSON.stringify(result, null, 4) + ";";
+// Export button → open the Save/Export modal, pre-filled with current scene data
+// (and the current level name if this scene was loaded/saved before).
+function exportLevel()
+{
+    document.getElementById("exportResponse").value = buildLevelString();
+    document.getElementById("exportLevelName").value = currentLevelName;
+    document.getElementById("exportStatus").textContent = "";
+    openModal("exportModal");
+}
+
+// Save button → persist { name: levelData } into localStorage (overwrites if the
+// name already exists).
+function saveLevelToStorage()
+{
+    const name = document.getElementById("exportLevelName").value.trim();
+    const data = document.getElementById("exportResponse").value;
+
+    if(!name)
+    {
+        document.getElementById("exportStatus").textContent = "Please enter a level name.";
+        return;
+    }
+
+    const store = loadLevelsStore();
+    const existed = Object.prototype.hasOwnProperty.call(store, name);
+    store[name] = data;
+    saveLevelsStore(store);
+    currentLevelName = name;
+
+    document.getElementById("exportStatus").textContent =
+        (existed ? "Updated " : "Saved ") + '"' + name + '" ✓';
 }
 
 //////////////////////////////////////////////////////
@@ -1427,67 +1530,108 @@ function clearAllObjects()
     clearInspector();
 }
 
-function importLevel()
+// Parse an exported level string (`const forestLevel = [...]` or a raw array)
+// and rebuild it in the scene. Returns true on success.
+function applyLevelData(raw)
 {
-    const raw = document.getElementById("importInput").value;
-
-    // Accept the raw `const forestLevel = [...]` / `mapProps3D = [...]` form or a
-    // plain JSON array by slicing out the outermost [ ... ] and parsing it.
     const start = raw.indexOf("[");
     const end   = raw.lastIndexOf("]");
 
     if(start === -1 || end === -1 || end < start)
     {
-        alert("Couldn't find a level array ([ ... ]) in the pasted text.");
-        return;
+        alert("Couldn't find a level array ([ ... ]) in the saved data.");
+        return false;
     }
 
     let props;
-    try
-    {
-        props = JSON.parse(raw.slice(start, end + 1));
-    }
-    catch(err)
-    {
-        alert("Invalid level data: " + err.message);
-        return;
-    }
+    try { props = JSON.parse(raw.slice(start, end + 1)); }
+    catch(err) { alert("Invalid level data: " + err.message); return false; }
 
     if(!Array.isArray(props))
     {
-        alert("Parsed data is not an array of props.");
-        return;
+        alert("Saved data is not an array of props.");
+        return false;
     }
 
     if(placedObjects.length &&
        !confirm("Replace the current " + placedObjects.length +
-                " object(s) with the imported level?"))
-        return;
+                " object(s) with this level?"))
+        return false;
 
     clearAllObjects();
 
     let loaded = 0;
     const missing = [];
+    props.forEach(p => { if(buildEditorObject(p)) loaded++; else missing.push(p.model); });
 
-    props.forEach(p =>
-    {
-        if(buildEditorObject(p))
-            loaded++;
-        else
-            missing.push(p.model);
-    });
-
-    // Keep auto-generated names from colliding with imported ones.
+    // Keep auto-generated names from colliding with loaded ones.
     objectId = Math.max(objectId, placedObjects.length + 1);
-
     refreshHierarchy();
 
-    let msg = "Imported " + loaded + " object(s).";
     if(missing.length)
-        msg += "  Skipped (model not loaded): " +
-               [...new Set(missing)].join(", ");
+        alert("Loaded " + loaded + " object(s). Skipped (model not loaded yet): " +
+              [...new Set(missing)].join(", "));
 
-    document.getElementById("output").value = msg;
+    return true;
+}
+
+// Load button → list all saved levels from localStorage.
+function openLoadModal()
+{
+    const store = loadLevelsStore();
+    const names = Object.keys(store);
+    const list  = document.getElementById("loadLevelList");
+    list.innerHTML = "";
+
+    if(!names.length)
+    {
+        list.innerHTML = '<div class="modal-list-empty">No saved levels yet.</div>';
+    }
+    else
+    {
+        names.forEach(name =>
+        {
+            const item = document.createElement("div");
+            item.className = "modal-list-item";
+            item.onclick = () => loadLevelByName(name);
+
+            const label = document.createElement("span");
+            label.className = "lvl-name";
+            label.textContent = name;
+
+            const del = document.createElement("button");
+            del.className = "lvl-del";
+            del.textContent = "✕";
+            del.title = "Delete level";
+            del.onclick = (e) => { e.stopPropagation(); deleteLevelByName(name); };
+
+            item.appendChild(label);
+            item.appendChild(del);
+            list.appendChild(item);
+        });
+    }
+
+    openModal("loadModal");
+}
+
+function loadLevelByName(name)
+{
+    const store = loadLevelsStore();
+    if(!(name in store)) return;
+    if(applyLevelData(store[name]))
+    {
+        currentLevelName = name;
+        closeModal("loadModal");
+    }
+}
+
+function deleteLevelByName(name)
+{
+    if(!confirm('Delete level "' + name + '"?')) return;
+    const store = loadLevelsStore();
+    delete store[name];
+    saveLevelsStore(store);
+    openLoadModal();   // refresh the list
 }
 
  
