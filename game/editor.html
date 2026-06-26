@@ -5,296 +5,360 @@
 <title>Hide & Hunt Level Editor</title>
 
 <style>
+:root{
+    --bg:#15151a;
+    --panel:#1f1f27;
+    --panel-2:#2a2a35;
+    --header:#272730;
+    --border:#383843;
+    --text:#e7e7ec;
+    --muted:#9a9aa7;
+    --accent:#3b82f6;
+    --accent-d:#2563eb;
+    --danger:#ef4444;
+    --radius:10px;
+}
+
+*{ box-sizing:border-box; }
+
 body{
     margin:0;
     overflow:hidden;
-    font-family:Arial;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:13px;
 }
 
+/* ---------- Shared panel chrome ---------- */
+.panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+}
+.panel-title{
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:.3px;
+    padding-bottom:10px;
+    margin-bottom:10px;
+    border-bottom:1px solid var(--border);
+}
+.section{ margin-bottom:14px; }
+.section:last-child{ margin-bottom:0; }
+.section-label{
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.8px;
+    color:var(--muted);
+    margin:0 0 7px 2px;
+}
+
+/* custom scrollbars */
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-thumb{ background:#3c3c48; border-radius:8px; }
+::-webkit-scrollbar-thumb:hover{ background:#4a4a58; }
+::-webkit-scrollbar-track{ background:transparent; }
+
+/* ---------- Toolbar (left) ---------- */
 #toolbar{
-    position:absolute;
-    left:10px;
-    top:10px;
-    width:250px;
-    background:#222;
-    color:white;
-    padding:10px;
-    border-radius:10px;
-    z-index:100;
-}
-#hierarchy
-{
-    position:absolute;
-    top:10px;
-    right:10px;
-    width:260px;
-    height:500px;
-    background:#222;
-    color:white;
-    border-radius:10px;
-    overflow:hidden;
-    z-index:100;
-}
-
-/* Inspector panel */
-#inspector {
-    position:absolute;
-    top:520px; /* below hierarchy */
-    right:10px;
-    width:260px;
-    background:#222;
-    color:white;
-    border-radius:10px;
-    padding:10px;
-    overflow:auto;
-    z-index:100;
-}
-
-.hierarchy-header
-{
-    background:#333;
-
-    padding:10px;
-
-    font-weight:bold;
-}
-
-#hierarchyList
-{
-    height:460px;
-
+    position:fixed;
+    left:12px;
+    top:12px;
+    width:clamp(210px,20vw,260px);
+    max-height:calc(100vh - 24px);
     overflow-y:auto;
+    padding:14px;
+    z-index:100;
 }
 
-.hierarchy-item
-{
-    padding:8px 12px;
+/* ---------- Right column (hierarchy + inspector) ---------- */
+#right-panel{
+    position:fixed;
+    right:12px;
+    top:12px;
+    width:clamp(230px,22vw,290px);
+    max-height:calc(100vh - 24px);
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    z-index:100;
+}
 
+#hierarchy{
+    display:flex;
+    flex-direction:column;
+    min-height:150px;
+    max-height:42vh;
+    overflow:hidden;
+}
+.hierarchy-header{
+    background:var(--header);
+    padding:11px 14px;
+    font-weight:700;
+    font-size:13px;
+    border-bottom:1px solid var(--border);
+    border-radius:var(--radius) var(--radius) 0 0;
+}
+#hierarchyList{
+    flex:1;
+    overflow-y:auto;
+    padding:4px;
+}
+.hierarchy-item{
+    padding:8px 10px;
     cursor:pointer;
+    border-radius:6px;
+    font-size:12.5px;
+    color:var(--muted);
+}
+.hierarchy-item:hover{ background:#2c2c37; color:var(--text); }
+.hierarchy-item.active{ background:var(--accent); color:#fff; font-weight:600; }
 
-    border-bottom:1px solid #444;
+#inspector{
+    flex:1;
+    overflow-y:auto;
+    padding:14px;
 }
 
-.hierarchy-item:hover
-{
-    background:#3b3b3b;
+/* ---------- Fields ---------- */
+.field{ margin-bottom:13px; }
+.field > label{
+    display:block;
+    font-size:11px;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:5px;
 }
-
-.hierarchy-item.active
-{
-    background:#2196f3;
+.name-value{
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:7px 9px;
+    font-size:13px;
+    color:var(--text);
+    word-break:break-all;
 }
+.vec3{ display:flex; gap:6px; }
+.vec3 > span{ flex:1; display:flex; align-items:center; gap:5px; }
+.vec3 i{ font-style:normal; font-size:11px; font-weight:700; color:var(--muted); }
 
-button{
+input[type=number]{
     width:100%;
-    margin:4px 0;
-    padding:10px;
+    min-width:0;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:6px;
+    color:var(--text);
+    padding:6px 7px;
+    font-family:inherit;
+    font-size:12.5px;
 }
-.propBtn.active
-{
-    background:#2196f3;
-    color:white;
-    border:2px solid white;
-}
-
-.propBtn
-{
-    transition:.2s;
-}
+input[type=number]:focus{ outline:none; border-color:var(--accent); }
 
 textarea{
     width:100%;
-    height:250px;
+    height:90px;
+    margin-top:6px;
+    resize:vertical;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:8px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:11.5px;
 }
+textarea:focus{ outline:none; border-color:var(--accent); }
 
-.help-btn
-{
-    position:fixed;
+/* ---------- Checkboxes ---------- */
+input[type=checkbox]{ accent-color:var(--accent); width:15px; height:15px; cursor:pointer; }
+.inline-check{
+    display:flex; align-items:center; gap:7px;
+    font-size:11px; font-weight:600; color:var(--muted); margin-bottom:6px;
+}
+.check-list{ display:flex; flex-direction:column; gap:2px; }
+.check-list label{
+    display:flex; align-items:center; gap:9px;
+    padding:6px 8px; border-radius:6px; cursor:pointer; font-size:13px;
+}
+.check-list label:hover{ background:var(--panel-2); }
 
-    right:20px;
-    bottom:20px;
-
-    width:50px;
-    height:50px;
-
-    border:none;
-    border-radius:50%;
-
-    font-size:28px;
-    font-weight:bold;
-
+/* ---------- Buttons ---------- */
+button{
+    font-family:inherit;
     cursor:pointer;
+    border:none;
+    border-radius:8px;
+    color:var(--text);
+}
+.btn{
+    width:100%;
+    padding:9px 12px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    font-weight:600;
+    font-size:13px;
+    transition:background .15s,border-color .15s,transform .05s;
+}
+.btn:hover{ background:#33333f; border-color:#4a4a58; }
+.btn:active{ transform:scale(.985); }
+.btn-primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.btn-primary:hover{ background:var(--accent-d); border-color:var(--accent-d); }
+.btn-danger{ background:rgba(239,68,68,.14); border-color:rgba(239,68,68,.5); color:#fca5a5; }
+.btn-danger:hover{ background:rgba(239,68,68,.24); }
 
-    z-index:9999;
-
-    background:#2196f3;
-    color:white;
+/* prop palette */
+.prop-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.propBtn{
+    padding:11px 4px;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:12px;
+    font-weight:600;
+    transition:background .15s,border-color .15s,box-shadow .15s;
+}
+.propBtn:hover{ background:#33333f; }
+.propBtn.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+    box-shadow:0 0 0 2px rgba(59,130,246,.35);
 }
 
-.help-modal
-{
-    display:none;
+/* ---------- Help FAB + modal ---------- */
+.help-btn{
+    position:fixed; right:20px; bottom:20px;
+    width:50px; height:50px;
+    border:none; border-radius:50%;
+    font-size:26px; font-weight:bold;
+    cursor:pointer; z-index:9999;
+    background:var(--accent); color:#fff;
+    box-shadow:0 6px 18px rgba(59,130,246,.45);
+    transition:background .15s,transform .1s;
+}
+.help-btn:hover{ background:var(--accent-d); transform:translateY(-2px); }
 
-    position:fixed;
-
-    left:0;
-    top:0;
-
-    width:100%;
-    height:100%;
-
-    background:rgba(0,0,0,.7);
-
+.help-modal{
+    display:none; position:fixed; inset:0;
+    background:rgba(0,0,0,.7); backdrop-filter:blur(2px);
     z-index:10000;
 }
-
-.help-card
-{
-    position:absolute;
-
-    top:50%;
-    left:50%;
-
+.help-card{
+    position:absolute; top:50%; left:50%;
     transform:translate(-50%,-50%);
-
-    width:400px;
-
-    background:white;
-
-    border-radius:10px;
-
-    padding:20px;
+    width:min(440px,92vw);
+    background:var(--panel);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:24px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
 }
+.help-card h2{ margin:0 0 16px; font-size:18px; }
+.help-card ul{ padding-left:18px; margin:0 0 18px; }
+.help-card li{ margin-bottom:9px; color:var(--muted); }
+.help-card li b{ color:var(--text); }
 
-.help-card ul
-{
-    padding-left:20px;
-}
-
-.help-card li
-{
-    margin-bottom:10px;
+/* ---------- Responsive ---------- */
+@media (max-width:760px){
+    #toolbar{ left:8px; top:8px; width:46vw; padding:11px; max-height:calc(100vh - 16px); }
+    #right-panel{ right:8px; top:8px; width:46vw; max-height:calc(100vh - 16px); }
+    .prop-grid{ grid-template-columns:repeat(2,1fr); }
+    #hierarchy{ max-height:36vh; min-height:110px; }
+    .help-btn{ width:44px; height:44px; font-size:22px; right:12px; bottom:12px; }
 }
 </style>
 </head>
 
 <body>
 
-<div id="toolbar">
+<div id="toolbar" class="panel">
 
-<h3>Level Editor</h3>
+    <div class="panel-title">🧱 Level Editor</div>
+
+    <div class="section">
+        <div class="section-label">Props</div>
+        <div class="prop-grid">
+            <button class="propBtn" onclick="selectModel('tree',this)">Tree</button>
+            <button class="propBtn" onclick="selectModel('rock',this)">Rock</button>
+            <button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
+            <button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
+            <button class="propBtn" onclick="selectModel('spawn',this)">Spawn</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-label">Object</div>
+        <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete Selected</button>
+    </div>
+
+    <div class="section">
+        <div class="section-label">Level</div>
+        <button class="btn btn-primary" onclick="exportLevel()">⬇ Export Level</button>
+        <textarea id="output" placeholder="Exported level appears here…"></textarea>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="importLevel()">⬆ Load Level</button>
+        <textarea id="importInput" placeholder="Paste an exported level here, then Load Level"></textarea>
+    </div>
+
+</div>
+
 <button id="helpBtn" class="help-btn">?</button>
-<button class="propBtn" onclick="selectModel('tree',this)">Tree</button>
-<button class="propBtn" onclick="selectModel('rock',this)">Rock</button>
-<button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
-<button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
-<button class="propBtn" onclick="selectModel('spawn',this)">Spawn</button>
 
+<div id="right-panel">
 
-<hr>
-
-<button onclick="deleteSelected()">Delete Selected</button>
-
-<button onclick="exportLevel()">Export Level</button>
-<textarea id="output"></textarea>
-
-<hr>
-
-<button onclick="importLevel()">Load Level</button>
-<textarea id="importInput" placeholder="Paste an exported level here, then click Load Level" style="height:120px"></textarea>
-
-</div>
-<!-- Removed duplicate toolbar buttons -->
-<div id="hierarchy">
-
-    <div class="hierarchy-header">
-        Hierarchy
+    <div id="hierarchy" class="panel">
+        <div class="hierarchy-header">Hierarchy</div>
+        <div id="hierarchyList"></div>
     </div>
 
-    <div id="hierarchyList">
+    <div id="inspector" class="panel">
+        <div class="panel-title">Inspector</div>
+
+        <div class="field">
+            <label>Name</label>
+            <div id="objName" class="name-value">None</div>
+        </div>
+
+        <div class="field">
+            <label>Position</label>
+            <div class="vec3">
+                <span><i>X</i><input id="posX" type="number" step="0.1"></span>
+                <span><i>Y</i><input id="posY" type="number" step="0.1"></span>
+                <span><i>Z</i><input id="posZ" type="number" step="0.1"></span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Rotation (Y°)</label>
+            <div class="vec3"><span style="flex:1;"><input id="rotY" type="number"></span></div>
+        </div>
+
+        <div class="field">
+            <label class="inline-check"><input type="checkbox" id="uniformScale"> Uniform Scale</label>
+            <div class="vec3">
+                <span><i>X</i><input id="scaleX" type="number" step="0.1"></span>
+                <span><i>Y</i><input id="scaleY" type="number" step="0.1"></span>
+                <span><i>Z</i><input id="scaleZ" type="number" step="0.1"></span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Gameplay</label>
+            <div class="check-list">
+                <label><input type="checkbox" id="chkCollision"> Collision</label>
+                <label><input type="checkbox" id="chkClimbable"> Climbable</label>
+                <label><input type="checkbox" id="chkHideSpot"> Hide Spot</label>
+                <label><input type="checkbox" id="chkSpawnPoint"> Spawn Point</label>
+                <label><input type="checkbox" id="chkSeekerSpawn"> Seeker Spawn</label>
+                <label><input type="checkbox" id="chkHiderSpawn"> Hider Spawn</label>
+            </div>
+        </div>
 
     </div>
-
-</div>
-
-<!-- Inspector Panel (Unity style) -->
-<div id="inspector">
-    <h3>Inspector</h3>
-    <div>
-        <b>Name</b>
-        <div id="objName">None</div>
-    </div>
-    <hr>
-    <div>
-        <b>Position</b><br>
-        X <input id="posX" type="number" step="0.1" />
-        Y <input id="posY" type="number" step="0.1" />
-        Z <input id="posZ" type="number" step="0.1" />
-    </div>
-    <hr>
-    <div>
-        <b>Rotation</b><br>
-        Y <input id="rotY" type="number" />
-    </div>
-    <hr>
-    <div>
-        <label>
-            <input type="checkbox" id="uniformScale" /> Uniform Scale
-        </label>
-        <br>
-        X <input id="scaleX" type="number" step="0.1" />
-        Y <input id="scaleY" type="number" step="0.1" />
-        Z <input id="scaleZ" type="number" step="0.1" />
-    </div>
-    <hr>
-
-<div>
-
-    <b>Gameplay</b>
-
-    <br><br>
-
-    <label>
-        <input type="checkbox" id="chkCollision">
-        Collision
-    </label>
-
-    <br>
-
-    <label>
-        <input type="checkbox" id="chkClimbable">
-        Climbable
-    </label>
-
-    <br>
-
-    <label>
-        <input type="checkbox" id="chkHideSpot">
-        Hide Spot
-    </label>
-
-    <br>
-
-    <label>
-        <input type="checkbox" id="chkSpawnPoint">
-        Spawn Point
-    </label>
-
-    <br>
-
-    <label>
-        <input type="checkbox" id="chkSeekerSpawn">
-        Seeker Spawn
-    </label>
-
-    <br>
-
-    <label>
-        <input type="checkbox" id="chkHiderSpawn">
-        Hider Spawn
-    </label>
-
-</div>
 
 </div>
 <div id="helpModal" class="help-modal">
@@ -304,16 +368,17 @@ textarea{
         <h2>Editor Controls</h2>
 
         <ul>
-            <li><b>Left Click</b> → Place Object</li>
-            <li><b>Left Click Object</b> → Select Object</li>
-            <li><b>Escape</b> → Deselect Object</li>
-            <li><b>Right Mouse Drag</b> → Orbit Camera</li>
-            <li><b>Middle Mouse Drag</b> → Pan Camera</li>
+            <li><b>Left Click</b> → Place / Select object</li>
+            <li><b>Escape</b> → Deselect</li>
+            <li><b>W / E / R</b> → Move / Rotate / Scale gizmo</li>
+            <li><b>Q</b> → Toggle local / world gizmo space</li>
+            <li><b>F</b> → Focus camera on selection</li>
+            <li><b>Arrow Keys</b> → Nudge selected object</li>
+            <li><b>Delete</b> → Delete selected object</li>
+            <li><b>Right Mouse Drag</b> → Orbit camera</li>
+            <li><b>Middle Mouse Drag</b> → Pan camera</li>
             <li><b>Mouse Wheel</b> → Zoom</li>
-            <li><b>Delete</b> → Delete Selected Object</li>
-            <li><b>Q/E</b> → Rotate Selected Object</li>
-            <li><b>Arrow Keys</b> → Move Selected Object</li>
-            <li><b>Export Level</b> → Copy-ready mapProps3D assignment</li>
+            <li><b>Export Level</b> → Copy-ready <code>const forestLevel</code></li>
         </ul>
 
         <button id="closeHelp">
@@ -1217,6 +1282,9 @@ window.addEventListener(
     "wheel",
     e =>
     {
+        // Scrolling over a UI panel should scroll that panel, not zoom the scene.
+        if (e.target.closest && e.target.closest('#toolbar, #right-panel, .help-modal')) return;
+
         orbitDistance += e.deltaY * 0.02;
 
         orbitDistance = THREE.MathUtils.clamp(
