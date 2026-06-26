@@ -22,10 +22,23 @@ const Level = {
         ground.receiveShadow = false;
         scene.add(ground);
 
-        // Load level data from the forest level module.
-        // The imported `forestLevel` constant provides the prop array.
-        mapProps3D = typeof forestLevel !== 'undefined' ? forestLevel : [];
+        // Load the first registered level as the default. Levels come from the
+        // js/levels/ folder via the registry (LEVELS); the lobby lets the host
+        // pick which one, and loadLevel() swaps it in at game start.
+        const def = (typeof LEVELS !== 'undefined' && LEVELS[0]) ? LEVELS[0].props : [];
+        this.loadLevel(def);
+    },
 
+    // Swap the active level: remove the previous level's prop meshes and spawn
+    // the new ones. Props are cloned so enrichProp() doesn't mutate the shared
+    // registry source (the same level can be loaded repeatedly).
+    loadLevel: function(props) {
+        if (this.levelMeshes) {
+            this.levelMeshes.forEach(m => scene.remove(m));
+        }
+        this.levelMeshes = [];
+
+        mapProps3D = JSON.parse(JSON.stringify(props || []));
         mapProps3D.forEach(prop => this.spawnProp(prop));
     },
 
@@ -45,6 +58,7 @@ const Level = {
         PropLevel.enrichProp(prop, mesh);
         mesh.userData.propData = prop;
         scene.add(mesh);
+        (this.levelMeshes = this.levelMeshes || []).push(mesh);
     },
 
     loadModels: function(callback) {

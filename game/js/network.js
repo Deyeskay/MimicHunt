@@ -243,6 +243,34 @@ const Network = {
     },
 
     /*=================================================================
+      Level selection (lobby). Levels come from the bundled registry
+      (LEVELS, populated by js/levels/*.js), so they are identical on
+      every peer — only the chosen NAME is synced, never the prop data.
+    =================================================================*/
+    getLevelList() {
+        return (typeof LEVELS !== 'undefined' ? LEVELS : []).map(l => l.name);
+    },
+
+    getLevelProps(name) {
+        const list = (typeof LEVELS !== 'undefined' ? LEVELS : []);
+        const found = list.find(l => l.name === name);
+        return (found || list[0] || { props: [] }).props;
+    },
+
+    // Host picks a map → record it + tell everyone (just the name).
+    selectLevel(name) {
+        if (!isHost) return;
+        gameState.levelName = name;
+        this.broadcast({
+            type: 'lobbySync',
+            players: gameState.players,
+            levelName: name,
+            roomCode: pendingRoomCode
+        });
+        UI.renderLevelSelector();
+    },
+
+    /*=================================================================
       Host initialization
     =================================================================*/
     initHost() {
@@ -319,6 +347,10 @@ const Network = {
         gameState.players = {};
         connections = [];
 
+        // Default the selected map to the first registered level.
+        const levelNames = this.getLevelList();
+        gameState.levelName = levelNames[0] || '';
+
         // Create host player — defaults to Seeker but can be changed in the
         // lobby. The host is implicitly ready (it drives "Start Game").
         gameState.players[myId] = this.createPlayer('Seeker', this._usedSpawns, myName);
@@ -326,6 +358,7 @@ const Network = {
         localPos = { ...gameState.players[myId] };
 
         UI.updateLobby();
+        UI.renderLevelSelector();
 
         // Accept new connections (and, after a migration, reconnecting survivors)
         peer.on('connection', conn => this.acceptConnection(conn));
@@ -363,7 +396,8 @@ const Network = {
                     phase: gameState.phase,
                     timer: gameState.timer,
                     hostId: myId,
-                    roomCode: pendingRoomCode
+                    roomCode: pendingRoomCode,
+                    levelName: gameState.levelName
                 });
 
                 // If the hunter left and the round is being dissolved, tell the
@@ -392,8 +426,8 @@ const Network = {
             const joinName = (conn.metadata && conn.metadata.name) || '';
             gameState.players[conn.peer] = this.createPlayer('Hider', this._usedSpawns || [], joinName);
             UI.updateLobby();
-            conn.send({ type: 'lobbySync', players: gameState.players });
-            this.broadcast({ type: 'lobbySync', players: gameState.players });
+            conn.send({ type: 'lobbySync', players: gameState.players, levelName: gameState.levelName });
+            this.broadcast({ type: 'lobbySync', players: gameState.players, levelName: gameState.levelName });
         });
 
         conn.on('data', data => this.handleClientData(conn, data));
@@ -638,6 +672,7 @@ const Network = {
 
             case 'lobbySync':
                 gameState.players = data.players;
+                if (data.levelName) gameState.levelName = data.levelName;
                 if (data.roomCode) {
                     pendingRoomCode = data.roomCode;
                     const t = document.getElementById('lobby-title');
@@ -647,10 +682,13 @@ const Network = {
                 // in-game; make sure we're actually showing the lobby.
                 if (gameState.phase === 'LOBBY') UI.transitionToLobby();
                 UI.updateLobby();
+                UI.renderLevelSelector();
                 break;
 
             case 'gameStart':
                 Object.assign(gameState, data.gameState);
+                // Load the host's chosen level into our scene before entering it.
+                Level.loadLevel(this.getLevelProps(gameState.levelName));
                 // Seed local prediction state from our authoritative spawn so
                 // the client starts at the right place instead of the origin.
                 {
@@ -673,6 +711,7 @@ const Network = {
                 this._lastSnapshotT = undefined;
                 migrating = false;
                 departedHostId = null;
+                if (data.levelName) gameState.levelName = data.levelName;
                 if (data.roomCode) {
                     pendingRoomCode = data.roomCode;
                     const t = document.getElementById('lobby-title');
@@ -687,6 +726,7 @@ const Network = {
                 if (gameState.phase === 'LOBBY') {
                     UI.transitionToLobby();
                     UI.updateLobby();
+                    UI.renderLevelSelector();
                 } else {
                     UI.transitionToGame();
                     UI.updateHUD();
@@ -817,6 +857,10 @@ const Network = {
         // A fresh round clears any leftover migration bookkeeping.
         this._pendingHidersWin = false;
         this._excluded = null;
+
+        // Load the host-selected level into the scene FIRST, so the spawn points
+        // below (getSpawnForRole reads mapProps3D) come from the chosen map.
+        Level.loadLevel(this.getLevelProps(gameState.levelName));
 
         // Roles may have changed in the lobby, so the spawn/color baked in at
         // createPlayer is stale. Reassign spawn + color per each player's FINAL

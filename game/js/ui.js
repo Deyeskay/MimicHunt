@@ -31,6 +31,41 @@ const UI = {
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'flex';
+        this.renderLevelSelector();
+    },
+
+    // Lobby map picker: a small status line + a horizontal carousel of level
+    // cards (from the bundled registry). The host can click a card to choose;
+    // everyone else sees the selection read-only. Rebuilt only on lobby entry /
+    // selection change (NOT from updateLobby) to avoid resetting scroll on every
+    // ready toggle.
+    renderLevelSelector: function() {
+        const wrap = document.getElementById('lobby-level');
+        if (!wrap) return;
+
+        const names = Network.getLevelList();
+        const selected = gameState.levelName || names[0] || '';
+
+        wrap.innerHTML = '';
+
+        const status = document.createElement('div');
+        status.className = 'lobby-level-status';
+        status.innerHTML = 'Map: <b>' + (selected || '—') + '</b>';
+        wrap.appendChild(status);
+
+        const carousel = document.createElement('div');
+        carousel.className = 'level-carousel';
+        names.forEach(name => {
+            const card = document.createElement('div');
+            card.className = 'level-card' + (name === selected ? ' selected' : '');
+            card.textContent = name;
+            if (isHost) {
+                card.style.cursor = 'pointer';
+                card.onclick = () => Network.selectLevel(name);
+            }
+            carousel.appendChild(card);
+        });
+        wrap.appendChild(carousel);
     },
 
     transitionToMenu: function() {

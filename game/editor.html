@@ -403,7 +403,7 @@ button{
             <li><b>Right Mouse Drag</b> → Orbit camera</li>
             <li><b>Middle Mouse Drag</b> → Pan camera</li>
             <li><b>Mouse Wheel</b> → Zoom</li>
-            <li><b>Export Level</b> → Copy-ready <code>const forestLevel</code></li>
+            <li><b>Export Level</b> → drop-in <code>registerLevel(...)</code> file</li>
         </ul>
 
         <button id="closeHelp" class="btn">
@@ -1373,20 +1373,31 @@ function saveLevelsStore(store)
 function openModal(id)  { document.getElementById(id).style.display = 'block'; }
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
-// Emit the exact form the game loads: `const forestLevel = [...]`.
-function buildLevelString()
+// Emit a drop-in level file: `registerLevel("name", [...]);`. Save it as
+// game/js/levels/<name>.js, add a <script> tag, and it shows in the lobby
+// carousel. (Load still works — applyLevelData slices out the [ ... ] array.)
+function buildLevelString(name)
 {
     const result = placedObjects.map(obj => PropLevel.exportProp(obj));
-    return "const forestLevel = " + JSON.stringify(result, null, 4) + ";";
+    return "registerLevel(" + JSON.stringify(name || "level") + ", " +
+           JSON.stringify(result, null, 4) + ");";
 }
 
 // Export button → open the Save/Export modal, pre-filled with current scene data
 // (and the current level name if this scene was loaded/saved before).
 function exportLevel()
 {
-    document.getElementById("exportResponse").value = buildLevelString();
-    document.getElementById("exportLevelName").value = currentLevelName;
+    const nameInput = document.getElementById("exportLevelName");
+    nameInput.value = currentLevelName;
+    document.getElementById("exportResponse").value = buildLevelString(currentLevelName);
     document.getElementById("exportStatus").textContent = "";
+
+    // Keep the registerLevel("name", ...) wrapper in sync as the user types.
+    nameInput.oninput = () => {
+        document.getElementById("exportResponse").value =
+            buildLevelString(nameInput.value.trim());
+    };
+
     openModal("exportModal");
 }
 
@@ -1530,8 +1541,8 @@ function clearAllObjects()
     clearInspector();
 }
 
-// Parse an exported level string (`const forestLevel = [...]` or a raw array)
-// and rebuild it in the scene. Returns true on success.
+// Parse an exported level string (`registerLevel("x", [...])`, `const forestLevel
+// = [...]`, or a raw array) and rebuild it in the scene. Returns true on success.
 function applyLevelData(raw)
 {
     const start = raw.indexOf("[");

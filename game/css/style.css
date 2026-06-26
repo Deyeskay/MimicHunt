@@ -94,6 +94,23 @@ button.leave { background: rgba(255, 71, 87, 0.2); color: var(--accent-red); bor
 .role-tag-hider  { color: var(--accent-green); background: rgba(46,213,115,0.15); }
 .role-tag-seeker { color: var(--accent-red);   background: rgba(255,71,87,0.15); }
 
+/* Lobby map picker (carousel of level cards) */
+.lobby-level-status { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
+.lobby-level-status b { color: var(--accent-blue); }
+.level-carousel { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
+.level-carousel::-webkit-scrollbar { height: 6px; }
+.level-carousel::-webkit-scrollbar-thumb { background: #3a3a46; border-radius: 6px; }
+.level-card {
+    flex: 0 0 auto; min-width: 88px; padding: 12px 14px; text-align: center;
+    background: #2f3542; border: 1px solid #3a3a46; border-radius: 10px;
+    font-weight: 600; font-size: 0.85rem; color: var(--text-main);
+    transition: background .15s, border-color .15s;
+}
+.level-card.selected {
+    background: var(--accent-blue); border-color: var(--accent-blue); color: #fff;
+    box-shadow: 0 0 0 2px rgba(30,144,255,0.35);
+}
+
 .hud-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
 .hud-card {
     background: rgba(26, 26, 36, 0.85); padding: 10px 16px; border-radius: 30px;

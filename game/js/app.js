@@ -77,11 +77,15 @@ function animate() {
 
 // --- INITIALIZE APPLICATION ---
 window.addEventListener('resize', () => Level.resize());
-Level.loadModels(() =>
+// Load all level files (registry.js → LEVEL_FILES) before init reads LEVELS.
+loadLevelScripts().then(() =>
 {
-    Level.init();
-    Mechanics.initInputs();
-    animate();
+    Level.loadModels(() =>
+    {
+        Level.init();
+        Mechanics.initInputs();
+        animate();
+    });
 });
 
 const savedSettings = localStorage.getItem('hidehunt_settings');

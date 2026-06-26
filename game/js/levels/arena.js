@@ -1,4 +1,4 @@
-registerLevel('Forest', [
+registerLevel('Arena', [
     {
         "id": "tree_1",
         "x": 2.97,
