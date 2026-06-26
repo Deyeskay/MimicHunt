@@ -63,19 +63,27 @@ const Mechanics = {
     applyDisguiseFromProp: function(prop) {
         localDisguise.type = prop.model;
         localDisguise.size = prop.radius * 2;
+        localDisguise.propScale = prop.scale ?? 1;
+        localDisguise.propHeight = prop.height;
+        localDisguise.propRadius = prop.radius;
+        localDisguise.propRotation = prop.rotation || null;
 
         const player = gameState.players[myId];
-        player.disguiseType = prop.model;
+        player.disguiseType = localDisguise.type;
         player.disguiseSize = localDisguise.size;
-        player.propScale = prop.scale ?? 1;
-        player.propHeight = prop.height;
-        player.propRadius = prop.radius;
-        player.propRotation = prop.rotation || null;
+        player.propScale = localDisguise.propScale;
+        player.propHeight = localDisguise.propHeight;
+        player.propRadius = localDisguise.propRadius;
+        player.propRotation = localDisguise.propRotation;
     },
 
     clearDisguise: function() {
         localDisguise.type = 'player';
         localDisguise.size = 2;
+        localDisguise.propScale = 1;
+        localDisguise.propHeight = 2;
+        localDisguise.propRadius = 1;
+        localDisguise.propRotation = null;
 
         const player = gameState.players[myId];
         player.disguiseType = 'player';

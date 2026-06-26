@@ -72,6 +72,34 @@ const Network = {
     },
 
     /*=================================================================
+      Local-player reconciliation helpers
+      ---------------------------------------------------------------
+      The local player is predicted at 60 FPS from localPos/cameraYaw/
+      localDisguise. These re-apply that prediction onto a player record
+      so an authoritative `sync` (which arrives at NETWORK_SEND_RATE and
+      may be older) never overwrites our own smooth movement. The host
+      stays authoritative for fields we DON'T touch here (e.g. isCaught).
+    =================================================================*/
+    applyLocalTransform(p) {
+        if (!p) return;
+        p.x = localPos.x;
+        p.y = localPos.y;
+        p.z = localPos.z;
+        p.rotY = cameraYaw;
+    },
+
+    applyLocalDisguise(p) {
+        if (!p) return;
+        p.disguiseType = localDisguise.type;
+        p.disguiseSize = localDisguise.size;
+        p.propScale = localDisguise.propScale;
+        p.propHeight = localDisguise.propHeight;
+        p.propRadius = localDisguise.propRadius;
+        p.propRotation = localDisguise.propRotation;
+        p.color = localDisguise.color;
+    },
+
+    /*=================================================================
       Host initialization
     =================================================================*/
     initHost() {
@@ -244,30 +272,25 @@ const Network = {
             }
         }, 1000);
 
-        // Main 60 FPS loop
+        // Physics / simulation loop — stays at 60 FPS
         gameLoopInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
 
-            // Host movement (Seeker)
+            // Host movement (Seeker) — predicted locally every frame
             Mechanics.handleLocalMovement();
-            const host = gameState.players[myId];
-            host.x = localPos.x;
-            host.y = localPos.y;
-            host.z = localPos.z;
-            host.rotY = cameraYaw;
-            host.disguiseType = localDisguise.type;
-            host.disguiseSize = localDisguise.size;
-            host.propScale = host.propScale || 1;
-            host.propHeight = host.propHeight || 2;
-            host.propRadius = host.propRadius || 1;
+            this.applyLocalTransform(gameState.players[myId]);
 
             // Collision detection (Seeker catches Hiders)
             if (gameState.phase === 'HUNTING') Mechanics.checkCollisions();
 
-            // Broadcast authoritative state
-            this.broadcast({ type: 'sync', gameState });
             UI.updateHUD();
         }, 1000 / 60);
+
+        // Network loop — broadcast authoritative state at NETWORK_SEND_RATE (20 Hz)
+        networkInterval = setInterval(() => {
+            if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+            this.broadcast({ type: 'sync', gameState });
+        }, 1000 / NETWORK_SEND_RATE);
     },
 
     /*=================================================================
@@ -286,11 +309,30 @@ const Network = {
 
             case 'gameStart':
                 Object.assign(gameState, data.gameState);
+                // Seed local prediction state from our authoritative spawn so
+                // the client starts at the right place instead of the origin.
+                {
+                    const me = gameState.players[myId];
+                    if (me) {
+                        localPos = { x: me.x, y: me.y, z: me.z };
+                        cameraYaw = me.rotY || 0;
+                        localDisguise.color = me.color;
+                    }
+                }
                 UI.transitionToGame();
                 break;
 
             case 'sync':
                 Object.assign(gameState, data.gameState);
+                // Authoritative snapshot just replaced our local player record.
+                // Re-apply our own predicted transform/disguise so our movement
+                // stays smooth; the host remains authoritative for everything
+                // else (e.g. isCaught), which we leave untouched.
+                {
+                    const me = gameState.players[myId];
+                    this.applyLocalTransform(me);
+                    this.applyLocalDisguise(me);
+                }
                 if (gameState.phase !== 'LOBBY')
                 {
                     UI.updateHUD();
@@ -314,13 +356,19 @@ const Network = {
             //UI.showModal('Disconnected', 'Host left the match.', () => this.cleanup());
         });
 
-        // Send movement at 60 FPS
+        // Physics / prediction loop — stays at 60 FPS for smooth local movement.
+        // Writes the predicted transform into our own player record every frame
+        // so rendering and the camera follow it smoothly between network updates.
         gameLoopInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
             Mechanics.handleLocalMovement();
+            this.applyLocalTransform(gameState.players[myId]);
+        }, 1000 / 60);
 
-            const player = gameState.players[myId];
-            const packet = {
+        // Network loop — send our input to the host at NETWORK_SEND_RATE (20 Hz)
+        networkInterval = setInterval(() => {
+            if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+            this.sendToHost({
                 type: 'clientMove',
                 x: localPos.x,
                 y: localPos.y,
@@ -328,14 +376,13 @@ const Network = {
                 rotY: cameraYaw,
                 disguiseType: localDisguise.type,
                 disguiseSize: localDisguise.size,
-                propScale: player?.propScale ?? 1,
-                propHeight: player?.propHeight ?? 2,
-                propRadius: player?.propRadius ?? 1,
-                propRotation: player?.propRotation ?? null,
+                propScale: localDisguise.propScale,
+                propHeight: localDisguise.propHeight,
+                propRadius: localDisguise.propRadius,
+                propRotation: localDisguise.propRotation,
                 color: localDisguise.color || 0x2ed573
-            };
-            this.sendToHost(packet);
-        }, 1000 / 60);
+            });
+        }, 1000 / NETWORK_SEND_RATE);
     },
 
     /*=================================================================
@@ -361,6 +408,7 @@ const Network = {
 
         // Stop loops
         if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
+        if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
 
         // Remove meshes

@@ -19,12 +19,27 @@ let isLeavingRoom = false;
 let isHost = false;
 let myId = null;
 let amIReady = false;
-let gameLoopInterval = null;
+let gameLoopInterval = null;   // 60 FPS physics loop
+let networkInterval = null;    // 20 Hz network send/broadcast loop
 let timerInterval = null;
+
+// Network transmission rate (Hz). Physics/render stay at 60 FPS.
+const NETWORK_SEND_RATE = 20;
 
 // --- PHYSICS & LOCAL PLAYER DATA ---
 let localPos = { x: 0, y: 2, z: 0 }; // Added Y for verticality
-let localDisguise = { type: 'player', size: 2, color: 0x2ed573 };
+// localDisguise is the client-side source of truth for everything the local
+// player controls about its appearance. Kept complete so it can be re-applied
+// after an authoritative `sync` overwrites gameState.players[myId].
+let localDisguise = {
+    type: 'player',
+    size: 2,
+    color: 0x2ed573,
+    propScale: 1,
+    propHeight: 2,
+    propRadius: 1,
+    propRotation: null
+};
 
 // Camera & Movement Params
 let cameraYaw = 0;   // Left/Right look

@@ -96,6 +96,20 @@ const Level = {
         );
     },
 
+    // Shortest-path angular interpolation (handles the -PI/+PI wrap).
+    lerpAngle: function(from, to, t) {
+        let diff = to - from;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        return from + diff * t;
+    },
+
+    // Smoothing factor for remote-player interpolation, applied per render
+    // frame (~60 FPS). Network snapshots arrive at NETWORK_SEND_RATE (20 Hz);
+    // each frame we ease the rendered transform toward the latest snapshot so
+    // remote players glide instead of teleporting every ~50 ms.
+    INTERP_FACTOR: 0.25,
+
     updatePlayerMeshTransform: function(mesh, p) {
         if (p.disguiseType !== "player" && p.role !== "Seeker") {
             const baseHeight = PropLevel.getDisguiseBaseHeight(p);
@@ -146,7 +160,33 @@ const Level = {
                 playerMeshes[id] = mesh;
             }
 
-            this.updatePlayerMeshTransform(playerMeshes[id], p);
+            const mesh = playerMeshes[id];
+
+            // The local player is already simulated at 60 FPS, so render it
+            // exactly. Remote players only update at the network rate, so
+            // interpolate their rendered transform toward the latest snapshot.
+            if (id === myId) {
+                this.updatePlayerMeshTransform(mesh, p);
+            } else {
+                const ud = mesh.userData;
+                if (ud.renderX === undefined) {
+                    ud.renderX = p.x; ud.renderY = p.y; ud.renderZ = p.z;
+                    ud.renderRotY = p.rotY;
+                }
+                const t = this.INTERP_FACTOR;
+                ud.renderX += (p.x - ud.renderX) * t;
+                ud.renderY += (p.y - ud.renderY) * t;
+                ud.renderZ += (p.z - ud.renderZ) * t;
+                ud.renderRotY = this.lerpAngle(ud.renderRotY, p.rotY, t);
+
+                this.updatePlayerMeshTransform(mesh, {
+                    ...p,
+                    x: ud.renderX,
+                    y: ud.renderY,
+                    z: ud.renderZ,
+                    rotY: ud.renderRotY
+                });
+            }
         }
 
         if (gameState.players[myId]) {
