@@ -227,20 +227,23 @@ const Mechanics = {
     },
 
     checkCollisions: function() {
-        const players = Object.values(gameState.players);
-        const seeker = players.find(p => p.role === 'Seeker');
-        if (!seeker) return;
+        // Multiple seekers are allowed — any seeker within range catches a hider.
+        const seekers = Object.values(gameState.players).filter(p => p.role === 'Seeker');
+        if (!seekers.length) return;
 
         for (let id in gameState.players) {
             let target = gameState.players[id];
-            if (target.role === 'Hider' && !target.isCaught) {
+            if (target.role !== 'Hider' || target.isCaught) continue;
+
+            for (const seeker of seekers) {
                 let dist = Math.hypot(seeker.x - target.x, seeker.z - target.z);
                 if (dist < (target.disguiseSize + 2)) {
-                    gameState.players[id].isCaught = true;
+                    target.isCaught = true;
                     // Caught state no longer rides in the snapshot — tell
                     // everyone with a discrete event (host-only code path).
                     Network.broadcast({ type: 'caught', id });
                     this.checkWinConditions();
+                    break;   // already caught; no need to test other seekers
                 }
             }
         }

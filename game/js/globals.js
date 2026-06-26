@@ -4,8 +4,12 @@ let GAME_SETTINGS = {
     huntingTime: 90,
     mouseSensitivity: 0.002,
     invertY: false,
-    showMobileControls: true
+    showMobileControls: true,
+    playerName: ''
 };
+
+// Local player's chosen display name (entered on the menu).
+let myName = '';
 
 const HIDING_DURATION = () => GAME_SETTINGS.hidingTime;
 const ROUND_DURATION = () => GAME_SETTINGS.huntingTime;

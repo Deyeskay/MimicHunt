@@ -54,43 +54,76 @@ const UI = {
         const container = document.getElementById('player-list-container');
         container.innerHTML = "";
 
-        const players = Object.keys(gameState.players);
-        let totalHidersCount = 0; let readyHidersCount = 0;
+        const ids = Object.keys(gameState.players);
+        const hostId = isHost ? myId : (connToHost && connToHost.peer);
+        const ROLE_ICONS = { Hider: '🙈', Seeker: '🔦' };
 
-        players.forEach((id, index) => {
+        let seekers = 0, hiders = 0, total = 0, readyCount = 0;
+
+        ids.forEach((id, index) => {
             const p = gameState.players[id];
+            total++;
+            if (p.role === 'Seeker') seekers++; else hiders++;
+            if (p.isReady) readyCount++;
+
             const item = document.createElement('div');
             item.className = 'player-item';
-            
-            let displayName = id === myId ? "You" : `Player ${index + 1}`;
-            let statusText = p.isReady ? "READY" : "NOT READY";
-            let statusClass = p.isReady ? "status-ready" : "status-not";
-            
-            if (p.role === 'Seeker') {
-                displayName += " [Host/Hunter]"; statusText = "HOST"; statusClass = "status-ready";
+
+            // Name (+ host tag)
+            const nameSpan = document.createElement('span');
+            let label = p.name || (id === myId ? 'You' : `Player ${index + 1}`);
+            if (id === hostId) label += ' (Host)';
+            nameSpan.textContent = label;
+            item.appendChild(nameSpan);
+
+            // Role: editable segmented toggle for the local player, read-only chip otherwise
+            if (id === myId) {
+                const roleWrap = document.createElement('span');
+                roleWrap.className = 'role-toggle';
+                ['Hider', 'Seeker'].forEach(r => {
+                    const b = document.createElement('button');
+                    b.textContent = `${ROLE_ICONS[r]} ${r}`;
+                    b.dataset.role = r;
+                    b.className = 'role-btn' + (p.role === r ? ' role-active' : '');
+                    b.onclick = () => Network.setLocalRole(r);
+                    roleWrap.appendChild(b);
+                });
+                item.appendChild(roleWrap);
             } else {
-                totalHidersCount++; if(p.isReady) readyHidersCount++;
+                const roleSpan = document.createElement('span');
+                roleSpan.className = 'role-tag role-tag-' + (p.role === 'Seeker' ? 'seeker' : 'hider');
+                roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${p.role}`;
+                item.appendChild(roleSpan);
             }
 
-            item.innerHTML = `<span>${displayName}</span><span class="${statusClass}">${statusText}</span>`;
+            // Ready status
+            const statusSpan = document.createElement('span');
+            statusSpan.textContent = p.isReady ? 'READY' : 'NOT READY';
+            statusSpan.className = p.isReady ? 'status-ready' : 'status-not';
+            item.appendChild(statusSpan);
+
             container.appendChild(item);
         });
+
+        // Validation: need >=1 of each role AND everyone ready.
+        const composOk = seekers >= 1 && hiders >= 1;
+        const allReady = total > 0 && readyCount === total;
+        let warning = '';
+        if (!composOk) warning = 'Need at least 1 Hider and 1 Seeker to start.';
+        else if (!allReady) warning = 'Waiting for all players to be ready.';
+        const warnEl = document.getElementById('lobby-warning');
+        if (warnEl) warnEl.textContent = warning;
 
         const actionBtn = document.getElementById('btn-lobby-action');
 
         if (isHost) {
+            const canStart = composOk && allReady;
             actionBtn.innerText = "Start Game";
-            if (totalHidersCount > 0 && readyHidersCount === totalHidersCount) {
-                actionBtn.disabled = false; actionBtn.className = "success";
-            } else {
-                actionBtn.disabled = true;
-            }
+            actionBtn.disabled = !canStart;
+            actionBtn.className = canStart ? "success" : "secondary";
         } else {
             // Drive the client's Ready button from the authoritative lobby state
-            // (not just the optimistic local toggle), so a lobbySync that crosses
-            // a ready click can't leave the button and the row out of sync. Set
-            // it unconditionally — if our record isn't present yet (e.g. a fresh
-            // room after a previous match) we still clear any stale "Unready".
+            // so a lobbySync that crosses a ready click can't desync it.
             const me = gameState.players[myId];
             amIReady = !!(me && me.isReady);
             actionBtn.disabled = false;
@@ -103,7 +136,8 @@ const UI = {
         const me = gameState.players[myId];
         if (!me) return;
 
-        document.getElementById('role-badge').innerText = `${me.role.toUpperCase()} ${me.isCaught ? '(CAUGHT)' : ''}`;
+        const namePrefix = me.name ? `${me.name} — ` : '';
+        document.getElementById('role-badge').innerText = `${namePrefix}${me.role.toUpperCase()} ${me.isCaught ? '(CAUGHT)' : ''}`;
         document.getElementById('role-badge').style.color = me.role === 'Seeker' ? 'var(--accent-red)' : 'var(--accent-green)';
 
         let m = Math.floor(gameState.timer / 60).toString().padStart(2, '0');

@@ -31,7 +31,7 @@ const Network = {
     /*=================================================================
       Helper: create a player object with initial data
     =================================================================*/
-    createPlayer(role, used) {
+    createPlayer(role, used, name) {
         const spawn = this.getSpawnForRole(role, used);
         used.push(spawn);
         return {
@@ -40,8 +40,11 @@ const Network = {
             z: spawn.z,
             rotY: 0,
             role,
+            name: name || '',
             isCaught: false,
-            isReady: role === 'Seeker',
+            // Readiness is independent of role now (roles are user-chosen). The
+            // host is marked ready explicitly by its callers; clients toggle it.
+            isReady: false,
             disguiseType: 'player',
             disguiseSize: 2,
             propScale: 1,
@@ -221,6 +224,25 @@ const Network = {
     },
 
     /*=================================================================
+      Set the local player's lobby role (Hider/Seeker). Optimistic locally,
+      then host broadcasts the new roster / a client tells the host, which
+      re-broadcasts — mirrors the isReady reconciliation pattern.
+    =================================================================*/
+    setLocalRole(role) {
+        if (role !== 'Hider' && role !== 'Seeker') return;
+        const me = gameState.players[myId];
+        if (!me || me.role === role) return;
+        me.role = role;
+        me.color = role === 'Seeker' ? 0xff4757 : 0x2ed573;
+        UI.updateLobby();
+        if (isHost) {
+            this.broadcast({ type: 'lobbySync', players: gameState.players });
+        } else {
+            this.sendToHost({ type: 'roleChange', role });
+        }
+    },
+
+    /*=================================================================
       Host initialization
     =================================================================*/
     initHost() {
@@ -263,7 +285,9 @@ const Network = {
         peer = new Peer();
         peer.on('open', id => {
             myId = id;
-            connToHost = peer.connect('hnh3d-' + input);
+            // Carry our display name in the connection metadata so the host can
+            // label us without a separate handshake message.
+            connToHost = peer.connect('hnh3d-' + input, { metadata: { name: myName } });
             connToHost.on('open', () => {
                 // Show lobby UI for client
                 document.getElementById('menu-screen').style.display = 'none';
@@ -295,8 +319,10 @@ const Network = {
         gameState.players = {};
         connections = [];
 
-        // Create host player (Seeker)
-        gameState.players[myId] = this.createPlayer('Seeker', this._usedSpawns);
+        // Create host player — defaults to Seeker but can be changed in the
+        // lobby. The host is implicitly ready (it drives "Start Game").
+        gameState.players[myId] = this.createPlayer('Seeker', this._usedSpawns, myName);
+        gameState.players[myId].isReady = true;
         localPos = { ...gameState.players[myId] };
 
         UI.updateLobby();
@@ -363,7 +389,8 @@ const Network = {
                 return;
             }
             connections.push(conn);
-            gameState.players[conn.peer] = this.createPlayer('Hider', this._usedSpawns || []);
+            const joinName = (conn.metadata && conn.metadata.name) || '';
+            gameState.players[conn.peer] = this.createPlayer('Hider', this._usedSpawns || [], joinName);
             UI.updateLobby();
             conn.send({ type: 'lobbySync', players: gameState.players });
             this.broadcast({ type: 'lobbySync', players: gameState.players });
@@ -397,6 +424,17 @@ const Network = {
             case 'lobbyReady':
                 if (gameState.players[conn.peer]) {
                     gameState.players[conn.peer].isReady = data.readyState;
+                    UI.updateLobby();
+                    this.broadcast({ type: 'lobbySync', players: gameState.players });
+                }
+                break;
+
+            case 'roleChange':
+                if (gameState.players[conn.peer] &&
+                    (data.role === 'Hider' || data.role === 'Seeker')) {
+                    const rp = gameState.players[conn.peer];
+                    rp.role = data.role;
+                    rp.color = data.role === 'Seeker' ? 0xff4757 : 0x2ed573;
                     UI.updateLobby();
                     this.broadcast({ type: 'lobbySync', players: gameState.players });
                 }
@@ -780,7 +818,33 @@ const Network = {
         this._pendingHidersWin = false;
         this._excluded = null;
 
-        gameState.players[myId].isReady = true;
+        // Roles may have changed in the lobby, so the spawn/color baked in at
+        // createPlayer is stale. Reassign spawn + color per each player's FINAL
+        // role, and reset combat/disguise state for the new round.
+        this._usedSpawns = [];
+        Object.keys(gameState.players).forEach(id => {
+            const p = gameState.players[id];
+            const spawn = this.getSpawnForRole(p.role, this._usedSpawns);
+            this._usedSpawns.push(spawn);
+            p.x = spawn.x; p.y = spawn.y; p.z = spawn.z; p.rotY = 0;
+            p.isCaught = false;
+            p.color = p.role === 'Seeker' ? 0xff4757 : 0x2ed573;
+            p.disguiseType = 'player';
+            p.disguiseSize = 2;
+            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;
+            delete p._lastMoveT;
+        });
+
+        // Re-seed the host's local prediction from its (re-spawned) record.
+        const host = gameState.players[myId];
+        host.isReady = true;
+        localPos = { x: host.x, y: host.y, z: host.z };
+        cameraYaw = 0;
+        localDisguise = {
+            type: 'player', size: 2, color: host.color,
+            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null
+        };
+
         gameState.phase = 'HIDING';
         gameState.timer = HIDING_DURATION();
         this.broadcast({ type: 'gameStart', gameState });
@@ -861,16 +925,11 @@ const Network = {
         this.startHostLoops();   // idle while LOBBY; resumes the match otherwise
 
         if (wasLobby) {
-            // Ensure the lobby has a hunter to start: promote self to Seeker
-            // (the host is conventionally the Seeker; roles otherwise preserved).
+            // Roles are user-chosen and preserved across migration. The new host
+            // is implicitly ready; if no seeker remains the lobby validation/
+            // warning prompts players to pick one (we don't force a role).
             const me = gameState.players[myId];
-            if (me && seekers === 0) {
-                me.role = 'Seeker';
-                me.isReady = true;
-                me.color = 0xff4757;
-                me.disguiseType = 'player';
-                me.disguiseSize = 2;
-            }
+            if (me) me.isReady = true;
             UI.transitionToLobby();
             UI.updateLobby();
             this.broadcast({ type: 'lobbySync', players: gameState.players, roomCode: pendingRoomCode });
@@ -944,7 +1003,9 @@ const Network = {
             p.role = role;
             p.x = spawn.x; p.y = spawn.y; p.z = spawn.z; p.rotY = 0;
             p.isCaught = false;
-            p.isReady = (role === 'Seeker');
+            // Host implicitly ready; clients re-ready in the fresh lobby. (Names
+            // are preserved — we only reset role/spawn/ready/disguise here.)
+            p.isReady = (id === myId);
             p.disguiseType = 'player';
             p.disguiseSize = 2;
             p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;

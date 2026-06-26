@@ -48,6 +48,7 @@
             <p>Modular WebRTC Prototype</p>
             <button id="btn-settings" class="secondary" style="margin-bottom:15px;">⚙ Settings</button>
             <div class="form-group">
+                <input type="text" id="input-player-name" placeholder="YOUR NAME" maxlength="16" style="margin-bottom:10px;">
                 <button id="btn-host">Host New Session</button>
                 <div style="font-size:0.8rem; margin: 5px 0;">— OR —</div>
                 <input type="text" id="input-room-id" placeholder="4-DIGIT CODE" maxlength="4">
@@ -86,6 +87,7 @@
             <h2 id="lobby-title" style="color: var(--accent-blue);">LOBBY ROOM</h2>
             <p id="lobby-subtitle">Waiting for all players...</p>
             <div class="player-list" id="player-list-container"></div>
+            <div id="lobby-warning" style="color: var(--accent-red); font-size: 0.85rem; min-height: 1.1em; margin: 6px 0;"></div>
             <div class="form-group">
                 <button id="btn-lobby-action" class="success">Mark Ready</button>
                 <button id="btn-lobby-leave" class="secondary" style="margin-top: 5px;">Leave Lobby</button>

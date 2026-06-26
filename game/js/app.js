@@ -1,6 +1,14 @@
 // --- BIND HTML BUTTONS TO NETWORK LOGIC ---
-document.getElementById('btn-host').addEventListener('click', () => Network.initHost());
-document.getElementById('btn-join').addEventListener('click', () => Network.initClient());
+// Capture + persist the chosen display name before hosting/joining.
+function commitPlayerName() {
+    const input = document.getElementById('input-player-name');
+    myName = (input ? input.value : '').trim().slice(0, 16);
+    GAME_SETTINGS.playerName = myName;
+    localStorage.setItem('hidehunt_settings', JSON.stringify(GAME_SETTINGS));
+}
+
+document.getElementById('btn-host').addEventListener('click', () => { commitPlayerName(); Network.initHost(); });
+document.getElementById('btn-join').addEventListener('click', () => { commitPlayerName(); Network.initClient(); });
 document.getElementById('btn-leave').addEventListener('click', () => Network.leaveMatch());
 document.getElementById('btn-lobby-leave').addEventListener('click', () => Network.leaveMatch());
 
@@ -29,15 +37,16 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
 document.getElementById('btn-lobby-action').addEventListener('click', () => {
     if (isHost)
     {
-        const players = Object.values(gameState.players); 
+        // Defensive re-check (the button is already disabled by updateLobby when
+        // invalid). Need >=1 Seeker, >=1 Hider, and everyone ready; the inline
+        // #lobby-warning explains what's missing.
+        const players = Object.values(gameState.players);
+        const seekers = players.filter(p => p.role === 'Seeker').length;
+        const hiders = players.filter(p => p.role === 'Hider').length;
         const allReady = players.every(p => p.isReady);
 
-        if(!allReady)
-        {
-            UI.showModal(
-                "Players Not Ready",
-                "Everyone must mark Ready before starting."
-            );
+        if (seekers < 1 || hiders < 1 || !allReady) {
+            UI.updateLobby();   // refresh the inline warning
             return;
         }
 
@@ -86,6 +95,11 @@ if(savedSettings)
     document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY; 
     document.getElementById('setting-mobile-ui').checked = GAME_SETTINGS.showMobileControls;
 }
+
+// Pre-fill the name input from the last saved name.
+myName = GAME_SETTINGS.playerName || '';
+const nameInput = document.getElementById('input-player-name');
+if (nameInput) nameInput.value = myName;
 
 refreshMobileControls();
 
