@@ -478,6 +478,18 @@ const Network = {
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
         if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
         if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
+        // We are the host now — stop watching for a host (a successor that was
+        // a client must drop its watchdog) and start emitting heartbeats.
+        if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; }
+        if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+
+        // Heartbeat — a lightweight ping to all clients in EVERY phase. In-game
+        // the 20 Hz snapshot already proves liveness, but the lobby has no other
+        // periodic host traffic, so this is what makes a lobby host-drop
+        // detectable by clients' watchdogs.
+        heartbeatInterval = setInterval(() => {
+            this.broadcast({ type: 'ping' });
+        }, HEARTBEAT_MS);
 
         // Timer loop (seconds)
         timerInterval = setInterval(() => {
@@ -542,7 +554,14 @@ const Network = {
       Client-side: handle a packet from the host.
     =================================================================*/
     handleHostData(data) {
+        // Any message from the host proves it's alive — reset the watchdog.
+        this._lastHostMsgTime = this.now();
+
         switch (data.type) {
+
+            case 'ping':
+                // Heartbeat only — liveness already recorded above.
+                break;
 
             case 'lobbySync':
                 gameState.players = data.players;
@@ -678,6 +697,9 @@ const Network = {
     startClientLoops() {
         if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
         if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
+        // We are a client — stop any host heartbeat and (re)arm the watchdog.
+        if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+        if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; }
 
         // Physics / prediction loop — 60 FPS smooth local movement.
         gameLoopInterval = setInterval(() => {
@@ -698,6 +720,17 @@ const Network = {
                 rotY: cameraYaw
             });
         }, 1000 / NETWORK_SEND_RATE);
+
+        // Watchdog — if the host goes silent (no snapshot/ping/event) for longer
+        // than HOST_TIMEOUT_MS, treat it as a host loss. This catches abrupt tab
+        // closes/crashes where conn.on('close') never fires. Runs in all phases.
+        this._lastHostMsgTime = this.now();
+        watchdogInterval = setInterval(() => {
+            if (isLeavingRoom || migrating || sessionEnding) return;
+            if (this.now() - this._lastHostMsgTime > HOST_TIMEOUT_MS) {
+                this.onHostConnectionClose();
+            }
+        }, WATCHDOG_MS);
     },
 
     /*=================================================================
@@ -729,6 +762,9 @@ const Network = {
         migrating = true;
         this._excluded = null;   // each migration starts with a clean exclusion set
         departedHostId = (connToHost && connToHost.peer) || departedHostId;
+        // The watchdog path reaches here with the (dead) connection still open;
+        // close it best-effort before dropping the reference.
+        if (connToHost) { try { connToHost.close(); } catch (e) {} }
         connToHost = null;
 
         if (departedHostId) delete gameState.players[departedHostId];
@@ -937,6 +973,8 @@ const Network = {
         if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
         if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+        if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
+        if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; }
 
         // Reset packet-ordering / interpolation state for the next match
         this._lastSnapshotT = undefined;

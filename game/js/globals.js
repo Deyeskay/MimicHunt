@@ -26,6 +26,15 @@ let timerInterval = null;
 // --- HOST MIGRATION ---
 let migrating = false;         // a host-migration handshake is in flight
 let sessionEnding = false;     // a terminal transition (gameOver/roomClosing) is underway — suppress migration
+
+// --- DISCONNECT DETECTION (heartbeat / watchdog) ---
+// conn.on('close') is unreliable on abrupt tab close, so the host pings and
+// each client times out if it stops hearing from the host.
+let heartbeatInterval = null;  // host: periodic ping to all clients (all phases)
+let watchdogInterval = null;   // client: checks for host-message silence
+const HEARTBEAT_MS = 1000;     // host ping cadence
+const HOST_TIMEOUT_MS = 3000;  // client declares the host lost after this silence
+const WATCHDOG_MS = 500;       // client check cadence
 let departedHostId = null;     // peer id of the host that just dropped (excluded from election)
 let pendingRoomCode = null;    // 4-digit code minted by a successor for new joiners
 let rejoinExpected = {};       // successor: { peerId: timeoutHandle } of survivors we await
