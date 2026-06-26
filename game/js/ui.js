@@ -29,6 +29,14 @@ const UI = {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'flex';
+
+        // Reset the lobby action button so a stale label (e.g. "Unready" from a
+        // previous match) can't carry into the next room.
+        const actionBtn = document.getElementById('btn-lobby-action');
+        actionBtn.innerText = "Mark Ready";
+        actionBtn.className = "success";
+        actionBtn.disabled = false;
+
         this.updateStatus("");
     },
 
@@ -58,14 +66,26 @@ const UI = {
             container.appendChild(item);
         });
 
+        const actionBtn = document.getElementById('btn-lobby-action');
+
         if (isHost) {
-            const actionBtn = document.getElementById('btn-lobby-action');
             actionBtn.innerText = "Start Game";
             if (totalHidersCount > 0 && readyHidersCount === totalHidersCount) {
                 actionBtn.disabled = false; actionBtn.className = "success";
             } else {
                 actionBtn.disabled = true;
             }
+        } else {
+            // Drive the client's Ready button from the authoritative lobby state
+            // (not just the optimistic local toggle), so a lobbySync that crosses
+            // a ready click can't leave the button and the row out of sync. Set
+            // it unconditionally — if our record isn't present yet (e.g. a fresh
+            // room after a previous match) we still clear any stale "Unready".
+            const me = gameState.players[myId];
+            amIReady = !!(me && me.isReady);
+            actionBtn.disabled = false;
+            actionBtn.innerText = amIReady ? "Unready" : "Mark Ready";
+            actionBtn.className = amIReady ? "secondary" : "success";
         }
     },
 

@@ -43,9 +43,17 @@ document.getElementById('btn-lobby-action').addEventListener('click', () => {
 
         Network.startGameBroadcast();
     } else {
-        amIReady = !amIReady;
-        document.getElementById('btn-lobby-action').innerText = amIReady ? "Unready" : "Mark Ready";
-        document.getElementById('btn-lobby-action').className = amIReady ? "secondary" : "success";
+        // Toggle off the authoritative ready state (falling back to the local
+        // flag before the first sync), then optimistically reflect it. The next
+        // lobbySync reconciles the button via UI.updateLobby.
+        const me = gameState.players[myId];
+        const current = me ? !!me.isReady : amIReady;
+        amIReady = !current;
+
+        const btn = document.getElementById('btn-lobby-action');
+        btn.innerText = amIReady ? "Unready" : "Mark Ready";
+        btn.className = amIReady ? "secondary" : "success";
+
         if(connToHost && connToHost.open) connToHost.send({ type: 'lobbyReady', readyState: amIReady });
     }
 });
