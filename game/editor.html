@@ -307,7 +307,7 @@ textarea{
             <li><b>Delete</b> → Delete Selected Object</li>
             <li><b>Q/E</b> → Rotate Selected Object</li>
             <li><b>Arrow Keys</b> → Move Selected Object</li>
-            <li><b>Export Level</b> → Generate mapProps3D[]</li>
+            <li><b>Export Level</b> → Copy-ready mapProps3D assignment</li>
         </ul>
 
         <button id="closeHelp">
@@ -321,6 +321,7 @@ textarea{
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="js/props.js"></script>
 
 <script>
 //Globals
@@ -409,6 +410,7 @@ transformControls.addEventListener('objectChange', () => {
         const s = selectedObject.scale.x;
         selectedObject.scale.set(s, s, s);
     }
+    if (selectedObject) PropLevel.syncBoundsToData(selectedObject);
     updateInspectorFields();
 });
 
@@ -804,8 +806,7 @@ window.addEventListener(
 
         if(selectedModel === "wall")
         {
-            clone = new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshLambertMaterial({color:0xc8b59a}));
-            clone.scale.set(4,3,0.3);
+            clone = PropLevel.createWallMesh();
         }
         else
         {
@@ -813,19 +814,11 @@ window.addEventListener(
                 return;
 
             clone = modelLibrary[selectedModel].clone(true);
+            clone.scale.setScalar(1);
         }
 
         clone.position.copy(groundHit[0].point);
-
-        clone.scale.setScalar(1);
-
-        const box = new THREE.Box3().setFromObject(clone);
-
-        const size = new THREE.Vector3();
-
-        box.getSize(size);
-
-        clone.position.y -= box.min.y;
+        PropLevel.groundObject(clone, groundHit[0].point.y);
 
         clone.userData =
         {
@@ -836,12 +829,6 @@ window.addEventListener(
                     name:selectedModel + "_" + objectId++,
 
                     model:selectedModel,
-
-                    radius:Math.max(size.x,size.z)*0.5,
-
-                    height:size.y,
-
-                    scale:1,
 
                     collision:true,
 
@@ -856,6 +843,8 @@ window.addEventListener(
                     hiderSpawn:false
                 }
         };
+
+        PropLevel.syncBoundsToData(clone);
 
         clone.traverse(c=>
         {
@@ -1079,15 +1068,9 @@ function duplicateSelected()
 
     let clone;
 
-    // Wall
     if(model === "wall")
     {
-        clone = new THREE.Mesh(
-            new THREE.BoxGeometry(1,1,1),
-            new THREE.MeshLambertMaterial({
-                color:0xc8b59a
-            })
-        );
+        clone = PropLevel.createWallMesh();
     }
     else
     {
@@ -1097,16 +1080,13 @@ function duplicateSelected()
         clone = modelLibrary[model].clone(true);
     }
 
-    // Copy transform
     clone.position.copy(selectedObject.position);
     clone.rotation.copy(selectedObject.rotation);
     clone.scale.copy(selectedObject.scale);
-
-    // Offset slightly
     clone.position.x += 2;
     clone.position.z += 2;
 
-    // Editor data
+    const source = selectedObject.userData.data;
     clone.userData =
     {
         editorObject:true,
@@ -1115,11 +1095,16 @@ function duplicateSelected()
         {
             name:model + "_" + objectId++,
             model:model,
-            radius:selectedObject.userData.data.radius,
-            height:selectedObject.userData.data.height,
-            scale:selectedObject.userData.data.scale
+            collision:source.collision,
+            climbable:source.climbable,
+            hideSpot:source.hideSpot,
+            spawnPoint:source.spawnPoint,
+            seekerSpawn:source.seekerSpawn,
+            hiderSpawn:source.hiderSpawn
         }
     };
+
+    PropLevel.syncBoundsToData(clone);
 
     clone.traverse(child=>
     {
@@ -1248,86 +1233,10 @@ window.addEventListener(
 
 function exportLevel()
 {
-    const result = [];
+    const result = placedObjects.map(obj => PropLevel.exportProp(obj));
 
-    placedObjects.forEach(
-        obj =>
-        {
-            result.push(
-            {
-                id: obj.userData.data.name,
-
-                x:Number(
-                    obj.position.x.toFixed(2)
-                ),
-
-                y:Number(
-                    obj.position.y.toFixed(2)
-                ),
-
-                z:Number(
-                    obj.position.z.toFixed(2)
-                ),
-
-                model:
-                    obj.userData.data.model,
-                collision:
-                    obj.userData.data.collision,
-
-                climbable:
-                    obj.userData.data.climbable,
-
-                hideSpot:
-                    obj.userData.data.hideSpot,
-
-                spawnPoint:
-                    obj.userData.data.spawnPoint,
-
-                seekerSpawn:
-                    obj.userData.data.seekerSpawn,
-
-                hiderSpawn:
-                    obj.userData.data.hiderSpawn,    
-
-                radius:
-                    obj.userData.data.radius,
-
-                height:
-                    obj.userData.data.height,
-
-                scale:
-                {
-                    x:Number(obj.scale.x.toFixed(2)),
-                    y:Number(obj.scale.y.toFixed(2)),
-                    z:Number(obj.scale.z.toFixed(2))
-                },
-
-                rotation:
-                {
-                    x:Number(
-                        THREE.MathUtils.radToDeg(obj.rotation.x).toFixed(1)
-                    ),
-
-                    y:Number(
-                        THREE.MathUtils.radToDeg(obj.rotation.y).toFixed(1)
-                    ),
-
-                    z:Number(
-                        THREE.MathUtils.radToDeg(obj.rotation.z).toFixed(1)
-                    )
-                }
-            });
-        }
-    );
-
-    document
-    .getElementById("output")
-    .value =
-    JSON.stringify(
-        result,
-        null,
-        4
-    );
+    document.getElementById("output").value =
+        "mapProps3D = " + JSON.stringify(result, null, 4) + ";";
 }
 
  

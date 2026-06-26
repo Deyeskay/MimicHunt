@@ -1,9 +1,9 @@
 const Mechanics = {
     initInputs: function() {
-        window.addEventListener('keydown', (e) => { 
-            keys[e.key.toLowerCase()] = true; 
-            if(e.key.toLowerCase() === 'f') this.handleDisguiseSwap();
-            if(e.key === ' ' && isGrounded) this.jump();
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'f') this.handleDisguiseSwap();
+            if (e.key === ' ' && isGrounded) this.jump();
         });
         window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
@@ -16,37 +16,26 @@ const Mechanics = {
             if (document.pointerLockElement === canvas) {
                 document.getElementById('mouse-hint').style.display = 'none';
             } else {
-                if(gameState.phase !== 'LOBBY') document.getElementById('mouse-hint').style.display = 'block';
+                if (gameState.phase !== 'LOBBY') document.getElementById('mouse-hint').style.display = 'block';
             }
         });
 
         document.addEventListener('mousemove', (e) => {
             if (document.pointerLockElement === canvas) {
-
-                cameraYaw -=
-                    e.movementX *
-                    GAME_SETTINGS.mouseSensitivity;
-
-                cameraPitch +=
-                    (GAME_SETTINGS.invertY ? -1 : 1) *
-                    e.movementY *
-                    GAME_SETTINGS.mouseSensitivity;
-
-                cameraPitch = Math.max(
-                    CAMERA_MAX_LOOK_DOWN,
-                    Math.min(CAMERA_MAX_LOOK_UP, cameraPitch)
-                );
+                cameraYaw -= e.movementX * GAME_SETTINGS.mouseSensitivity;
+                cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * e.movementY * GAME_SETTINGS.mouseSensitivity;
+                cameraPitch = Math.max(CAMERA_MAX_LOOK_DOWN, Math.min(CAMERA_MAX_LOOK_UP, cameraPitch));
             }
         });
 
         const joyZone = document.getElementById('joystick-zone');
         const joyNub = document.getElementById('joystick-nub');
         joyZone.addEventListener('touchstart', (e) => { joyActive = true; this.handleJoystick(e, joyZone, joyNub); });
-        joyZone.addEventListener('touchmove', (e) => { if(joyActive) this.handleJoystick(e, joyZone, joyNub); });
+        joyZone.addEventListener('touchmove', (e) => { if (joyActive) this.handleJoystick(e, joyZone, joyNub); });
         joyZone.addEventListener('touchend', () => { joyActive = false; touchVector = { x: 0, y: 0 }; joyNub.style.transform = `translate(0px, 0px)`; });
 
         document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { e.preventDefault(); this.handleDisguiseSwap(); });
-        document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if(isGrounded) this.jump(); });
+        document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (isGrounded) this.jump(); });
     },
 
     handleJoystick: function(e, zone, nub) {
@@ -55,9 +44,11 @@ const Mechanics = {
         const rect = zone.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
-        let dx = touch.clientX - centerX; let dy = touch.clientY - centerY;
-        const dist = Math.hypot(dx, dy); const maxDist = rect.width / 2;
+
+        let dx = touch.clientX - centerX;
+        let dy = touch.clientY - centerY;
+        const dist = Math.hypot(dx, dy);
+        const maxDist = rect.width / 2;
         if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
 
         nub.style.transform = `translate(${dx}px, ${dy}px)`;
@@ -69,28 +60,52 @@ const Mechanics = {
         isGrounded = false;
     },
 
+    applyDisguiseFromProp: function(prop) {
+        localDisguise.type = prop.model;
+        localDisguise.size = prop.radius * 2;
+
+        const player = gameState.players[myId];
+        player.disguiseType = prop.model;
+        player.disguiseSize = localDisguise.size;
+        player.propScale = prop.scale ?? 1;
+        player.propHeight = prop.height;
+        player.propRadius = prop.radius;
+        player.propRotation = prop.rotation || null;
+    },
+
+    clearDisguise: function() {
+        localDisguise.type = 'player';
+        localDisguise.size = 2;
+
+        const player = gameState.players[myId];
+        player.disguiseType = 'player';
+        player.disguiseSize = 2;
+        player.propScale = 1;
+        player.propHeight = 2;
+        player.propRadius = 1;
+        player.propRotation = null;
+    },
+
     handleLocalMovement: function() {
-        if(!joyActive)
-        {
+        if (!joyActive) {
             touchVector.x = 0;
             touchVector.y = 0;
         }
+
         let pData = gameState.players[myId];
         if (!pData || pData.isCaught) return;
         if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
 
         const moveSpeed = 0.3;
-        let moveX = 0; let moveZ = 0;
-        
-        // BUG FIX: Corrected Camera-Relative Math. 
-        // Camera looks at (-sin, -cos). Left is (-cos, +sin). Right is (+cos, -sin).
+        let moveX = 0;
+        let moveZ = 0;
+
         if (keys['w'] || keys['arrowup']) { moveX -= Math.sin(cameraYaw); moveZ -= Math.cos(cameraYaw); }
         if (keys['s'] || keys['arrowdown']) { moveX += Math.sin(cameraYaw); moveZ += Math.cos(cameraYaw); }
         if (keys['a'] || keys['arrowleft']) { moveX -= Math.cos(cameraYaw); moveZ += Math.sin(cameraYaw); }
         if (keys['d'] || keys['arrowright']) { moveX += Math.cos(cameraYaw); moveZ -= Math.sin(cameraYaw); }
 
-        if( joyActive && (Math.abs(touchVector.x) > 0.05 || Math.abs(touchVector.y) > 0.05))
-        {
+        if (joyActive && (Math.abs(touchVector.x) > 0.05 || Math.abs(touchVector.y) > 0.05)) {
             let fwd = -touchVector.y;
             let rgt = touchVector.x;
             moveX = fwd * (-Math.sin(cameraYaw)) + rgt * Math.cos(cameraYaw);
@@ -101,127 +116,102 @@ const Mechanics = {
         if (length > 0) {
             moveX = (moveX / length) * moveSpeed;
             moveZ = (moveZ / length) * moveSpeed;
-            
-            // BONUS FIX: Make the 3D model physically turn to face the direction you are walking
             localRotY = Math.atan2(moveX, moveZ);
         }
 
         let targetX = localPos.x + moveX;
         let targetZ = localPos.z + moveZ;
 
-        // Map Bounds Clamp
-        if (targetX < -100) targetX = -100; if (targetX > 100) targetX = 100;
-        if (targetZ < -100) targetZ = -100; if (targetZ > 100) targetZ = 100;
+        if (targetX < -100) targetX = -100;
+        if (targetX > 100) targetX = 100;
+        if (targetZ < -100) targetZ = -100;
+        if (targetZ > 100) targetZ = 100;
 
-        // Prop Collision Check
         let isColliding = false;
-        let myRadius = localDisguise.type === 'player' ? 1 : localDisguise.size / 2;
+        let myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
 
         for (let prop of mapProps3D) {
-            //let propRadius = prop.size / 2;
-            let propRadius = prop.radius;
-            let dist = Math.hypot(targetX - prop.x, targetZ - prop.z);
-            
-            // If overlapping on X/Z axis, and we aren't jumping OVER it
-            if (dist < (myRadius + propRadius) && localPos.y < (prop.height)) {
-                isColliding = true; break;
+            if (!PropLevel.hasCollision(prop)) continue;
+
+            const center = PropLevel.getPropCenter(prop);
+            let dist = Math.hypot(targetX - center.x, targetZ - center.z);
+            const propTop = PropLevel.getPropTop(prop);
+
+            if (dist < (myRadius + prop.radius) && localPos.y < propTop) {
+                isColliding = true;
+                break;
             }
         }
 
-        // Apply horizontal movement if path is clear
         if (!isColliding) {
             localPos.x = targetX;
             localPos.z = targetZ;
         }
 
-        
-        let baseHeight = localDisguise.type === 'player' ? 1.5 : localDisguise.size / 2;
+        let baseHeight = localDisguise.type === 'player' ? PropLevel.PLAYER_BASE_HEIGHT : localDisguise.size / 2;
         let standingOnSurface = false;
         let surfaceHeight = 0;
-        //Scan all props to see if we are standing on top of one. If so, set the surfaceHeight to that prop's top.
-        for(let prop of mapProps3D)
-        {
-            //let propRadius = prop.size / 2;
-            let propRadius = prop.radius;
 
-            let distXZ = Math.hypot(
-                localPos.x - prop.x,
-                localPos.z - prop.z
-            );
+        for (let prop of mapProps3D) {
+            if (!PropLevel.isClimbable(prop)) continue;
 
-            let propTop = prop.height;
+            const center = PropLevel.getPropCenter(prop);
+            let distXZ = Math.hypot(localPos.x - center.x, localPos.z - center.z);
+            let propTop = PropLevel.getPropTop(prop);
 
-            if(
-                distXZ < propRadius + myRadius &&
-                Math.abs(
-                    localPos.y -
-                    (propTop + baseHeight)
-                ) < 0.15
-            )
-            {
+            if (
+                distXZ < prop.radius + myRadius &&
+                Math.abs(localPos.y - (propTop + baseHeight)) < 0.15
+            ) {
                 standingOnSurface = true;
                 surfaceHeight = propTop + baseHeight;
                 break;
             }
         }
-        // Apply Vertical Movement (Gravity)
-        if(!standingOnSurface)
-        {
+
+        if (!standingOnSurface) {
             velocityY += GRAVITY;
             localPos.y += velocityY;
-
             isGrounded = false;
-        }
-        else
-        {
+        } else {
             localPos.y = surfaceHeight;
             velocityY = 0;
-
             isGrounded = true;
         }
- 
 
-        if(localPos.y <= baseHeight)
-        {
+        if (localPos.y <= baseHeight) {
             localPos.y = baseHeight;
-
             velocityY = 0;
-
             isGrounded = true;
         }
-
-        
     },
 
     handleDisguiseSwap: function() {
-         
         let pData = gameState.players[myId];
         if (!pData || pData.role !== 'Hider' || pData.isCaught) return;
 
+        let nearest = null;
+        let nearestDist = Infinity;
+
         for (let prop of mapProps3D) {
-            let dist = Math.hypot(localPos.x - prop.x, localPos.z - prop.z);
-            if (dist < prop.radius  * 2 + 2) {
-                localDisguise.type = prop.model;
-                localDisguise.size = 1;
+            if (!PropLevel.canDisguiseAs(prop)) continue;
 
-                gameState.players[myId].disguiseType = prop.model;
-                gameState.players[myId].disguiseSize = 1;
+            const center = PropLevel.getPropCenter(prop);
+            let dist = Math.hypot(localPos.x - center.x, localPos.z - center.z);
+            let reach = prop.radius * 2 + 2;
 
-                gameState.players[myId].propScale = prop.scale;
-                gameState.players[myId].propHeight = prop.height;
-                gameState.players[myId].propRadius = prop.radius;
-                //localDisguise.color = prop.color; // temporary
-                return;
+            if (dist < reach && dist < nearestDist) {
+                nearest = prop;
+                nearestDist = dist;
             }
         }
-        localDisguise.type = 'player'; 
-        localDisguise.size = 2; 
-        gameState.players[myId].disguiseType = "player";
-        gameState.players[myId].disguiseSize = 2;
-        //localDisguise.color = 0x2ed573;
-        gameState.players[myId].propScale = 1;
-        gameState.players[myId].propHeight = 2;
-        gameState.players[myId].propRadius = 1;
+
+        if (nearest) {
+            this.applyDisguiseFromProp(nearest);
+            return;
+        }
+
+        this.clearDisguise();
     },
 
     checkCollisions: function() {
@@ -234,7 +224,7 @@ const Mechanics = {
             if (target.role === 'Hider' && !target.isCaught) {
                 let dist = Math.hypot(seeker.x - target.x, seeker.z - target.z);
                 if (dist < (target.disguiseSize + 2)) {
-                    gameState.players[id].isCaught = true; 
+                    gameState.players[id].isCaught = true;
                     this.checkWinConditions();
                 }
             }
@@ -245,9 +235,9 @@ const Mechanics = {
         const players = Object.values(gameState.players);
         const hidersLeft = players.filter(p => p.role === 'Hider' && !p.isCaught).length;
         if (hidersLeft === 0 && players.filter(p => p.role === 'Hider').length > 0) {
-            gameState.phase = 'ENDED'; 
+            gameState.phase = 'ENDED';
             UI.showModal("Game Over", "Seeker Wins! All props found.", () => {
-                Network.exitRoom();
+                Network.cleanup();
             });
         }
     }

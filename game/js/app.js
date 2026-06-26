@@ -1,8 +1,8 @@
 // --- BIND HTML BUTTONS TO NETWORK LOGIC ---
 document.getElementById('btn-host').addEventListener('click', () => Network.initHost());
 document.getElementById('btn-join').addEventListener('click', () => Network.initClient());
-document.getElementById('btn-leave').addEventListener('click', () => Network.exitRoom());
-document.getElementById('btn-lobby-leave').addEventListener('click', () => Network.exitRoom());
+document.getElementById('btn-leave').addEventListener('click', () => Network.leaveMatch());
+document.getElementById('btn-lobby-leave').addEventListener('click', () => Network.leaveMatch());
 
 document.getElementById('btn-settings').addEventListener('click', () => {
     document.getElementById('menu-screen').style.display = 'none';
@@ -27,7 +27,20 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
 });
 
 document.getElementById('btn-lobby-action').addEventListener('click', () => {
-    if (isHost) {
+    if (isHost)
+    {
+        const players = Object.values(gameState.players); 
+        const allReady = players.every(p => p.isReady);
+
+        if(!allReady)
+        {
+            UI.showModal(
+                "Players Not Ready",
+                "Everyone must mark Ready before starting."
+            );
+            return;
+        }
+
         Network.startGameBroadcast();
     } else {
         amIReady = !amIReady;

@@ -15,10 +15,12 @@ let gameState = { phase: 'LOBBY', timer: 0, players: {} };
 let peer = null;
 let connections = [];
 let connToHost = null;
+let isLeavingRoom = false;
 let isHost = false;
 let myId = null;
 let amIReady = false;
 let gameLoopInterval = null;
+let timerInterval = null;
 
 // --- PHYSICS & LOCAL PLAYER DATA ---
 let localPos = { x: 0, y: 2, z: 0 }; // Added Y for verticality
