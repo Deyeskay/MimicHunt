@@ -104,11 +104,21 @@ const Level = {
         return from + diff * t;
     },
 
-    // Smoothing factor for remote-player interpolation, applied per render
-    // frame (~60 FPS). Network snapshots arrive at NETWORK_SEND_RATE (20 Hz);
-    // each frame we ease the rendered transform toward the latest snapshot so
-    // remote players glide instead of teleporting every ~50 ms.
-    INTERP_FACTOR: 0.25,
+    // Remote-player interpolation speed (higher = snappier catch-up). Network
+    // snapshots arrive at NETWORK_SEND_RATE (20 Hz); each render frame we ease
+    // the rendered transform toward the latest snapshot so remote players glide
+    // instead of teleporting every ~50 ms. The per-frame blend factor is
+    // derived from real frame time below, so the feel is identical at 30, 60,
+    // or 144 FPS. ~16 reproduces the old fixed 0.25-per-frame feel at 60 FPS.
+    INTERP_SPEED: 16,
+
+    // Frame-rate-independent smoothing factor: alpha = 1 - e^(-speed * dt).
+    // This is the exact exponential form (the linear speed*dt approximation
+    // overshoots at low FPS); clamped to [0,1] for safety on long frames.
+    interpAlpha: function(dt) {
+        const a = 1 - Math.exp(-this.INTERP_SPEED * dt);
+        return a < 0 ? 0 : (a > 1 ? 1 : a);
+    },
 
     updatePlayerMeshTransform: function(mesh, p) {
         if (p.disguiseType !== "player" && p.role !== "Seeker") {
@@ -131,6 +141,14 @@ const Level = {
 
     render: function() {
         if (!gameState || !gameState.players) return;
+
+        // Real elapsed frame time (seconds), for frame-rate-independent interp.
+        const nowMs = (typeof performance !== 'undefined' && performance.now)
+            ? performance.now() : Date.now();
+        let dt = (nowMs - (this._lastFrameTime || nowMs)) / 1000;
+        this._lastFrameTime = nowMs;
+        if (dt > 0.1) dt = 0.1;            // clamp after tab-out / hitch
+        const alpha = this.interpAlpha(dt);
 
         for (let id in playerMeshes) {
             if (!gameState.players[id]) {
@@ -173,11 +191,10 @@ const Level = {
                     ud.renderX = p.x; ud.renderY = p.y; ud.renderZ = p.z;
                     ud.renderRotY = p.rotY;
                 }
-                const t = this.INTERP_FACTOR;
-                ud.renderX += (p.x - ud.renderX) * t;
-                ud.renderY += (p.y - ud.renderY) * t;
-                ud.renderZ += (p.z - ud.renderZ) * t;
-                ud.renderRotY = this.lerpAngle(ud.renderRotY, p.rotY, t);
+                ud.renderX += (p.x - ud.renderX) * alpha;
+                ud.renderY += (p.y - ud.renderY) * alpha;
+                ud.renderZ += (p.z - ud.renderZ) * alpha;
+                ud.renderRotY = this.lerpAngle(ud.renderRotY, p.rotY, alpha);
 
                 this.updatePlayerMeshTransform(mesh, {
                     ...p,

@@ -216,10 +216,14 @@ const Mechanics = {
 
         if (nearest) {
             this.applyDisguiseFromProp(nearest);
-            return;
+        } else {
+            this.clearDisguise();
         }
 
-        this.clearDisguise();
+        // Disguise changes rarely, so replicate it as a discrete event rather
+        // than in every movement packet. No-ops on the host (it's the Seeker
+        // and never reaches here, and has no connToHost anyway).
+        Network.sendDisguiseUpdate();
     },
 
     checkCollisions: function() {
@@ -233,6 +237,9 @@ const Mechanics = {
                 let dist = Math.hypot(seeker.x - target.x, seeker.z - target.z);
                 if (dist < (target.disguiseSize + 2)) {
                     gameState.players[id].isCaught = true;
+                    // Caught state no longer rides in the snapshot — tell
+                    // everyone with a discrete event (host-only code path).
+                    Network.broadcast({ type: 'caught', id });
                     this.checkWinConditions();
                 }
             }

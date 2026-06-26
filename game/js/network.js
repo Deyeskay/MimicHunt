@@ -72,13 +72,25 @@ const Network = {
     },
 
     /*=================================================================
-      Local-player reconciliation helpers
+      Monotonic clock for packet timestamps. Compared only within a
+      single sender's stream (a client's moves, or the host's snapshots),
+      so the per-peer clock origin never matters — only that it increases.
+    =================================================================*/
+    now() {
+        return (typeof performance !== 'undefined' && performance.now)
+            ? performance.now()
+            : Date.now();
+    },
+
+    /*=================================================================
+      Local-player prediction helper
       ---------------------------------------------------------------
-      The local player is predicted at 60 FPS from localPos/cameraYaw/
-      localDisguise. These re-apply that prediction onto a player record
-      so an authoritative `sync` (which arrives at NETWORK_SEND_RATE and
-      may be older) never overwrites our own smooth movement. The host
-      stays authoritative for fields we DON'T touch here (e.g. isCaught).
+      The local player is simulated at 60 FPS from localPos/cameraYaw.
+      This copies that prediction onto our own player record every frame
+      so rendering and the camera follow it smoothly. Snapshots from the
+      host deliberately skip our own id, so this prediction is never
+      overwritten; the host stays authoritative for the rest (caught,
+      role, ready, and remote disguises) via discrete events.
     =================================================================*/
     applyLocalTransform(p) {
         if (!p) return;
@@ -88,15 +100,44 @@ const Network = {
         p.rotY = cameraYaw;
     },
 
-    applyLocalDisguise(p) {
-        if (!p) return;
-        p.disguiseType = localDisguise.type;
-        p.disguiseSize = localDisguise.size;
-        p.propScale = localDisguise.propScale;
-        p.propHeight = localDisguise.propHeight;
-        p.propRadius = localDisguise.propRadius;
-        p.propRotation = localDisguise.propRotation;
-        p.color = localDisguise.color;
+    /*=================================================================
+      Build a lightweight movement snapshot (host → clients, 20 Hz).
+      Carries only the volatile fields — per-player transform plus the
+      phase/timer header. Everything else (role, color, disguise, caught,
+      ready) changes rarely and is replicated through discrete events, so
+      it is intentionally absent here.
+    =================================================================*/
+    buildSnapshot() {
+        const players = {};
+        for (const id in gameState.players) {
+            const p = gameState.players[id];
+            players[id] = { x: p.x, y: p.y, z: p.z, rotY: p.rotY };
+        }
+        return {
+            type: 'snapshot',
+            t: this.now(),
+            phase: gameState.phase,
+            timer: gameState.timer,
+            players
+        };
+    },
+
+    /*=================================================================
+      Send the local player's disguise to the host as a discrete event
+      (only when it actually changes — see Mechanics.handleDisguiseSwap).
+      No-ops on the host, which has no connToHost.
+    =================================================================*/
+    sendDisguiseUpdate() {
+        this.sendToHost({
+            type: 'clientDisguise',
+            disguiseType: localDisguise.type,
+            disguiseSize: localDisguise.size,
+            propScale: localDisguise.propScale,
+            propHeight: localDisguise.propHeight,
+            propRadius: localDisguise.propRadius,
+            propRotation: localDisguise.propRotation,
+            color: localDisguise.color
+        });
     },
 
     /*=================================================================
@@ -226,24 +267,49 @@ const Network = {
                         }
                         break;
 
-                    case 'clientMove':
+                    case 'clientMove': {
+                        // Frequent movement packet — transform only.
                         const p = gameState.players[conn.peer];
                         if (p && !p.isCaught) {
-                            Object.assign(p, {
-                                x: data.x,
-                                y: data.y,
-                                z: data.z,
-                                rotY: data.rotY,
-                                disguiseType: data.disguiseType,
-                                disguiseSize: data.disguiseSize,
-                                propScale: data.propScale ?? 1,
-                                propHeight: data.propHeight ?? 2,
-                                propRadius: data.propRadius ?? 1,
-                                propRotation: data.propRotation ?? null,
-                                color: data.color
-                            });
+                            // Drop stale / out-of-order packets (timestamp guard).
+                            if (data.t !== undefined &&
+                                p._lastMoveT !== undefined &&
+                                data.t <= p._lastMoveT) break;
+                            p._lastMoveT = data.t;
+                            p.x = data.x;
+                            p.y = data.y;
+                            p.z = data.z;
+                            p.rotY = data.rotY;
                         }
                         break;
+                    }
+
+                    case 'clientDisguise': {
+                        // Rare event packet — disguise change. Apply, then relay
+                        // to every OTHER client so they render this player right.
+                        const p = gameState.players[conn.peer];
+                        if (p) {
+                            p.disguiseType = data.disguiseType;
+                            p.disguiseSize = data.disguiseSize;
+                            p.propScale = data.propScale ?? 1;
+                            p.propHeight = data.propHeight ?? 2;
+                            p.propRadius = data.propRadius ?? 1;
+                            p.propRotation = data.propRotation ?? null;
+                            p.color = data.color;
+                            this.broadcastExcept({
+                                type: 'disguise',
+                                id: conn.peer,
+                                disguiseType: p.disguiseType,
+                                disguiseSize: p.disguiseSize,
+                                propScale: p.propScale,
+                                propHeight: p.propHeight,
+                                propRadius: p.propRadius,
+                                propRotation: p.propRotation,
+                                color: p.color
+                            }, conn.peer);
+                        }
+                        break;
+                    }
                 }
             });
 
@@ -286,10 +352,12 @@ const Network = {
             UI.updateHUD();
         }, 1000 / 60);
 
-        // Network loop — broadcast authoritative state at NETWORK_SEND_RATE (20 Hz)
+        // Network loop — broadcast a lightweight movement snapshot at
+        // NETWORK_SEND_RATE (20 Hz). Disguise/caught/ready/roster changes
+        // travel separately as discrete events, not in this hot path.
         networkInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
-            this.broadcast({ type: 'sync', gameState });
+            this.broadcast(this.buildSnapshot());
         }, 1000 / NETWORK_SEND_RATE);
     },
 
@@ -322,22 +390,57 @@ const Network = {
                 UI.transitionToGame();
                 break;
 
-            case 'sync':
-                Object.assign(gameState, data.gameState);
-                // Authoritative snapshot just replaced our local player record.
-                // Re-apply our own predicted transform/disguise so our movement
-                // stays smooth; the host remains authoritative for everything
-                // else (e.g. isCaught), which we leave untouched.
-                {
-                    const me = gameState.players[myId];
-                    this.applyLocalTransform(me);
-                    this.applyLocalDisguise(me);
+            case 'snapshot': {
+                // Lightweight movement update. Surgically patch only remote
+                // players' transforms — our own record is left untouched so our
+                // 60 FPS prediction is never overwritten. Authoritative non-
+                // transform state (disguise/caught/ready) arrives via events.
+
+                // Timestamp guard: ignore stale / out-of-order snapshots.
+                if (data.t !== undefined &&
+                    this._lastSnapshotT !== undefined &&
+                    data.t <= this._lastSnapshotT) break;
+                this._lastSnapshotT = data.t;
+
+                gameState.phase = data.phase;
+                gameState.timer = data.timer;
+
+                for (const id in data.players) {
+                    if (id === myId) continue;            // never clobber our prediction
+                    const local = gameState.players[id];
+                    if (!local) continue;                  // roster is fixed at gameStart
+                    const incoming = data.players[id];
+                    local.x = incoming.x;
+                    local.y = incoming.y;
+                    local.z = incoming.z;
+                    local.rotY = incoming.rotY;
                 }
-                if (gameState.phase !== 'LOBBY')
-                {
-                    UI.updateHUD();
+
+                if (gameState.phase !== 'LOBBY') UI.updateHUD();
+                break;
+            }
+
+            case 'disguise': {
+                // Remote player changed disguise (relayed by host).
+                const p = gameState.players[data.id];
+                if (p) {
+                    p.disguiseType = data.disguiseType;
+                    p.disguiseSize = data.disguiseSize;
+                    p.propScale = data.propScale;
+                    p.propHeight = data.propHeight;
+                    p.propRadius = data.propRadius;
+                    p.propRotation = data.propRotation;
+                    p.color = data.color;
                 }
                 break;
+            }
+
+            case 'caught': {
+                // Host marked a player (possibly us) as caught.
+                const p = gameState.players[data.id];
+                if (p) p.isCaught = true;
+                break;
+            }
 
             case 'gameOver':
                 UI.showModal(data.title,data.message,() => this.cleanup());
@@ -365,22 +468,18 @@ const Network = {
             this.applyLocalTransform(gameState.players[myId]);
         }, 1000 / 60);
 
-        // Network loop — send our input to the host at NETWORK_SEND_RATE (20 Hz)
+        // Network loop — send our movement to the host at NETWORK_SEND_RATE
+        // (20 Hz). Transform + timestamp only; disguise changes are sent
+        // separately as events (see Mechanics.handleDisguiseSwap).
         networkInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
             this.sendToHost({
                 type: 'clientMove',
+                t: this.now(),
                 x: localPos.x,
                 y: localPos.y,
                 z: localPos.z,
-                rotY: cameraYaw,
-                disguiseType: localDisguise.type,
-                disguiseSize: localDisguise.size,
-                propScale: localDisguise.propScale,
-                propHeight: localDisguise.propHeight,
-                propRadius: localDisguise.propRadius,
-                propRotation: localDisguise.propRotation,
-                color: localDisguise.color || 0x2ed573
+                rotY: cameraYaw
             });
         }, 1000 / NETWORK_SEND_RATE);
     },
@@ -410,6 +509,9 @@ const Network = {
         if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
         if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }
         if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+
+        // Reset packet-ordering state for the next match
+        this._lastSnapshotT = undefined;
 
         // Remove meshes
         for (let id in playerMeshes) scene.remove(playerMeshes[id]);
