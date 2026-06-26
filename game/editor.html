@@ -401,6 +401,10 @@ transformControls = new THREE.TransformControls(
     renderer.domElement
 );
 
+// Default to LOCAL space so the Move/Scale gizmo follows the object's rotation
+// (drag along the rotated object's own axes, not the world X/Z). Toggle with Q.
+transformControls.setSpace('local');
+
 // Uniform scaling handling (checkbox)
 const uniformCheckbox = document.getElementById('uniformScale');
 uniformCheckbox.addEventListener('change', () => {
