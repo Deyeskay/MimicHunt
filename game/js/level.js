@@ -349,10 +349,19 @@ const Level = {
             let p = gameState.players[id];
             const meshKey = p.disguiseType !== "player" ? PropLevel.getDisguiseMeshKey(p) : p.disguiseType;
 
+            // A character mesh is wanted when the player isn't disguised as a prop
+            // and the model is loaded. If a cached mesh is still a fallback box/
+            // cylinder (created before player.glb finished/failed to load), upgrade
+            // it now — this self-heals the load race that left one client on
+            // primitives.
+            const wantCharacter = (p.role === "Seeker" || p.disguiseType === "player")
+                && !!this.playerGLB && !!THREE.SkeletonUtils;
+
             if (
                 playerMeshes[id] &&
                 (playerMeshes[id].userData.disguiseType !== p.disguiseType ||
-                 playerMeshes[id].userData.meshKey !== meshKey)
+                 playerMeshes[id].userData.meshKey !== meshKey ||
+                 (wantCharacter && !playerMeshes[id].userData.isCharacter))
             ) {
                 scene.remove(playerMeshes[id]);
                 delete playerMeshes[id];
