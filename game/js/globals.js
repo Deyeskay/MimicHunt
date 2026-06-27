@@ -71,8 +71,9 @@ let localDisguise = {
 };
 
 // Camera & Movement Params
-let cameraYaw = 0;   // Left/Right look
+let cameraYaw = 0;   // Left/Right look (orbits the camera around the player)
 let cameraPitch = 0.2; // Up/Down look
+let localRotY = 0;   // character facing = MOVEMENT direction (PUBG-style), not cameraYaw
 let velocityY = 0;
 const GRAVITY = -0.015;
 const JUMP_STRENGTH = 0.35;
@@ -84,8 +85,14 @@ const CAMERA_MAX_LOOK_DOWN = -10 * Math.PI / 180;
 
 // --- INPUTS ---
 let keys = {};
-let joyActive = false; 
+let joyActive = false;
 let touchVector = { x: 0, y: 0 };
+// Multi-touch tracking: left thumb drives the joystick, right thumb the camera,
+// so each is bound to its own touch identifier (PUBG-style dual-stick on mobile).
+let joyTouchId = null;
+let lookTouchId = null;
+let lastLookX = 0;
+let lastLookY = 0;
 
 // --- 3D ENGINE REFERENCES ---
 let scene, camera, renderer;

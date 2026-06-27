@@ -100,7 +100,7 @@ const Network = {
         p.x = localPos.x;
         p.y = localPos.y;
         p.z = localPos.z;
-        p.rotY = cameraYaw;
+        p.rotY = localRotY;   // face MOVEMENT direction (PUBG), not the camera
     },
 
     /*=================================================================
@@ -830,7 +830,7 @@ const Network = {
                 x: localPos.x,
                 y: localPos.y,
                 z: localPos.z,
-                rotY: cameraYaw
+                rotY: localRotY
             });
         }, 1000 / NETWORK_SEND_RATE);
 

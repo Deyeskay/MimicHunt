@@ -157,10 +157,10 @@ const Level = {
         camera.updateProjectionMatrix();
     },
 
-    // Yaw applied to the character model on top of p.rotY. player.glb faces +Z
-    // (toward the camera) by default, so rotate 180° to put its back to the
-    // camera like a third-person game.
-    PLAYER_YAW_OFFSET: Math.PI,
+    // Yaw applied to the character model on top of p.rotY. rotY is now the
+    // MOVEMENT heading (atan2(moveX,moveZ)) and the model faces +Z, so offset 0
+    // makes it face the way it's moving. Flip to Math.PI if it faces backwards.
+    PLAYER_YAW_OFFSET: 0,
 
     createPlayerMesh: function(p) {
         // Disguised hider → the prop mesh (no character / no animation).

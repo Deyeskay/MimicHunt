@@ -31,17 +31,77 @@ const Mechanics = {
 
         const joyZone = document.getElementById('joystick-zone');
         const joyNub = document.getElementById('joystick-nub');
-        joyZone.addEventListener('touchstart', (e) => { joyActive = true; this.handleJoystick(e, joyZone, joyNub); });
-        joyZone.addEventListener('touchmove', (e) => { if (joyActive) this.handleJoystick(e, joyZone, joyNub); });
-        joyZone.addEventListener('touchend', () => { joyActive = false; touchVector = { x: 0, y: 0 }; joyNub.style.transform = `translate(0px, 0px)`; });
+
+        // Joystick is bound to its OWN touch identifier so a second finger (the
+        // right-half camera look) can run at the same time without hijacking it.
+        joyZone.addEventListener('touchstart', (e) => {
+            if (joyTouchId !== null) return;
+            const t = e.changedTouches[0];
+            joyTouchId = t.identifier;
+            joyActive = true;
+            this.handleJoystickTouch(t, joyZone, joyNub);
+            e.preventDefault();
+        }, { passive: false });
+        joyZone.addEventListener('touchmove', (e) => {
+            if (joyTouchId === null) return;
+            const t = this.findTouch(e.touches, joyTouchId);
+            if (t) { this.handleJoystickTouch(t, joyZone, joyNub); e.preventDefault(); }
+        }, { passive: false });
+        const endJoy = (e) => {
+            if (joyTouchId === null) return;
+            if (this.findTouch(e.touches, joyTouchId)) return;   // our touch still down
+            joyTouchId = null;
+            joyActive = false;
+            touchVector = { x: 0, y: 0 };
+            joyNub.style.transform = `translate(0px, 0px)`;
+        };
+        joyZone.addEventListener('touchend', endJoy);
+        joyZone.addEventListener('touchcancel', endJoy);
 
         document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { e.preventDefault(); this.handleDisguiseSwap(); });
         document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (isGrounded) this.jump(); });
+
+        // --- Mobile camera look (PUBG): drag anywhere on the RIGHT half of the
+        // screen (except on UI buttons) to orbit the camera. Tracked by its own
+        // touch id so it coexists with the left joystick. No visible UI. ---
+        const lookSens = () => GAME_SETTINGS.mouseSensitivity * 1.5;
+        document.addEventListener('touchstart', (e) => {
+            if (gameState.phase === 'LOBBY') return;
+            if (lookTouchId !== null) return;
+            const ts = e.changedTouches;
+            for (let i = 0; i < ts.length; i++) {
+                const t = ts[i];
+                if (t.clientX <= window.innerWidth * 0.5) continue;      // right half only
+                const el = document.elementFromPoint(t.clientX, t.clientY);
+                if (el && el.closest && el.closest('.interactive')) continue;  // skip buttons
+                lookTouchId = t.identifier;
+                lastLookX = t.clientX;
+                lastLookY = t.clientY;
+                e.preventDefault();
+                break;
+            }
+        }, { passive: false });
+        document.addEventListener('touchmove', (e) => {
+            if (lookTouchId === null) return;
+            const t = this.findTouch(e.touches, lookTouchId);
+            if (!t) return;
+            cameraYaw -= (t.clientX - lastLookX) * lookSens();
+            cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * (t.clientY - lastLookY) * lookSens();
+            cameraPitch = Math.max(CAMERA_MAX_LOOK_DOWN, Math.min(CAMERA_MAX_LOOK_UP, cameraPitch));
+            lastLookX = t.clientX;
+            lastLookY = t.clientY;
+            e.preventDefault();
+        }, { passive: false });
+        const endLook = (e) => {
+            if (lookTouchId === null) return;
+            if (this.findTouch(e.touches, lookTouchId)) return;   // still down
+            lookTouchId = null;
+        };
+        document.addEventListener('touchend', endLook);
+        document.addEventListener('touchcancel', endLook);
     },
 
-    handleJoystick: function(e, zone, nub) {
-        e.preventDefault();
-        const touch = e.touches[0];
+    handleJoystickTouch: function(touch, zone, nub) {
         const rect = zone.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -54,6 +114,14 @@ const Mechanics = {
 
         nub.style.transform = `translate(${dx}px, ${dy}px)`;
         touchVector = { x: dx / maxDist, y: dy / maxDist };
+    },
+
+    // Find a touch by identifier in a TouchList (multi-touch helper).
+    findTouch: function(touchList, id) {
+        for (let i = 0; i < touchList.length; i++) {
+            if (touchList[i].identifier === id) return touchList[i];
+        }
+        return null;
     },
 
     jump: function() {
