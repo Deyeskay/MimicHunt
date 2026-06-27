@@ -220,19 +220,14 @@ const Level = {
         ring.position.y = 0.02;
         root.add(ring);
 
-        // Animation: play idle + walk, blend via weight (crossfaded at runtime).
+        // Animation: build idle/walk actions; start in idle. Walk is started on
+        // demand (reset+fadeIn+play) so it always runs from a clean state.
         const mixer = new THREE.AnimationMixer(model);
         const actions = {};
-        if (this.playerClips && this.playerClips.idle) {
-            actions.idle = mixer.clipAction(this.playerClips.idle);
-            actions.idle.play();
-            actions.idle.weight = 1;
-        }
-        if (this.playerClips && this.playerClips.walk) {
-            actions.walk = mixer.clipAction(this.playerClips.walk);
-            actions.walk.play();
-            actions.walk.weight = 0;
-        }
+        if (this.playerClips && this.playerClips.idle) actions.idle = mixer.clipAction(this.playerClips.idle);
+        if (this.playerClips && this.playerClips.walk) actions.walk = mixer.clipAction(this.playerClips.walk);
+        if (actions.idle) actions.idle.play();
+        else if (actions.walk) actions.walk.play();
 
         root.userData.isCharacter = true;
         root.userData.mixer = mixer;
@@ -281,34 +276,49 @@ const Level = {
     // because it measures the mesh's own position delta (no networked anim state).
     updateCharacterAnim: function(mesh, p, dt) {
         const ud = mesh.userData;
-        let target = 'idle';
 
+        // Instantaneous speed from rendered movement. Physics runs on a 60Hz
+        // setInterval while this runs on rAF, so individual frames can see zero
+        // movement — smooth with an EMA so one stale frame can't flip the state.
+        let inst = 0;
         if (ud.lastPos && dt > 0) {
             const dx = mesh.position.x - ud.lastPos.x;
             const dz = mesh.position.z - ud.lastPos.z;
-            const speed = Math.hypot(dx, dz) / dt;
-            target = speed > 1.0 ? 'walk' : 'idle';
+            inst = Math.hypot(dx, dz) / dt;
         }
         if (ud.lastPos) ud.lastPos.set(mesh.position.x, mesh.position.y, mesh.position.z);
+        ud.speed = (ud.speed || 0) + (inst - (ud.speed || 0)) * Math.min(1, dt * 12);
 
-        if (p.isCaught) target = 'idle';            // caught hiders freeze
+        // Hysteresis: enter walk above 1.5, drop to idle below 0.5 — no toggling
+        // around a single threshold.
+        let moving = ud.current === 'walk';
+        if (ud.speed > 1.5) moving = true;
+        else if (ud.speed < 0.5) moving = false;
+        if (p.isCaught) moving = false;             // caught hiders freeze
+        let target = moving ? 'walk' : 'idle';
 
         if (ud.ring && p.isCaught) ud.ring.material.color.setHex(0x333333);
 
         if (ud.hasClips) {
-            // Real skeletal clips: crossfade idle/walk and advance the mixer.
+            // Crossfade on actual state change only (hysteresis makes this rare,
+            // so the reset+play that guarantees clean playback won't cause the
+            // earlier flicker). The active clip then loops via mixer.update.
             if (!ud.actions[target]) target = 'idle';
             if (ud.actions[target] && ud.current !== target) {
-                if (ud.actions[ud.current]) ud.actions[ud.current].fadeOut(0.2);
-                ud.actions[target].reset().fadeIn(0.2).play();
+                const next = ud.actions[target];
+                const prev = ud.actions[ud.current];
+                next.reset();
+                next.setEffectiveWeight(1);
+                next.fadeIn(0.2);
+                next.play();
+                if (prev) prev.fadeOut(0.2);
                 ud.current = target;
             }
-            if (dt > 0) ud.mixer.update(dt);
+            ud.mixer.update(dt);
         } else if (ud.model) {
-            // Procedural fallback (model has no baked clips): bob up/down, and add
-            // a side-to-side sway while walking, so it doesn't look frozen.
+            // Procedural fallback (model has no baked clips): bob up/down, plus a
+            // side-to-side sway while walking, so it doesn't look frozen.
             ud.animT += dt;
-            const moving = (target === 'walk') && !p.isCaught;
             const freq = moving ? 8 : 2;
             const amp = moving ? 0.18 : 0.05;
             const bob = (Math.sin(ud.animT * freq) * 0.5 + 0.5) * amp;
