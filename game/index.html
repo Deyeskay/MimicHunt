@@ -26,9 +26,13 @@
             <div class="hud-card"><span id="role-badge">Spectator</span></div>
             <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
             <div class="hud-card" style="border-color: var(--accent-blue);">👥 <span id="player-count">1</span></div>
+            <div class="hud-card" id="combat-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
+            <div class="hud-card" id="health-hud" style="border-color: var(--accent-green); display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
             <button id="btn-leave" class="interactive leave">Exit Match</button>
         </div>
-        
+
+        <div id="crosshair"></div>
+
         <div id="mouse-hint" style="position:absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none;">
             Click screen to Lock Mouse. Press ESC to unlock.
         </div>
@@ -38,6 +42,7 @@
             <div id="action-pad" class="interactive" style="flex-direction: row; gap: 10px;">
                 <button class="action-btn" id="btn-action-jump">JUMP</button>
                 <button class="action-btn" id="btn-action-disguise" style="background: var(--accent-red); border-color: #ff6b81;">PROP (F)</button>
+                <button class="action-btn" id="btn-action-shoot" style="background: rgba(73,182,255,0.6); border-color: var(--accent-blue); display:none;">SHOOT</button>
             </div>
         </div>
     </div>
@@ -103,15 +108,15 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
-    <script src="js/globals.js?v=14"></script>
-    <script src="js/prefabs.js?v=14"></script>
-    <script src="js/props.js?v=14"></script>
-    <script src="js/ui.js?v=14"></script>
-    <script src="js/levels/registry.js?v=14"></script>
+    <script src="js/globals.js?v=17"></script>
+    <script src="js/prefabs.js?v=17"></script>
+    <script src="js/props.js?v=17"></script>
+    <script src="js/ui.js?v=17"></script>
+    <script src="js/levels/registry.js?v=17"></script>
     <!-- Level files are loaded dynamically from registry.js (LEVEL_FILES). -->
-    <script src="js/level.js?v=14"></script>
-    <script src="js/mechanics.js?v=14"></script>
-    <script src="js/network.js?v=14"></script>
-    <script src="js/app.js?v=14"></script>
+    <script src="js/level.js?v=17"></script>
+    <script src="js/mechanics.js?v=17"></script>
+    <script src="js/network.js?v=17"></script>
+    <script src="js/app.js?v=17"></script>
 </body>
 </html>

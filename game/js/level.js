@@ -327,6 +327,92 @@ const Level = {
         }
     },
 
+    // Aim ray for a shot. The HIT ray (o*, d*) is the CAMERA ray through the
+    // crosshair (so hits match exactly what's centered on screen). The muzzle
+    // (m*) is the player's chest — the visual bolt flies from there toward the
+    // aim point so it reads as coming from the character for every viewer.
+    getAimRay: function() {
+        const o = new THREE.Vector3();
+        const d = new THREE.Vector3();
+        if (camera) { camera.getWorldPosition(o); camera.getWorldDirection(d); }
+        else { o.set(localPos.x, localPos.y + 1, localPos.z); d.set(0, 0, -1); }
+        return {
+            ox: o.x, oy: o.y, oz: o.z,
+            dx: d.x, dy: d.y, dz: d.z,
+            mx: localPos.x, my: localPos.y + 1.0, mz: localPos.z
+        };
+    },
+
+    // Spawn the visual bolt from the muzzle toward the ray's aim point.
+    spawnPulse: function(ray) {
+        const range = (typeof SHOT_RANGE !== 'undefined' ? SHOT_RANGE : 60);
+        const ax = ray.ox + ray.dx * range;
+        const ay = ray.oy + ray.dy * range;
+        const az = ray.oz + ray.dz * range;
+        const mx = ray.mx != null ? ray.mx : ray.ox;
+        const my = ray.my != null ? ray.my : ray.oy;
+        const mz = ray.mz != null ? ray.mz : ray.oz;
+        this.spawnProjectile(mx, my, mz, ax - mx, ay - my, az - mz);
+    },
+
+    // Spawn a blue energy-pulse projectile that flies along (dx,dy,dz) and is
+    // culled after SHOT_RANGE. Purely cosmetic — hit logic is host-authoritative.
+    spawnProjectile: function(ox, oy, oz, dx, dy, dz) {
+        if (!scene) return;
+        const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.18, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0x49b6ff })
+        );
+        mesh.position.set(ox, oy, oz);
+        scene.add(mesh);
+        const len = Math.hypot(dx, dy, dz) || 1;
+        this._projectiles = this._projectiles || [];
+        this._projectiles.push({
+            mesh,
+            dir: { x: dx / len, y: dy / len, z: dz / len },
+            traveled: 0,
+            maxDist: (typeof SHOT_RANGE !== 'undefined' ? SHOT_RANGE : 60)
+        });
+    },
+
+    // Advance + cull live projectiles (called once per render frame).
+    updateProjectiles: function(dt) {
+        const list = this._projectiles;
+        if (!list || !list.length) return;
+        const speed = 90;   // world units / sec
+        for (let i = list.length - 1; i >= 0; i--) {
+            const pr = list[i];
+            const step = speed * dt;
+            pr.mesh.position.x += pr.dir.x * step;
+            pr.mesh.position.y += pr.dir.y * step;
+            pr.mesh.position.z += pr.dir.z * step;
+            pr.traveled += step;
+            if (pr.traveled >= pr.maxDist) {
+                scene.remove(pr.mesh);
+                pr.mesh.geometry.dispose();
+                list.splice(i, 1);
+            }
+        }
+    },
+
+    // Blink the (per-instance) foot ring red while a hider is "revealed" after a
+    // hit. Restores the base color once the reveal window ends. Caught/eliminated
+    // players keep their grey ring (handled in updateCharacterAnim).
+    applyRevealBlink: function(mesh, p) {
+        const ring = mesh.userData && mesh.userData.ring;
+        if (!ring) return;
+        const revealed = !p.isCaught && Network.now() < (p.revealedUntil || 0);
+        if (revealed) {
+            const on = Math.floor(Network.now() / 150) % 2 === 0;
+            const base = p.role === 'Seeker' ? 0xff4757 : 0x2ed573;
+            ring.material.color.setHex(on ? 0xff0000 : base);
+            mesh.userData._wasRevealed = true;
+        } else if (mesh.userData._wasRevealed) {
+            ring.material.color.setHex(p.isCaught ? 0x333333 : (p.role === 'Seeker' ? 0xff4757 : 0x2ed573));
+            mesh.userData._wasRevealed = false;
+        }
+    },
+
     render: function() {
         if (!gameState || !gameState.players) return;
 
@@ -392,7 +478,12 @@ const Level = {
 
             // Drive the character animation from its rendered movement.
             if (mesh.userData.mixer) this.updateCharacterAnim(mesh, p, dt);
+            // Red reveal blink after a hit.
+            this.applyRevealBlink(mesh, p);
         }
+
+        // Advance energy-pulse projectiles.
+        this.updateProjectiles(dt);
 
         // Developer: outline the local player's own collision radius (cyan) so
         // you can see why you wedge in tight spaces — myRadius (1 for player,

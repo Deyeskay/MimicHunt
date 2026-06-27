@@ -41,7 +41,11 @@ const Network = {
             rotY: 0,
             role,
             name: name || '',
-            isCaught: false,
+            isCaught: false,        // reused as "eliminated" (health hit 0)
+            health: HIDER_MAX_HP,   // hider hit points (seeker unused)
+            score: 0,               // seeker score (+HIT_SCORE per hit)
+            revealedUntil: 0,       // local-clock deadline for the red reveal blink
+            disguiseLockUntil: 0,   // local-clock deadline: can't re-disguise until then
             // Readiness is independent of role now (roles are user-chosen). The
             // host is marked ready explicitly by its callers; clients toggle it.
             isReady: false,
@@ -221,6 +225,101 @@ const Network = {
             propRotation: localDisguise.propRotation,
             color: localDisguise.color
         });
+    },
+
+    // Seeker fired an energy pulse. Host applies it directly; a client routes the
+    // aim ray to the host (host is authoritative for hit/damage/score).
+    sendShot(ray) {
+        if (isHost) {
+            this.processShot(myId, ray);
+        } else {
+            this.sendToHost({
+                type: 'shoot', t: this.now(),
+                ox: ray.ox, oy: ray.oy, oz: ray.oz,
+                dx: ray.dx, dy: ray.dy, dz: ray.dz,
+                mx: ray.mx, my: ray.my, mz: ray.mz
+            });
+        }
+    },
+
+    // HOST ONLY — validate a shot's geometry against hider positions (pure math,
+    // no Three meshes), apply damage/reveal/disguise-lock/score, and broadcast the
+    // result + projectile to everyone.
+    processShot(shooterId, ray) {
+        const shooter = gameState.players[shooterId];
+        if (!shooter || shooter.role !== 'Seeker' || shooter.isCaught) return;
+        if (gameState.phase !== 'HUNTING') return;
+
+        const now = this.now();
+        if (shooter._lastShotT && now - shooter._lastShotT < FIRE_INTERVAL_MS - 100) return; // anti-spam
+        shooter._lastShotT = now;
+
+        const O = { x: ray.ox, y: ray.oy, z: ray.oz };
+        const dl = Math.hypot(ray.dx, ray.dy, ray.dz) || 1;
+        const D = { x: ray.dx / dl, y: ray.dy / dl, z: ray.dz / dl };
+
+        // Nearest hider whose BODY COLUMN comes within hitRadius of the aim ray.
+        // Sampling several heights (feet→head) means aiming anywhere on the body
+        // counts, instead of only a single chest point.
+        const COLUMN = [-1.4, -0.7, 0, 0.7, 1.4];
+        let best = null, bestT = Infinity;
+        for (const id in gameState.players) {
+            const h = gameState.players[id];
+            if (h.role !== 'Hider' || h.isCaught) continue;
+            const hitRadius = Math.max(1.0, (h.disguiseSize || 2) / 2);  // forgiving aim assist; big props easier
+            let hitDist = Infinity, hitT = Infinity;
+            for (let k = 0; k < COLUMN.length; k++) {
+                const sy = h.y + COLUMN[k];
+                const cx = h.x - O.x, cy = sy - O.y, cz = h.z - O.z;
+                const t = cx * D.x + cy * D.y + cz * D.z;   // projection along ray
+                if (t < 0 || t > SHOT_RANGE) continue;
+                const px = O.x + D.x * t, py = O.y + D.y * t, pz = O.z + D.z * t;
+                const dist = Math.hypot(h.x - px, sy - py, h.z - pz);
+                if (dist < hitDist) { hitDist = dist; hitT = t; }
+            }
+            if (hitDist < hitRadius && hitT < bestT) { best = id; bestT = hitT; }
+        }
+
+        let hit = false, targetId = null, health, eliminated = false, forcedOut = false;
+        if (best) {
+            hit = true;
+            targetId = best;
+            const tgt = gameState.players[best];
+            tgt.health = Math.max(0, (tgt.health != null ? tgt.health : HIDER_MAX_HP) - 1);
+            shooter.score = (shooter.score || 0) + HIT_SCORE;
+            tgt.revealedUntil = now + REVEAL_MS;
+            tgt.disguiseLockUntil = now + DISGUISE_LOCK_MS;
+            if (tgt.disguiseType !== 'player') {
+                forcedOut = true;
+                tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
+                tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null;
+                tgt.color = 0x2ed573;
+            }
+            health = tgt.health;
+            if (tgt.health <= 0) { tgt.isCaught = true; eliminated = true; }
+        }
+
+        const packet = {
+            type: 'shot', shooterId,
+            ox: O.x, oy: O.y, oz: O.z, dx: D.x, dy: D.y, dz: D.z,
+            mx: ray.mx, my: ray.my, mz: ray.mz,
+            hit, targetId, health, score: shooter.score,
+            revealMs: REVEAL_MS, lockMs: DISGUISE_LOCK_MS, eliminated, forcedOut
+        };
+        this.broadcast(packet);
+
+        // Host's own pulse/sound for shots fired by OTHERS (the host shooter
+        // already drew its pulse in fireShot).
+        if (shooterId !== myId) {
+            Sound.pew();
+            Level.spawnPulse(packet);
+        }
+        // If the host itself is the hider that got hit, play the damage sound.
+        if (hit && targetId === myId) Sound.hurt();
+        // Hit-marker on our own crosshair when we (the host seeker) land a shot.
+        if (hit && shooterId === myId) UI.hitMarker();
+
+        if (eliminated) Mechanics.checkWinConditions();
     },
 
     /*=================================================================
@@ -491,11 +590,19 @@ const Network = {
                 break;
             }
 
+            case 'shoot':
+                // A client seeker fired — host validates geometry + applies.
+                this.processShot(conn.peer, data);
+                break;
+
             case 'clientDisguise': {
                 // Rare event packet — disguise change. Apply, then relay
                 // to every OTHER client so they render this player right.
                 const p = gameState.players[conn.peer];
                 if (p) {
+                    // Disguise is locked for a few seconds after being hit — reject
+                    // re-disguising into a prop (clearing to 'player' is allowed).
+                    if (data.disguiseType !== 'player' && this.now() < (p.disguiseLockUntil || 0)) break;
                     p.disguiseType = data.disguiseType;
                     p.disguiseSize = data.disguiseSize;
                     p.propScale = data.propScale ?? 1;
@@ -621,8 +728,8 @@ const Network = {
             Mechanics.handleLocalMovement();
             this.applyLocalTransform(gameState.players[myId]);
 
-            // Collision detection (Seeker catches Hiders)
-            if (gameState.phase === 'HUNTING') Mechanics.checkCollisions();
+            // Seekers shoot to catch hiders now (replaces proximity collisions).
+            Mechanics.tickReload();
 
             UI.updateHUD();
         }, 1000 / 60);
@@ -699,6 +806,7 @@ const Network = {
                         localDisguise.color = me.color;
                     }
                 }
+                ammo = MAG_SIZE; reloading = false; reloadUntil = 0; lastShotAt = 0;
                 UI.transitionToGame();
                 break;
 
@@ -779,6 +887,44 @@ const Network = {
                 break;
             }
 
+            case 'shot': {
+                // Authoritative result of a seeker's energy-pulse shot.
+                const shooter = gameState.players[data.shooterId];
+                if (shooter && data.score !== undefined) shooter.score = data.score;
+
+                if (data.hit && data.targetId) {
+                    const tgt = gameState.players[data.targetId];
+                    if (tgt) {
+                        if (data.health !== undefined) tgt.health = data.health;
+                        // Per-peer deadlines from durations (no cross-peer clock sync).
+                        tgt.revealedUntil = this.now() + (data.revealMs || REVEAL_MS);
+                        tgt.disguiseLockUntil = this.now() + (data.lockMs || DISGUISE_LOCK_MS);
+                        if (data.eliminated) tgt.isCaught = true;
+                        if (data.forcedOut) {
+                            tgt.disguiseType = 'player';
+                            tgt.disguiseSize = 2; tgt.propScale = 1;
+                            tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null;
+                            tgt.color = 0x2ed573;
+                            if (data.targetId === myId) {
+                                localDisguise = { type: 'player', size: 2, color: 0x2ed573,
+                                    propScale: 1, propHeight: 2, propRadius: 1, propRotation: null };
+                            }
+                        }
+                    }
+                }
+
+                // Visual + audio for shots fired by OTHERS (our own was drawn in fireShot).
+                if (data.shooterId !== myId) {
+                    Sound.pew();
+                    Level.spawnPulse(data);
+                }
+                // Damage sound when WE are the hider that got hit.
+                if (data.hit && data.targetId === myId) Sound.hurt();
+                // Hit-marker on our own crosshair when our shot landed.
+                if (data.hit && data.shooterId === myId) UI.hitMarker();
+                break;
+            }
+
             case 'hidersWin':
                 // The hunter disconnected during migration. We're already (or
                 // about to be) dropped into the new host's lobby via lobbySync /
@@ -819,6 +965,7 @@ const Network = {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
             Mechanics.handleLocalMovement();
             this.applyLocalTransform(gameState.players[myId]);
+            Mechanics.tickReload();   // finish weapon reloads (client seeker)
         }, 1000 / 60);
 
         // Network loop — send our movement to the host at NETWORK_SEND_RATE.
@@ -872,11 +1019,16 @@ const Network = {
             this._usedSpawns.push(spawn);
             p.x = spawn.x; p.y = spawn.y; p.z = spawn.z; p.rotY = 0;
             p.isCaught = false;
+            p.health = HIDER_MAX_HP;
+            p.score = 0;
+            p.revealedUntil = 0;
+            p.disguiseLockUntil = 0;
             p.color = p.role === 'Seeker' ? 0xff4757 : 0x2ed573;
             p.disguiseType = 'player';
             p.disguiseSize = 2;
             p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;
             delete p._lastMoveT;
+            delete p._lastShotT;
         });
 
         // Re-seed the host's local prediction from its (re-spawned) record.
@@ -884,6 +1036,7 @@ const Network = {
         host.isReady = true;
         localPos = { x: host.x, y: host.y, z: host.z };
         cameraYaw = 0;
+        ammo = MAG_SIZE; reloading = false; reloadUntil = 0; lastShotAt = 0;
         localDisguise = {
             type: 'player', size: 2, color: host.color,
             propScale: 1, propHeight: 2, propRadius: 1, propRotation: null

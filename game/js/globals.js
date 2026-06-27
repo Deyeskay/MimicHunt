@@ -94,8 +94,66 @@ let lookTouchId = null;
 let lastLookX = 0;
 let lastLookY = 0;
 
+// --- COMBAT (seeker energy-pulse shooting) ---
+const MAG_SIZE = 4;            // shots before a reload
+const FIRE_INTERVAL_MS = 500;  // min time between shots (1 shot / 0.5s)
+const RELOAD_MS = 1500;        // reload duration
+const HIDER_MAX_HP = 5;        // hits to eliminate
+const SHOT_RANGE = 60;         // max pulse travel / hit range (world units)
+const HIT_SCORE = 100;         // points per hit
+const REVEAL_MS = 2000;        // hider blinks red this long after a hit
+const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit
+let ammo = MAG_SIZE;           // local seeker's current magazine
+let reloading = false;
+let lastShotAt = 0;
+let reloadUntil = 0;
+
+// Lightweight synthesized "pew" so shots have feedback without any audio assets.
+const Sound = {
+    ctx: null,
+    ensure() {
+        if (!this.ctx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) this.ctx = new AC();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+        return this.ctx;
+    },
+    pew() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(220, t + 0.12);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.14);
+    },
+    // Played on the hider that took the hit — a lower "ow" zap, distinct from pew.
+    hurt() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(420, t);
+        osc.frequency.exponentialRampToValueAtTime(90, t + 0.22);
+        gain.gain.setValueAtTime(0.16, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.24);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.25);
+    }
+};
+
 // --- 3D ENGINE REFERENCES ---
 let scene, camera, renderer;
-let playerMeshes = {}; 
+let playerMeshes = {};
 let mapProps3D = [];
 let modelLibrary = {};

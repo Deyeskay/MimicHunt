@@ -167,23 +167,71 @@ const UI = {
         }
     },
 
+    // Brief red crosshair flash when the local seeker lands a hit.
+    hitMarker: function() {
+        const ch = document.getElementById('crosshair');
+        if (!ch) return;
+        ch.classList.add('hit');
+        clearTimeout(this._hitT);
+        this._hitT = setTimeout(() => ch.classList.remove('hit'), 150);
+    },
+
     updateHUD: function() {
         const me = gameState.players[myId];
         if (!me) return;
 
+        const isSeeker = me.role === 'Seeker';
         const namePrefix = me.name ? `${me.name} — ` : '';
-        document.getElementById('role-badge').innerText = `${namePrefix}${me.role.toUpperCase()} ${me.isCaught ? '(CAUGHT)' : ''}`;
-        document.getElementById('role-badge').style.color = me.role === 'Seeker' ? 'var(--accent-red)' : 'var(--accent-green)';
+        const suffix = (!isSeeker && me.isCaught) ? ' (ELIMINATED)' : '';
+        document.getElementById('role-badge').innerText = `${namePrefix}${me.role.toUpperCase()}${suffix}`;
+        document.getElementById('role-badge').style.color = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';
 
         let m = Math.floor(gameState.timer / 60).toString().padStart(2, '0');
         let s = (gameState.timer % 60).toString().padStart(2, '0');
         document.getElementById('timer-display').innerText = `${gameState.phase}: ${m}:${s}`;
 
-        document.getElementById('blind-overlay').style.display = (gameState.phase === 'HIDING' && me.role === 'Seeker') ? 'flex' : 'none';
+        document.getElementById('blind-overlay').style.display = (gameState.phase === 'HIDING' && isSeeker) ? 'flex' : 'none';
 
         // Live player count (top-right pill). Keeps updating on host (60fps loop)
         // and clients (snapshot handler), including after a host migration.
         const pc = document.getElementById('player-count');
         if (pc) pc.innerText = Object.keys(gameState.players).length;
+
+        // --- Combat UI: crosshair + ammo/score, Seeker only, while alive in HUNTING ---
+        const combatActive = isSeeker && gameState.phase === 'HUNTING' && !me.isCaught;
+        const ch = document.getElementById('crosshair');
+        const combat = document.getElementById('combat-hud');
+        if (ch) ch.style.display = combatActive ? 'block' : 'none';
+        if (combat) {
+            combat.style.display = combatActive ? 'flex' : 'none';
+            if (combatActive) {
+                const ammoEl = document.getElementById('ammo-display');
+                const scoreEl = document.getElementById('score-display');
+                if (ammoEl) ammoEl.innerText = reloading ? 'RELOAD' : `${ammo}/${MAG_SIZE}`;
+                if (scoreEl) scoreEl.innerText = me.score || 0;
+            }
+        }
+        // Hider health bar (top HUD): visible for a hider in-game.
+        const healthHud = document.getElementById('health-hud');
+        if (healthHud) {
+            const showHealth = !isSeeker && gameState.phase !== 'LOBBY';
+            healthHud.style.display = showHealth ? 'flex' : 'none';
+            if (showHealth) {
+                const hp = me.health != null ? me.health : HIDER_MAX_HP;
+                const pct = Math.max(0, Math.min(1, hp / HIDER_MAX_HP));
+                const fill = document.getElementById('hp-fill');
+                if (fill) {
+                    fill.style.width = (pct * 100) + '%';
+                    fill.style.background = pct > 0.6 ? 'var(--accent-green)'
+                        : pct > 0.3 ? '#ffa502' : 'var(--accent-red)';
+                }
+            }
+        }
+
+        // Mobile action buttons by role: Seeker shoots, Hider disguises.
+        const shootBtn = document.getElementById('btn-action-shoot');
+        const propBtn = document.getElementById('btn-action-disguise');
+        if (shootBtn) shootBtn.style.display = isSeeker ? '' : 'none';
+        if (propBtn) propBtn.style.display = isSeeker ? 'none' : '';
     }
 };

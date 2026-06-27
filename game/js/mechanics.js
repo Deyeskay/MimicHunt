@@ -29,6 +29,12 @@ const Mechanics = {
             }
         });
 
+        // Desktop: left-click while pointer-locked = fire (fireShot self-gates to
+        // Seeker + HUNTING). The first click on the canvas only locks the pointer.
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 0 && document.pointerLockElement === canvas) this.fireShot();
+        });
+
         const joyZone = document.getElementById('joystick-zone');
         const joyNub = document.getElementById('joystick-nub');
 
@@ -60,6 +66,8 @@ const Mechanics = {
 
         document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { e.preventDefault(); this.handleDisguiseSwap(); });
         document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (isGrounded) this.jump(); });
+        const shootBtn = document.getElementById('btn-action-shoot');
+        if (shootBtn) shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireShot(); });
 
         // --- Mobile camera look (PUBG): drag anywhere on the RIGHT half of the
         // screen (except on UI buttons) to orbit the camera. Tracked by its own
@@ -127,6 +135,43 @@ const Mechanics = {
     jump: function() {
         velocityY = JUMP_STRENGTH;
         isGrounded = false;
+    },
+
+    // Seeker fires an energy pulse toward the crosshair. Client-side ammo +
+    // fire-rate + reload gating; the host validates the hit (Network.processShot).
+    fireShot: function() {
+        const me = gameState.players[myId];
+        if (!me || me.role !== 'Seeker' || me.isCaught) return;
+        if (gameState.phase !== 'HUNTING') return;
+
+        this.tickReload();
+        const now = Network.now();
+        if (reloading) return;
+        if (now - lastShotAt < FIRE_INTERVAL_MS) return;
+        if (ammo <= 0) { this.startReload(); return; }
+
+        ammo--;
+        lastShotAt = now;
+        if (ammo <= 0) this.startReload();
+
+        const ray = Level.getAimRay();
+        Sound.pew();
+        Level.spawnPulse(ray);
+        Network.sendShot(ray);
+    },
+
+    startReload: function() {
+        if (reloading) return;
+        reloading = true;
+        reloadUntil = Network.now() + RELOAD_MS;
+    },
+
+    // Finish a reload once its timer elapses (called every frame on host + client).
+    tickReload: function() {
+        if (reloading && Network.now() >= reloadUntil) {
+            reloading = false;
+            ammo = MAG_SIZE;
+        }
     },
 
     applyDisguiseFromProp: function(prop) {
@@ -277,6 +322,9 @@ const Mechanics = {
         }
 
         if (nearest) {
+            // Disguise is locked for a few seconds after being hit (so a revealed
+            // hider can't instantly become another rock). Un-disguising is allowed.
+            if (pData.disguiseLockUntil && Network.now() < pData.disguiseLockUntil) return;
             this.applyDisguiseFromProp(nearest);
         } else {
             this.clearDisguise();
@@ -348,38 +396,17 @@ const Mechanics = {
         // Fully boxed in (no clear spot within range) — leave the player put.
     },
 
-    checkCollisions: function() {
-        // Multiple seekers are allowed — any seeker within range catches a hider.
-        const seekers = Object.values(gameState.players).filter(p => p.role === 'Seeker');
-        if (!seekers.length) return;
-
-        for (let id in gameState.players) {
-            let target = gameState.players[id];
-            if (target.role !== 'Hider' || target.isCaught) continue;
-
-            for (const seeker of seekers) {
-                let dist = Math.hypot(seeker.x - target.x, seeker.z - target.z);
-                if (dist < (target.disguiseSize + 2)) {
-                    target.isCaught = true;
-                    // Caught state no longer rides in the snapshot — tell
-                    // everyone with a discrete event (host-only code path).
-                    Network.broadcast({ type: 'caught', id });
-                    this.checkWinConditions();
-                    break;   // already caught; no need to test other seekers
-                }
-            }
-        }
-    },
-
+    // Win check: all hiders eliminated (health 0 → isCaught). Reached from
+    // Network.processShot after a lethal hit. (The old proximity catch is gone —
+    // seekers now eliminate hiders by shooting; see Network.processShot.)
     checkWinConditions: function() {
         const players = Object.values(gameState.players);
         const hidersLeft = players.filter(p => p.role === 'Hider' && !p.isCaught).length;
         if (hidersLeft === 0 && players.filter(p => p.role === 'Hider').length > 0) {
             gameState.phase = 'ENDED';
             // finishMatch broadcasts gameOver to every client (so hiders also
-            // see the end screen) and shows the host's modal — previously this
-            // path only opened the modal on the host.
-            Network.finishMatch("Game Over", "Seeker Wins! All props found.");
+            // see the end screen) and shows the host's modal.
+            Network.finishMatch("Game Over", "Seeker Wins! All hiders eliminated.");
         }
     }
 };
