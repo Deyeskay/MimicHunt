@@ -111,20 +111,43 @@ const Level = {
             { key: "bush", path: "assets/models/bush1.glb" }
         ];
 
+        const total = files.length + 1;   // + the animated player character
         let loaded = 0;
+        const done = () => { loaded++; if (loaded === total) callback(); };
 
         files.forEach(file => {
             loader.load(
                 file.path,
-                (gltf) => {
-                    modelLibrary[file.key] = gltf.scene;
-                    loaded++;
-                    if (loaded === files.length) callback();
-                },
+                (gltf) => { modelLibrary[file.key] = gltf.scene; done(); },
                 undefined,
-                (err) => console.error("Failed:", file.path, err)
+                (err) => { console.error("Failed:", file.path, err); done(); }
             );
         });
+
+        // Animated player character — keep BOTH scene and animations. If it
+        // fails, the game falls back to box/cylinder primitives.
+        loader.load(
+            "assets/models/player.glb",
+            (gltf) => {
+                this.playerGLB = { scene: gltf.scene, animations: gltf.animations || [] };
+
+                // Pick idle/walk clips by name with sensible fallbacks.
+                const anims = this.playerGLB.animations;
+                const byName = subs => anims.find(a =>
+                    subs.some(s => (a.name || '').toLowerCase().includes(s)));
+                this.playerClips = {
+                    idle: byName(['idle', 'stand']) || anims[0] || null,
+                    walk: byName(['walk', 'run', 'move']) || anims[1] || anims[0] || null
+                };
+                console.log('player.glb clips:', anims.map(a => a.name),
+                    '→ idle:', this.playerClips.idle && this.playerClips.idle.name,
+                    'walk:', this.playerClips.walk && this.playerClips.walk.name);
+
+                done();
+            },
+            undefined,
+            (err) => { console.error("Failed: player.glb", err); done(); }
+        );
     },
 
     resize: function() {
@@ -134,17 +157,13 @@ const Level = {
         camera.updateProjectionMatrix();
     },
 
-    createPlayerMesh: function(p) {
-        if (p.role === "Seeker") {
-            return new THREE.Mesh(
-                new THREE.BoxGeometry(2, 4, 2),
-                new THREE.MeshLambertMaterial({
-                    color: p.isCaught ? 0x333333 : p.color
-                })
-            );
-        }
+    // Yaw applied to the character model on top of p.rotY. Flip to Math.PI if
+    // the player.glb faces the opposite way (i.e. appears to moonwalk).
+    PLAYER_YAW_OFFSET: 0,
 
-        if (p.disguiseType !== "player") {
+    createPlayerMesh: function(p) {
+        // Disguised hider → the prop mesh (no character / no animation).
+        if (p.role !== "Seeker" && p.disguiseType !== "player") {
             const mesh = PropLevel.createDisguiseMesh(p.disguiseType, modelLibrary, p.propScale);
             if (mesh) {
                 mesh.userData.meshKey = PropLevel.getDisguiseMeshKey(p);
@@ -152,13 +171,86 @@ const Level = {
             }
         }
 
+        // Seeker or undisguised hider → animated character (when loaded).
+        if (this.playerGLB && THREE.SkeletonUtils) {
+            return this.makeCharacterMesh(p);
+        }
+
+        // Fallback primitives (model not loaded / SkeletonUtils missing).
+        if (p.role === "Seeker") {
+            return new THREE.Mesh(
+                new THREE.BoxGeometry(2, 4, 2),
+                new THREE.MeshLambertMaterial({ color: p.isCaught ? 0x333333 : p.color })
+            );
+        }
         return new THREE.Mesh(
             new THREE.CylinderGeometry(1, 1, 3, 16),
             new THREE.MeshLambertMaterial({ color: p.color })
         );
     },
 
+    // Build an animated character instance: a skinned clone (SkeletonUtils is
+    // required — plain .clone() breaks skinning), grounded so its feet sit at the
+    // group origin, plus a role-colored foot ring and a per-instance AnimationMixer.
+    makeCharacterMesh: function(p) {
+        const root = new THREE.Group();
+
+        const model = THREE.SkeletonUtils.clone(this.playerGLB.scene);
+
+        // Scale to ~3 tall by measuring the actual clone (respects any intrinsic
+        // scale in the GLB), then drop it so its feet sit at the group origin
+        // regardless of where the GLB's pivot is.
+        const m0 = new THREE.Box3().setFromObject(model);
+        const sz = new THREE.Vector3();
+        m0.getSize(sz);
+        if (sz.y > 0) model.scale.multiplyScalar(3 / sz.y);
+        const box = new THREE.Box3().setFromObject(model);
+        model.position.y -= box.min.y;
+        root.add(model);
+
+        // Role-colored foot ring (red Seeker / green Hider) for at-a-glance ID.
+        const ringColor = p.isCaught ? 0x333333 : (p.role === "Seeker" ? 0xff4757 : 0x2ed573);
+        const ring = new THREE.Mesh(
+            new THREE.RingGeometry(0.7, 1.0, 24),
+            new THREE.MeshBasicMaterial({ color: ringColor, side: THREE.DoubleSide,
+                transparent: true, opacity: 0.85 })
+        );
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.02;
+        root.add(ring);
+
+        // Animation: play idle + walk, blend via weight (crossfaded at runtime).
+        const mixer = new THREE.AnimationMixer(model);
+        const actions = {};
+        if (this.playerClips && this.playerClips.idle) {
+            actions.idle = mixer.clipAction(this.playerClips.idle);
+            actions.idle.play();
+            actions.idle.weight = 1;
+        }
+        if (this.playerClips && this.playerClips.walk) {
+            actions.walk = mixer.clipAction(this.playerClips.walk);
+            actions.walk.play();
+            actions.walk.weight = 0;
+        }
+
+        root.userData.isCharacter = true;
+        root.userData.mixer = mixer;
+        root.userData.actions = actions;
+        root.userData.ring = ring;
+        root.userData.current = 'idle';
+        root.userData.lastPos = new THREE.Vector3(p.x, p.y, p.z);
+        return root;
+    },
+
     updatePlayerMeshTransform: function(mesh, p) {
+        // Animated character: group origin = feet, so drop by the player base
+        // height (primitives were centered on p.y). Face the movement direction.
+        if (mesh.userData.isCharacter) {
+            mesh.position.set(p.x, p.y - PropLevel.PLAYER_BASE_HEIGHT, p.z);
+            mesh.rotation.set(0, p.rotY + (this.PLAYER_YAW_OFFSET || 0), 0);
+            return;
+        }
+
         if (p.disguiseType !== "player" && p.role !== "Seeker") {
             const baseHeight = PropLevel.getDisguiseBaseHeight(p);
             const groundY = PropLevel.getPlayerGroundY(p.y, baseHeight);
@@ -177,8 +269,40 @@ const Level = {
         mesh.rotation.y = p.rotY;
     },
 
+    // Crossfade idle/walk based on the character's rendered movement speed, then
+    // advance its mixer. Works for the local player and interpolated remotes alike
+    // because it measures the mesh's own position delta (no networked anim state).
+    updateCharacterAnim: function(mesh, p, dt) {
+        const ud = mesh.userData;
+        let target = 'idle';
+
+        if (ud.lastPos && dt > 0) {
+            const dx = mesh.position.x - ud.lastPos.x;
+            const dz = mesh.position.z - ud.lastPos.z;
+            const speed = Math.hypot(dx, dz) / dt;
+            target = speed > 1.0 ? 'walk' : 'idle';
+        }
+        if (ud.lastPos) ud.lastPos.set(mesh.position.x, mesh.position.y, mesh.position.z);
+
+        if (p.isCaught) target = 'idle';            // caught hiders freeze
+        if (!ud.actions[target]) target = 'idle';   // missing clip → idle
+
+        if (ud.actions[target] && ud.current !== target) {
+            if (ud.actions[ud.current]) ud.actions[ud.current].fadeOut(0.2);
+            ud.actions[target].reset().fadeIn(0.2).play();
+            ud.current = target;
+        }
+
+        if (ud.ring && p.isCaught) ud.ring.material.color.setHex(0x333333);
+
+        if (dt > 0) ud.mixer.update(dt);
+    },
+
     render: function() {
         if (!gameState || !gameState.players) return;
+
+        // Delta time for animation mixers (lazily create the shared clock).
+        const dt = (this.animClock || (this.animClock = new THREE.Clock())).getDelta();
 
         // Sample remote players from the snapshot buffer at a fixed delay behind
         // real time. Interpolation between buffered snapshots (in Network) does
@@ -227,6 +351,9 @@ const Level = {
                     s ? { ...p, x: s.x, y: s.y, z: s.z, rotY: s.rotY } : p
                 );
             }
+
+            // Drive the character animation from its rendered movement.
+            if (mesh.userData.mixer) this.updateCharacterAnim(mesh, p, dt);
         }
 
         // Developer: outline the local player's own collision radius (cyan) so
