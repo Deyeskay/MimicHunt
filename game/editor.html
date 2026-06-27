@@ -1730,7 +1730,13 @@ function animate()
 {
     if(selectionHelper)
     {
+        // BoxHelper.update() re-measures the object each frame; detach the
+        // AxesHelper(5) child first so the box fits the prop instead of being
+        // inflated/offset by the helper's rays.
+        const axes = selectedObject && selectedObject.userData && selectedObject.userData.axesHelper;
+        if (axes) selectedObject.remove(axes);
         selectionHelper.update();
+        if (axes) selectedObject.add(axes);
     }
 
     if (showColliders && collidersDirty)
