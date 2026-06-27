@@ -267,6 +267,10 @@ const Network = {
         const dl = Math.hypot(ray.dx, ray.dy, ray.dz) || 1;
         const D = { x: ray.dx / dl, y: ray.dy / dl, z: ray.dz / dl };
 
+        // A rock/tree between the seeker and a hider blocks the shot — the bolt
+        // stops at the prop and the hider behind takes no damage.
+        const blockT = PropLevel.raycastProps(O.x, O.y, O.z, D.x, D.y, D.z, SHOT_RANGE);
+
         // Nearest hider whose BODY COLUMN comes within hitRadius of the aim ray.
         // Sampling several heights (feet→head) means aiming anywhere on the body
         // counts, instead of only a single chest point.
@@ -286,7 +290,8 @@ const Network = {
                 const dist = Math.hypot(h.x - px, sy - py, h.z - pz);
                 if (dist < hitDist) { hitDist = dist; hitT = t; }
             }
-            if (hitDist < hitRadius && hitT < bestT) { best = id; bestT = hitT; }
+            // Only count the hit if the hider is IN FRONT of the nearest prop.
+            if (hitDist < hitRadius && hitT < bestT && hitT < blockT) { best = id; bestT = hitT; }
         }
 
         let hit = false, targetId = null, health, eliminated = false, forcedOut = false;
@@ -308,11 +313,15 @@ const Network = {
             if (tgt.health <= 0) { tgt.isCaught = true; eliminated = true; }
         }
 
+        // Where the bolt ends: at the hider if hit, else at the blocking prop,
+        // else full range.
+        const impactDist = best ? bestT : Math.min(blockT, SHOT_RANGE);
+
         const packet = {
             type: 'shot', shooterId,
             ox: O.x, oy: O.y, oz: O.z, dx: D.x, dy: D.y, dz: D.z,
             mx: ray.mx, my: ray.my, mz: ray.mz,
-            hit, targetId, health, score: shooter.score,
+            hit, targetId, health, score: shooter.score, impactDist,
             revealMs: REVEAL_MS, lockMs: DISGUISE_LOCK_MS, shootMs: SHOOT_ANIM_MS,
             eliminated, forcedOut
         };
@@ -322,7 +331,7 @@ const Network = {
         // already drew its pulse in fireShot).
         if (shooterId !== myId) {
             Sound.pew();
-            Level.spawnPulse(packet);
+            Level.spawnPulse(packet, packet.impactDist);
         }
         // If the host itself is the hider that got hit, play the damage sound.
         if (hit && targetId === myId) Sound.hurt();
@@ -936,7 +945,7 @@ const Network = {
                 // Visual + audio for shots fired by OTHERS (our own was drawn in fireShot).
                 if (data.shooterId !== myId) {
                     Sound.pew();
-                    Level.spawnPulse(data);
+                    Level.spawnPulse(data, data.impactDist);
                 }
                 // Damage sound when WE are the hider that got hit.
                 if (data.hit && data.targetId === myId) Sound.hurt();

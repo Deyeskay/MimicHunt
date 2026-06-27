@@ -8,9 +8,11 @@ const Level = {
 
         camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        const hemiLight = new THREE.HemisphereLight(0xbfd8ff, 0x4a6a3a, 0.6);
+        scene.add(hemiLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
         dirLight.position.set(10, 20, 10);
         scene.add(dirLight);
 
@@ -455,20 +457,25 @@ const Level = {
     },
 
     // Spawn the visual bolt from the muzzle toward the ray's aim point.
-    spawnPulse: function(ray) {
-        const range = (typeof SHOT_RANGE !== 'undefined' ? SHOT_RANGE : 60);
+    // Spawn the visual bolt from the muzzle toward the aim point. stopDist (along
+    // the camera ray) ends the bolt at the impact (a prop or hider); default =
+    // full range. An impact flash shows when it actually hit something.
+    spawnPulse: function(ray, stopDist) {
+        const full = (typeof SHOT_RANGE !== 'undefined' ? SHOT_RANGE : 60);
+        const range = (stopDist != null && isFinite(stopDist)) ? stopDist : full;
         const ax = ray.ox + ray.dx * range;
         const ay = ray.oy + ray.dy * range;
         const az = ray.oz + ray.dz * range;
         const mx = ray.mx != null ? ray.mx : ray.ox;
         const my = ray.my != null ? ray.my : ray.oy;
         const mz = ray.mz != null ? ray.mz : ray.oz;
-        this.spawnProjectile(mx, my, mz, ax - mx, ay - my, az - mz);
+        const maxDist = Math.hypot(ax - mx, ay - my, az - mz);
+        this.spawnProjectile(mx, my, mz, ax - mx, ay - my, az - mz, maxDist, range < full - 0.5);
     },
 
     // Spawn a blue energy-pulse projectile that flies along (dx,dy,dz) and is
-    // culled after SHOT_RANGE. Purely cosmetic — hit logic is host-authoritative.
-    spawnProjectile: function(ox, oy, oz, dx, dy, dz) {
+    // culled after maxDist. Purely cosmetic — hit logic is host-authoritative.
+    spawnProjectile: function(ox, oy, oz, dx, dy, dz, maxDist, impact) {
         if (!scene) return;
         const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(0.18, 10, 10),
@@ -482,26 +489,58 @@ const Level = {
             mesh,
             dir: { x: dx / len, y: dy / len, z: dz / len },
             traveled: 0,
-            maxDist: (typeof SHOT_RANGE !== 'undefined' ? SHOT_RANGE : 60)
+            maxDist: (maxDist != null ? maxDist : (typeof SHOT_RANGE !== 'undefined' ? SHOT_RANGE : 60)),
+            impact: !!impact
         });
     },
 
-    // Advance + cull live projectiles (called once per render frame).
+    // A brief expanding/fading flash where a bolt hit something.
+    spawnImpact: function(x, y, z) {
+        if (!scene) return;
+        const mesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.25, 10, 10),
+            new THREE.MeshBasicMaterial({ color: 0x9fe0ff, transparent: true, opacity: 0.9 })
+        );
+        mesh.position.set(x, y, z);
+        scene.add(mesh);
+        this._impacts = this._impacts || [];
+        this._impacts.push({ mesh, life: 0, maxLife: 0.18 });
+    },
+
+    // Advance + cull live projectiles and impact flashes (once per render frame).
     updateProjectiles: function(dt) {
         const list = this._projectiles;
-        if (!list || !list.length) return;
-        const speed = 90;   // world units / sec
-        for (let i = list.length - 1; i >= 0; i--) {
-            const pr = list[i];
-            const step = speed * dt;
-            pr.mesh.position.x += pr.dir.x * step;
-            pr.mesh.position.y += pr.dir.y * step;
-            pr.mesh.position.z += pr.dir.z * step;
-            pr.traveled += step;
-            if (pr.traveled >= pr.maxDist) {
-                scene.remove(pr.mesh);
-                pr.mesh.geometry.dispose();
-                list.splice(i, 1);
+        if (list && list.length) {
+            const speed = 90;   // world units / sec
+            for (let i = list.length - 1; i >= 0; i--) {
+                const pr = list[i];
+                const step = speed * dt;
+                pr.mesh.position.x += pr.dir.x * step;
+                pr.mesh.position.y += pr.dir.y * step;
+                pr.mesh.position.z += pr.dir.z * step;
+                pr.traveled += step;
+                if (pr.traveled >= pr.maxDist) {
+                    if (pr.impact) this.spawnImpact(pr.mesh.position.x, pr.mesh.position.y, pr.mesh.position.z);
+                    scene.remove(pr.mesh);
+                    pr.mesh.geometry.dispose();
+                    list.splice(i, 1);
+                }
+            }
+        }
+
+        const impacts = this._impacts;
+        if (impacts && impacts.length) {
+            for (let i = impacts.length - 1; i >= 0; i--) {
+                const im = impacts[i];
+                im.life += dt;
+                const k = im.life / im.maxLife;
+                im.mesh.scale.setScalar(1 + k * 2.5);
+                im.mesh.material.opacity = Math.max(0, 0.9 * (1 - k));
+                if (im.life >= im.maxLife) {
+                    scene.remove(im.mesh);
+                    im.mesh.geometry.dispose();
+                    impacts.splice(i, 1);
+                }
             }
         }
     },

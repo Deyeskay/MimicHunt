@@ -196,6 +196,40 @@ const PropLevel = {
         return prop.collision !== false;
     },
 
+    // Ray vs the level's collidable props (vertical-cylinder colliders). Returns
+    // the nearest blocking distance along the ray within maxRange, or Infinity if
+    // nothing blocks. (O is the ray origin, D the UNIT direction, so t is the 3D
+    // distance.) Used so shots stop at rocks/trees instead of passing through.
+    raycastProps: function(ox, oy, oz, dx, dy, dz, maxRange) {
+        if (typeof mapProps3D === 'undefined' || !mapProps3D) return Infinity;
+        const range = maxRange || 60;
+        let best = Infinity;
+
+        for (let i = 0; i < mapProps3D.length; i++) {
+            const prop = mapProps3D[i];
+            if (prop.model === 'spawn' || !this.hasCollision(prop)) continue;
+            const pieces = this.getColliders(prop);
+            for (let j = 0; j < pieces.length; j++) {
+                const c = pieces[j];
+                const ex = ox - c.x, ez = oz - c.z;
+                const a = dx * dx + dz * dz;
+                if (a < 1e-6) continue;                 // near-vertical ray: no column hit
+                const b = 2 * (ex * dx + ez * dz);
+                const cc = ex * ex + ez * ez - c.radius * c.radius;
+                let disc = b * b - 4 * a * cc;
+                if (disc < 0) continue;
+                disc = Math.sqrt(disc);
+                let t = (-b - disc) / (2 * a);          // nearest entry
+                if (t < 0) t = (-b + disc) / (2 * a);   // origin inside → exit point
+                if (t < 0 || t > range || t >= best) continue;
+                const y = oy + dy * t;                  // height at the entry point
+                if (y < c.yMin || y > c.yMax) continue; // outside the cylinder's band
+                best = t;
+            }
+        }
+        return best;
+    },
+
     isClimbable: function(prop) {
         return prop.climbable === true;
     },

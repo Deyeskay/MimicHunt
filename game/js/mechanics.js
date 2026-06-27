@@ -160,7 +160,10 @@ const Mechanics = {
 
         const ray = Level.getAimRay();
         Sound.pew();
-        Level.spawnPulse(ray);
+        // Stop our immediate local bolt at the nearest prop (host stays
+        // authoritative for the actual hit).
+        const blockT = PropLevel.raycastProps(ray.ox, ray.oy, ray.oz, ray.dx, ray.dy, ray.dz, SHOT_RANGE);
+        Level.spawnPulse(ray, Math.min(blockT, SHOT_RANGE));
         Network.sendShot(ray);
         // Enter aim-stance locally (face target + back-walk + upper-body shoot).
         if (me) me.shootingUntil = now + SHOOT_ANIM_MS;
