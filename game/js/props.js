@@ -143,8 +143,53 @@ const PropLevel = {
         prop.height = bounds.height;
 
         this.resolveGameplay(prop);
+        prop.colliders = this.resolveColliders(prop, bounds, this.getPrefab(prop.model));
 
         return prop;
+    },
+
+    // Turn a prefab's optional `colliders` template (fractions of bounds) into
+    // concrete world cylinders { x, z, radius, yMin, yMax }. With no template,
+    // fall back to one full-height cylinder = the model's bounding box (the
+    // original single-collider behavior). Offsets are rotated by rotation.y.
+    resolveColliders: function(prop, bounds, def) {
+        const R = bounds.radius;
+        const H = bounds.height;
+        const base = bounds.bottomY;
+        const tmpl = (def && def.colliders && def.colliders.length) ? def.colliders : null;
+
+        if (!tmpl) {
+            return [{ x: bounds.centerX, z: bounds.centerZ, radius: R, yMin: base, yMax: bounds.topY }];
+        }
+
+        const ry = THREE.MathUtils.degToRad((prop.rotation && prop.rotation.y) || 0);
+        const cos = Math.cos(ry), sin = Math.sin(ry);
+
+        return tmpl.map(c => {
+            const ox = (c.offsetX || 0) * R;
+            const oz = (c.offsetZ || 0) * R;
+            return {
+                x: bounds.centerX + ox * cos - oz * sin,
+                z: bounds.centerZ + ox * sin + oz * cos,
+                radius: (c.radius != null ? c.radius : 1) * R,
+                yMin: base + (c.yMin != null ? c.yMin : 0) * H,
+                yMax: base + (c.yMax != null ? c.yMax : 1) * H
+            };
+        });
+    },
+
+    // Safe accessor: precomputed colliders if enriched, else a single cylinder
+    // derived from whatever bounds the prop already carries (never throws).
+    getColliders: function(prop) {
+        if (prop.colliders && prop.colliders.length) return prop.colliders;
+        const cx = prop.centerX != null ? prop.centerX : prop.x;
+        const cz = prop.centerZ != null ? prop.centerZ : prop.z;
+        return [{
+            x: cx, z: cz,
+            radius: prop.radius || 0.5,
+            yMin: prop.bottomY != null ? prop.bottomY : 0,
+            yMax: this.getPropTop(prop)
+        }];
     },
 
     hasCollision: function(prop) {

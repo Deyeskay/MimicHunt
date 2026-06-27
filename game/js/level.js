@@ -58,19 +58,19 @@ const Level = {
             if (prop.model === 'spawn') continue;
             if (!PropLevel.hasCollision(prop)) continue;
 
-            const center = PropLevel.getPropCenter(prop);
-            const r = prop.radius || 0.5;
-            const h = Math.max(PropLevel.getPropTop(prop), 0.1);
-
-            const geo = new THREE.CylinderGeometry(r, r, h, 24);
-            const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
-            mat.depthTest = false;   // draw over geometry like editor gizmos
-            const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-            helper.position.set(center.x, h / 2, center.z);
-            helper.renderOrder = 999;
-            scene.add(helper);
-            this.colliderHelpers.push(helper);
-            geo.dispose();
+            // One outline per collider piece (e.g. trunk + canopy for a tree).
+            for (const c of PropLevel.getColliders(prop)) {
+                const h = Math.max(c.yMax - c.yMin, 0.1);
+                const geo = new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+                const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+                mat.depthTest = false;   // draw over geometry like editor gizmos
+                const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+                helper.renderOrder = 999;
+                scene.add(helper);
+                this.colliderHelpers.push(helper);
+                geo.dispose();
+            }
         }
     },
 

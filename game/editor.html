@@ -321,6 +321,7 @@ button{
     <div class="section">
         <div class="section-label">Object</div>
         <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete Selected</button>
+        <button id="toggleCollidersBtn" class="btn" style="margin-top:8px;" onclick="toggleEditorColliders(this)">🟡 Show Colliders</button>
     </div>
 
     <div class="section">
@@ -448,8 +449,8 @@ button{
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
-<script src="js/prefabs.js?v=2"></script>
-<script src="js/props.js?v=2"></script>
+<script src="js/prefabs.js?v=7"></script>
+<script src="js/props.js?v=7"></script>
 
 <script>
 //Globals
@@ -472,6 +473,15 @@ let selectionHelper = null;
 
 let placedObjects = [];
 let objectId = 1;
+
+// --- Collider visualization (read-only) ---
+// Mirrors the in-game dev gizmos: draws yellow outlines for each prop's
+// compound collider pieces (PropLevel.getColliders) so designers can confirm
+// shapes like the tree's trunk + floating canopy. Rebuilt lazily via a dirty
+// flag whenever objects move/place/delete/load.
+let showColliders = false;
+let editorColliderHelpers = [];
+let collidersDirty = false;
 
 let modelLibrary = {};
 
@@ -544,7 +554,62 @@ transformControls.addEventListener('objectChange', () => {
     }
     if (selectedObject) PropLevel.syncBoundsToData(selectedObject);
     updateInspectorFields();
+    collidersDirty = true;
 });
+
+// --- Collider visualization helpers ---
+function toggleEditorColliders(btn) {
+    showColliders = !showColliders;
+    if (btn) {
+        btn.classList.toggle('btn-primary', showColliders);
+        btn.innerText = showColliders ? '🟡 Hide Colliders' : '🟡 Show Colliders';
+    }
+    if (showColliders) collidersDirty = true;
+    else clearEditorColliders();
+}
+
+function clearEditorColliders() {
+    editorColliderHelpers.forEach(h => scene.remove(h));
+    editorColliderHelpers = [];
+}
+
+function rebuildEditorColliders() {
+    clearEditorColliders();
+    if (!showColliders) return;
+
+    placedObjects.forEach(obj => {
+        const data = obj.userData && obj.userData.data;
+        if (!data || data.model === 'spawn') return;
+        if (!PropLevel.hasCollision(data)) return;
+
+        // Compute live world bounds, then resolve the prefab's compound collider
+        // template (passing rotation.y in degrees, as resolveColliders expects).
+        const bounds = PropLevel.computeBounds(obj);
+        const def = PropLevel.getPrefab(data.model);
+        const propLike = { rotation: { y: THREE.MathUtils.radToDeg(obj.rotation.y) } };
+        const pieces = PropLevel.resolveColliders(propLike, bounds, def);
+
+        pieces.forEach(c => {
+            const h = Math.max(c.yMax - c.yMin, 0.1);
+            const geo = new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+            const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+            mat.depthTest = false;
+            const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+            helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+            helper.renderOrder = 999;
+            scene.add(helper);
+            editorColliderHelpers.push(helper);
+            geo.dispose();
+        });
+    });
+}
+
+// Any inspector edit (position/rotation/scale/collision checkbox) changes a
+// collider, so flag a rebuild.
+(function () {
+    const insp = document.getElementById('inspector');
+    if (insp) insp.addEventListener('change', () => { collidersDirty = true; });
+})();
 
 // Input listeners to edit object properties
 function attachInspectorInputListeners() {
@@ -1112,6 +1177,9 @@ function selectModel(model, button)
 /////////////////////////////////////////////////////
 function refreshHierarchy()
 {
+    // Roster changed (place/delete/clone/load) → collider outlines are stale.
+    collidersDirty = true;
+
     const list =
         document.getElementById("hierarchyList");
 
@@ -1656,6 +1724,12 @@ function animate()
     if(selectionHelper)
     {
         selectionHelper.update();
+    }
+
+    if (showColliders && collidersDirty)
+    {
+        rebuildEditorColliders();
+        collidersDirty = false;
     }
 
     requestAnimationFrame(
