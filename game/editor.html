@@ -290,6 +290,30 @@ button{
 .lvl-del{ background:transparent; border:none; color:var(--muted); font-size:15px; cursor:pointer; padding:3px 7px; border-radius:6px; }
 .lvl-del:hover{ color:#fca5a5; background:rgba(239,68,68,.15); }
 
+/* ---------- Prefab editor modal ---------- */
+#prefabModal .help-card{ width:min(820px,96vw); max-height:90vh; overflow-y:auto; }
+.pf-layout{ display:flex; gap:18px; align-items:flex-start; }
+.pf-edit{ flex:1; min-width:0; }
+.pf-preview{ width:300px; flex:none; }
+#prefabPreviewCanvas{ width:300px; height:340px; display:block; background:#11141a;
+    border:1px solid var(--border); border-radius:10px; cursor:grab; }
+#prefabPreviewCanvas:active{ cursor:grabbing; }
+.pf-preview-msg{ min-height:14px; margin-top:6px; font-size:11.5px; color:var(--muted); text-align:center; }
+.pf-preview-hint{ font-size:11px; color:var(--muted); text-align:center; margin-top:2px; }
+@media (max-width:760px){
+    .pf-layout{ flex-direction:column; }
+    .pf-preview{ width:100%; }
+    #prefabPreviewCanvas{ width:100%; }
+}
+.modal-hint{ font-weight:400; text-transform:none; letter-spacing:0; color:var(--muted); font-size:10px; }
+.pf-collider-row{ display:flex; gap:6px; align-items:flex-end; margin-bottom:6px; }
+.pf-collider-row > span{ flex:1; display:flex; flex-direction:column; min-width:0; }
+.pf-collider-row i{ font-style:normal; font-size:10px; color:var(--muted); margin-bottom:2px; }
+.pf-collider-row input[type=number]{ width:100%; }
+.pf-del{ background:transparent; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:7px 6px; border-radius:6px; }
+.pf-del:hover{ color:#fca5a5; background:rgba(239,68,68,.15); }
+.pf-empty{ color:var(--muted); font-size:12.5px; padding:6px 0; }
+
 /* ---------- Responsive ---------- */
 @media (max-width:760px){
     #toolbar{ left:8px; top:8px; width:46vw; padding:11px; max-height:calc(100vh - 16px); }
@@ -328,6 +352,7 @@ button{
         <div class="section-label">Level</div>
         <button class="btn btn-primary" onclick="exportLevel()">💾 Save / Export Level</button>
         <button class="btn" style="margin-top:8px;" onclick="openLoadModal()">📂 Load Level</button>
+        <button class="btn" style="margin-top:8px;" onclick="openPrefabModal()">🧩 Edit Prefabs</button>
     </div>
 
 </div>
@@ -446,6 +471,46 @@ button{
     </div>
 </div>
 
+<!-- Edit Prefabs modal -->
+<div id="prefabModal" class="help-modal">
+    <div class="help-card">
+        <h2>Edit Prefabs</h2>
+
+        <div class="pf-layout">
+            <div class="pf-edit">
+                <label class="modal-label">Prop type</label>
+                <div id="prefabTypeRow" class="prop-grid"></div>
+
+                <label class="modal-label" style="margin-top:14px;">Gameplay</label>
+                <div id="prefabFlags" class="check-list"></div>
+
+                <label class="modal-label" style="margin-top:14px;">
+                    Colliders <span class="modal-hint">fractions of bounds — radius·R, yMin/yMax·H, offset·R; empty = single auto cylinder</span>
+                </label>
+                <div id="prefabColliderRows"></div>
+                <button class="btn" style="margin-top:6px;" onclick="addPrefabCollider()">➕ Add piece</button>
+
+                <textarea id="prefabExportText" class="modal-textarea" spellcheck="false" style="display:none; margin-top:14px;"></textarea>
+            </div>
+
+            <div class="pf-preview">
+                <label class="modal-label">Preview</label>
+                <canvas id="prefabPreviewCanvas"></canvas>
+                <div id="prefabPreviewMsg" class="pf-preview-msg"></div>
+                <div class="pf-preview-hint">drag to rotate · scroll to zoom</div>
+            </div>
+        </div>
+
+        <div id="prefabStatus" class="modal-status"></div>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="exportPrefabsFile()">📦 Export prefabs.js</button>
+            <button class="btn" onclick="resetPrefabsToFile()">↺ Reset</button>
+            <button class="btn" onclick="closePrefabModal()">Close</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
@@ -482,6 +547,54 @@ let objectId = 1;
 let showColliders = false;
 let editorColliderHelpers = [];
 let collidersDirty = false;
+
+// --- Prefab editing (read PrefabLibrary → edit → export prefabs.js) ---
+const PREFABS_KEY = 'hnh_editor_prefabs';
+const PREFAB_TYPES = ['tree', 'rock', 'bush', 'wall', 'spawn'];
+const PREFAB_FLAGS = ['collision', 'climbable', 'hideSpot', 'canDisguise'];
+// Snapshot the original file defaults BEFORE applying any saved overrides (Reset).
+const PREFAB_DEFAULTS_ORIG = JSON.parse(JSON.stringify(PrefabLibrary));
+let activePrefab = 'tree';
+
+function loadPrefabStore() {
+    try { return JSON.parse(localStorage.getItem(PREFABS_KEY)) || {}; }
+    catch (e) { return {}; }
+}
+function savePrefabStore(obj) {
+    localStorage.setItem(PREFABS_KEY, JSON.stringify(obj));
+}
+
+// Persist only the diff vs the file defaults, so unchanged types aren't stored.
+function prefabDiffFromDefaults() {
+    const out = {};
+    PREFAB_TYPES.forEach(type => {
+        const cur = PrefabLibrary[type] || {};
+        const def = PREFAB_DEFAULTS_ORIG[type] || {};
+        const d = {};
+        PREFAB_FLAGS.forEach(f => { if (cur[f] !== def[f]) d[f] = cur[f]; });
+        const curC = cur.colliders || null;
+        const defC = def.colliders || null;
+        if (JSON.stringify(curC) !== JSON.stringify(defC)) {
+            d.colliders = curC ? JSON.parse(JSON.stringify(curC)) : [];
+        }
+        if (Object.keys(d).length) out[type] = d;
+    });
+    return out;
+}
+function persistPrefabs() { savePrefabStore(prefabDiffFromDefaults()); }
+
+// Deep-merge any saved overrides into the live library at startup.
+(function applySavedPrefabOverrides() {
+    const store = loadPrefabStore();
+    Object.keys(store).forEach(type => {
+        if (!PrefabLibrary[type]) PrefabLibrary[type] = {};
+        const ov = store[type];
+        PREFAB_FLAGS.forEach(f => { if (ov[f] !== undefined) PrefabLibrary[type][f] = ov[f]; });
+        if (ov.colliders !== undefined) {
+            PrefabLibrary[type].colliders = JSON.parse(JSON.stringify(ov.colliders));
+        }
+    });
+})();
 
 let modelLibrary = {};
 
@@ -617,6 +730,298 @@ function rebuildEditorColliders() {
     const insp = document.getElementById('inspector');
     if (insp) insp.addEventListener('change', () => { collidersDirty = true; });
 })();
+
+// --- Prefab editor UI ---
+function openPrefabModal() {
+    activePrefab = 'tree';
+    renderPrefabTypeRow();
+    renderPrefabEditor();
+    document.getElementById('prefabExportText').style.display = 'none';
+    document.getElementById('prefabStatus').textContent = '';
+    openModal('prefabModal');
+    // Init AFTER the modal is shown so the canvas has a non-zero size.
+    initPrefabPreview();
+    buildPrefabPreviewContent();
+    startPrefabPreviewLoop();
+}
+
+function closePrefabModal() {
+    stopPrefabPreviewLoop();
+    closeModal('prefabModal');
+}
+
+function renderPrefabTypeRow() {
+    const row = document.getElementById('prefabTypeRow');
+    row.innerHTML = '';
+    PREFAB_TYPES.forEach(type => {
+        const b = document.createElement('button');
+        b.className = 'propBtn' + (type === activePrefab ? ' active' : '');
+        b.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        b.onclick = () => { activePrefab = type; renderPrefabTypeRow(); renderPrefabEditor(); };
+        row.appendChild(b);
+    });
+}
+
+function renderPrefabEditor() {
+    const def = PrefabLibrary[activePrefab] || (PrefabLibrary[activePrefab] = {});
+    const flags = document.getElementById('prefabFlags');
+    flags.innerHTML = '';
+    PREFAB_FLAGS.forEach(f => {
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!def[f];
+        cb.onchange = () => { def[f] = cb.checked; persistPrefabs(); collidersDirty = true; refreshPrefabPreview(); };
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + f));
+        flags.appendChild(label);
+    });
+    renderPrefabColliderRows();
+    refreshPrefabPreview();
+}
+
+function renderPrefabColliderRows() {
+    const def = PrefabLibrary[activePrefab];
+    const wrap = document.getElementById('prefabColliderRows');
+    wrap.innerHTML = '';
+    const list = def.colliders || [];
+
+    if (!list.length) {
+        const e = document.createElement('div');
+        e.className = 'pf-empty';
+        e.textContent = 'No collider pieces — single auto cylinder (full bounds).';
+        wrap.appendChild(e);
+        return;
+    }
+
+    const fields = [
+        ['radius', 'radius', 1],
+        ['yMin', 'yMin', 0],
+        ['yMax', 'yMax', 1],
+        ['offX', 'offsetX', 0],
+        ['offZ', 'offsetZ', 0]
+    ];
+
+    list.forEach((c, i) => {
+        const row = document.createElement('div');
+        row.className = 'pf-collider-row';
+
+        fields.forEach(([labelText, key, dflt]) => {
+            const span = document.createElement('span');
+            const ic = document.createElement('i');
+            ic.textContent = labelText;
+            const inp = document.createElement('input');
+            inp.type = 'number';
+            inp.step = '0.01';
+            inp.value = (c[key] != null ? c[key] : dflt);
+            inp.onchange = () => {
+                const num = parseFloat(inp.value);
+                const v = isNaN(num) ? 0 : num;
+                // Keep zero offsets out of the data so exports stay clean.
+                if ((key === 'offsetX' || key === 'offsetZ') && v === 0) delete c[key];
+                else c[key] = v;
+                persistPrefabs();
+                collidersDirty = true;
+                refreshPrefabPreview();
+            };
+            span.appendChild(ic);
+            span.appendChild(inp);
+            row.appendChild(span);
+        });
+
+        const del = document.createElement('button');
+        del.className = 'pf-del';
+        del.textContent = '✕';
+        del.title = 'Remove piece';
+        del.onclick = () => {
+            def.colliders.splice(i, 1);
+            persistPrefabs();
+            collidersDirty = true;
+            renderPrefabColliderRows();
+            refreshPrefabPreview();
+        };
+        row.appendChild(del);
+        wrap.appendChild(row);
+    });
+}
+
+function addPrefabCollider() {
+    const def = PrefabLibrary[activePrefab];
+    if (!def.colliders) def.colliders = [];
+    def.colliders.push({ radius: 0.5, yMin: 0, yMax: 1 });
+    persistPrefabs();
+    collidersDirty = true;
+    renderPrefabColliderRows();
+    refreshPrefabPreview();
+}
+
+// Generate the full prefabs.js file text for the user to paste into the file.
+function buildPrefabsFileString() {
+    const header =
+'/*=====================================================================\n' +
+'  prefabs.js – Prefab library (Unity-style prop type defaults)\n' +
+'  ---------------------------------------------------------------\n' +
+'  Generated by the level editor\'s "Edit Prefabs" tool.\n' +
+'  Each prop TYPE defines its gameplay defaults (collision, climbable,\n' +
+'  hideSpot, canDisguise) and an optional compound `colliders` template\n' +
+'  (fractions of the prop\'s bounds: radius·R, yMin/yMax·H, offset·R).\n' +
+'=====================================================================*/\n\n';
+
+    return header +
+        'const PrefabLibrary = ' + JSON.stringify(PrefabLibrary, null, 4) + ';\n\n' +
+        'const PREFAB_DEFAULT = ' + JSON.stringify(PREFAB_DEFAULT, null, 4) + ';\n\n' +
+        "if (typeof module !== 'undefined' && module.exports) {\n" +
+        '    module.exports = { PrefabLibrary, PREFAB_DEFAULT };\n' +
+        '}\n';
+}
+
+function exportPrefabsFile() {
+    const ta = document.getElementById('prefabExportText');
+    ta.value = buildPrefabsFileString();
+    ta.style.display = 'block';
+    ta.focus();
+    ta.select();
+    const status = document.getElementById('prefabStatus');
+    try {
+        document.execCommand('copy');
+        status.textContent = 'Generated & copied — paste into game/js/prefabs.js ✓';
+    } catch (e) {
+        status.textContent = 'Generated — copy the text into game/js/prefabs.js';
+    }
+}
+
+function resetPrefabsToFile() {
+    if (!confirm('Reset all prefabs to the original file defaults? This clears your saved prefab edits.')) return;
+    PREFAB_TYPES.forEach(type => {
+        PrefabLibrary[type] = JSON.parse(JSON.stringify(PREFAB_DEFAULTS_ORIG[type]));
+    });
+    localStorage.removeItem(PREFABS_KEY);
+    collidersDirty = true;
+    document.getElementById('prefabExportText').style.display = 'none';
+    document.getElementById('prefabStatus').textContent = 'Reset to file defaults ✓';
+    renderPrefabEditor();
+}
+
+// --- Prefab preview (mini 3D viewport in the modal) ---
+let pfRenderer = null, pfScene = null, pfCamera = null;
+let pfModel = null, pfGizmos = [], pfRaf = null;
+let pfYaw = 0.7, pfPitch = 0.5, pfDist = 8;
+let pfTarget = new THREE.Vector3(0, 1, 0);
+let pfDragging = false, pfLastX = 0, pfLastY = 0, pfAutoRotate = true;
+
+function initPrefabPreview() {
+    if (pfRenderer) return;
+    const canvas = document.getElementById('prefabPreviewCanvas');
+    const w = canvas.clientWidth || 300;
+    const h = canvas.clientHeight || 340;
+
+    pfRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+    pfRenderer.setPixelRatio(window.devicePixelRatio || 1);
+    pfRenderer.setSize(w, h, false);
+
+    pfScene = new THREE.Scene();
+    pfScene.background = new THREE.Color(0x11141a);
+    pfScene.add(new THREE.AmbientLight(0xffffff, 0.85));
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(8, 14, 10);
+    pfScene.add(sun);
+
+    // Ground + grid so a floating canopy reads as floating.
+    const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(60, 60),
+        new THREE.MeshLambertMaterial({ color: 0x1c2a1c })
+    );
+    ground.rotation.x = -Math.PI / 2;
+    pfScene.add(ground);
+    pfScene.add(new THREE.GridHelper(60, 30, 0x335533, 0x223322));
+
+    pfCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
+
+    // Orbit: drag to rotate (stops auto-rotate), wheel to zoom.
+    canvas.addEventListener('mousedown', e => {
+        pfDragging = true; pfAutoRotate = false; pfLastX = e.clientX; pfLastY = e.clientY;
+    });
+    window.addEventListener('mouseup', () => { pfDragging = false; });
+    window.addEventListener('mousemove', e => {
+        if (!pfDragging) return;
+        pfYaw   -= (e.clientX - pfLastX) * 0.01;
+        pfPitch += (e.clientY - pfLastY) * 0.01;
+        pfPitch = Math.max(0.05, Math.min(1.45, pfPitch));
+        pfLastX = e.clientX; pfLastY = e.clientY;
+    });
+    canvas.addEventListener('wheel', e => {
+        e.preventDefault();
+        pfDist *= (1 + Math.sign(e.deltaY) * 0.1);
+        pfDist = Math.max(1.5, Math.min(80, pfDist));
+    }, { passive: false });
+}
+
+function buildPrefabPreviewContent() {
+    if (!pfRenderer) return;
+    if (pfModel) { pfScene.remove(pfModel); pfModel = null; }
+    pfGizmos.forEach(g => pfScene.remove(g));
+    pfGizmos = [];
+
+    const msg = document.getElementById('prefabPreviewMsg');
+    const def = PrefabLibrary[activePrefab] || {};
+    const propLike = { model: activePrefab, x: 0, z: 0,
+        scale: { x: 1, y: 1, z: 1 }, rotation: { x: 0, y: 0, z: 0 } };
+
+    const mesh = PropLevel.createPropMesh(propLike, modelLibrary);
+    let bounds;
+    if (mesh) {
+        pfModel = mesh;
+        pfScene.add(mesh);
+        bounds = PropLevel.computeBounds(mesh);
+        msg.textContent = '';
+    } else {
+        // spawn has no mesh; tree/rock/bush before GLBs finish loading land here too.
+        msg.textContent = (activePrefab === 'spawn') ? '(spawn marker — no mesh)' : 'model loading…';
+        bounds = { radius: 1, height: 2, bottomY: 0, topY: 2, centerX: 0, centerZ: 0 };
+    }
+
+    PropLevel.resolveColliders(propLike, bounds, def).forEach(c => {
+        const hh = Math.max(c.yMax - c.yMin, 0.1);
+        const geo = new THREE.CylinderGeometry(c.radius, c.radius, hh, 24);
+        const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+        mat.depthTest = false;
+        const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+        helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+        helper.renderOrder = 999;
+        pfScene.add(helper);
+        pfGizmos.push(helper);
+        geo.dispose();
+    });
+
+    // Frame the camera to the bounds.
+    pfTarget.set(bounds.centerX || 0, (bounds.bottomY + bounds.topY) / 2, bounds.centerZ || 0);
+    pfDist = Math.max(bounds.height, bounds.radius * 2) * 2 + 1.5;
+}
+
+function refreshPrefabPreview() {
+    if (pfRenderer) buildPrefabPreviewContent();
+}
+
+function startPrefabPreviewLoop() {
+    if (pfRaf) return;
+    const loop = () => {
+        pfRaf = requestAnimationFrame(loop);
+        if (!pfRenderer) return;
+        if (pfAutoRotate) pfYaw += 0.006;
+        pfCamera.position.set(
+            pfTarget.x + pfDist * Math.cos(pfPitch) * Math.sin(pfYaw),
+            pfTarget.y + pfDist * Math.sin(pfPitch),
+            pfTarget.z + pfDist * Math.cos(pfPitch) * Math.cos(pfYaw)
+        );
+        pfCamera.lookAt(pfTarget);
+        pfRenderer.render(pfScene, pfCamera);
+    };
+    loop();
+}
+
+function stopPrefabPreviewLoop() {
+    if (pfRaf) { cancelAnimationFrame(pfRaf); pfRaf = null; }
+}
 
 // Input listeners to edit object properties
 function attachInspectorInputListeners() {
@@ -786,6 +1191,11 @@ function loadModel(name,path)
         {
             modelLibrary[name] =
                 gltf.scene;
+
+            // If the prefab modal is open, refresh so the model appears once loaded.
+            if (pfRenderer && document.getElementById('prefabModal').style.display === 'block') {
+                buildPrefabPreviewContent();
+            }
         }
     );
 }
