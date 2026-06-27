@@ -3,7 +3,7 @@
 // prop in the scene, plus a cyan outline of the local player's own collision
 // radius. Set false to hide them. Can also be toggled live with the 'G' key
 // or Level.setDeveloper(true/false) from the console.
-let developer = true;
+let developer = false;
 
 // --- CONFIGURATION ---
 let GAME_SETTINGS = {

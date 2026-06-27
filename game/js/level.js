@@ -157,9 +157,10 @@ const Level = {
         camera.updateProjectionMatrix();
     },
 
-    // Yaw applied to the character model on top of p.rotY. Flip to Math.PI if
-    // the player.glb faces the opposite way (i.e. appears to moonwalk).
-    PLAYER_YAW_OFFSET: 0,
+    // Yaw applied to the character model on top of p.rotY. player.glb faces +Z
+    // (toward the camera) by default, so rotate 180° to put its back to the
+    // camera like a third-person game.
+    PLAYER_YAW_OFFSET: Math.PI,
 
     createPlayerMesh: function(p) {
         // Disguised hider → the prop mesh (no character / no animation).
@@ -236,9 +237,15 @@ const Level = {
         root.userData.isCharacter = true;
         root.userData.mixer = mixer;
         root.userData.actions = actions;
+        root.userData.hasClips = !!(actions.idle || actions.walk);
         root.userData.ring = ring;
         root.userData.current = 'idle';
         root.userData.lastPos = new THREE.Vector3(p.x, p.y, p.z);
+        // For the procedural fallback (player.glb ships with no clips): bob the
+        // model child around this grounded base Y so the foot ring stays put.
+        root.userData.model = model;
+        root.userData.modelBaseY = model.position.y;
+        root.userData.animT = 0;
         return root;
     },
 
@@ -285,17 +292,29 @@ const Level = {
         if (ud.lastPos) ud.lastPos.set(mesh.position.x, mesh.position.y, mesh.position.z);
 
         if (p.isCaught) target = 'idle';            // caught hiders freeze
-        if (!ud.actions[target]) target = 'idle';   // missing clip → idle
-
-        if (ud.actions[target] && ud.current !== target) {
-            if (ud.actions[ud.current]) ud.actions[ud.current].fadeOut(0.2);
-            ud.actions[target].reset().fadeIn(0.2).play();
-            ud.current = target;
-        }
 
         if (ud.ring && p.isCaught) ud.ring.material.color.setHex(0x333333);
 
-        if (dt > 0) ud.mixer.update(dt);
+        if (ud.hasClips) {
+            // Real skeletal clips: crossfade idle/walk and advance the mixer.
+            if (!ud.actions[target]) target = 'idle';
+            if (ud.actions[target] && ud.current !== target) {
+                if (ud.actions[ud.current]) ud.actions[ud.current].fadeOut(0.2);
+                ud.actions[target].reset().fadeIn(0.2).play();
+                ud.current = target;
+            }
+            if (dt > 0) ud.mixer.update(dt);
+        } else if (ud.model) {
+            // Procedural fallback (model has no baked clips): bob up/down, and add
+            // a side-to-side sway while walking, so it doesn't look frozen.
+            ud.animT += dt;
+            const moving = (target === 'walk') && !p.isCaught;
+            const freq = moving ? 8 : 2;
+            const amp = moving ? 0.18 : 0.05;
+            const bob = (Math.sin(ud.animT * freq) * 0.5 + 0.5) * amp;
+            ud.model.position.y = ud.modelBaseY + bob;
+            ud.model.rotation.z = moving ? Math.sin(ud.animT * freq) * 0.07 : 0;
+        }
     },
 
     render: function() {
