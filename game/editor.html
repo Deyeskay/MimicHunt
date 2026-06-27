@@ -584,7 +584,14 @@ function rebuildEditorColliders() {
 
         // Compute live world bounds, then resolve the prefab's compound collider
         // template (passing rotation.y in degrees, as resolveColliders expects).
+        // The selected object has an AxesHelper(5) child — temporarily detach it
+        // so Box3.setFromObject doesn't include the helper's rays (which would
+        // inflate/offset the bounds and the gizmo).
+        const axes = obj.userData && obj.userData.axesHelper;
+        if (axes) obj.remove(axes);
         const bounds = PropLevel.computeBounds(obj);
+        if (axes) obj.add(axes);
+
         const def = PropLevel.getPrefab(data.model);
         const propLike = { rotation: { y: THREE.MathUtils.radToDeg(obj.rotation.y) } };
         const pieces = PropLevel.resolveColliders(propLike, bounds, def);
