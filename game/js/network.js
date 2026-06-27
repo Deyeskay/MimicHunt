@@ -46,6 +46,8 @@ const Network = {
             score: 0,               // seeker score (+HIT_SCORE per hit)
             revealedUntil: 0,       // local-clock deadline for the red reveal blink
             disguiseLockUntil: 0,   // local-clock deadline: can't re-disguise until then
+            shootingUntil: 0,       // local-clock deadline for aim-stance + upper-body shoot anim
+            jumpAt: 0,              // local-clock timestamp of the last jump (edge-detected for the anim)
             // Readiness is independent of role now (roles are user-chosen). The
             // host is marked ready explicitly by its callers; clients toggle it.
             isReady: false,
@@ -242,6 +244,12 @@ const Network = {
         }
     },
 
+    // Replicate a jump so every peer plays the jump animation for this player.
+    sendJump() {
+        if (isHost) this.broadcast({ type: 'jump', id: myId });
+        else this.sendToHost({ type: 'clientJump' });
+    },
+
     // HOST ONLY — validate a shot's geometry against hider positions (pure math,
     // no Three meshes), apply damage/reveal/disguise-lock/score, and broadcast the
     // result + projectile to everyone.
@@ -253,6 +261,7 @@ const Network = {
         const now = this.now();
         if (shooter._lastShotT && now - shooter._lastShotT < FIRE_INTERVAL_MS - 100) return; // anti-spam
         shooter._lastShotT = now;
+        shooter.shootingUntil = now + SHOOT_ANIM_MS;   // aim-stance window (host clock)
 
         const O = { x: ray.ox, y: ray.oy, z: ray.oz };
         const dl = Math.hypot(ray.dx, ray.dy, ray.dz) || 1;
@@ -304,7 +313,8 @@ const Network = {
             ox: O.x, oy: O.y, oz: O.z, dx: D.x, dy: D.y, dz: D.z,
             mx: ray.mx, my: ray.my, mz: ray.mz,
             hit, targetId, health, score: shooter.score,
-            revealMs: REVEAL_MS, lockMs: DISGUISE_LOCK_MS, eliminated, forcedOut
+            revealMs: REVEAL_MS, lockMs: DISGUISE_LOCK_MS, shootMs: SHOOT_ANIM_MS,
+            eliminated, forcedOut
         };
         this.broadcast(packet);
 
@@ -594,6 +604,14 @@ const Network = {
                 // A client seeker fired — host validates geometry + applies.
                 this.processShot(conn.peer, data);
                 break;
+
+            case 'clientJump': {
+                // A client jumped — stamp it for the host's render + relay to all.
+                const jp = gameState.players[conn.peer];
+                if (jp) jp.jumpAt = this.now();
+                this.broadcast({ type: 'jump', id: conn.peer });
+                break;
+            }
 
             case 'clientDisguise': {
                 // Rare event packet — disguise change. Apply, then relay
@@ -891,6 +909,8 @@ const Network = {
                 // Authoritative result of a seeker's energy-pulse shot.
                 const shooter = gameState.players[data.shooterId];
                 if (shooter && data.score !== undefined) shooter.score = data.score;
+                // Aim-stance window so remotes show the upper-body shoot pose + facing.
+                if (shooter) shooter.shootingUntil = this.now() + (data.shootMs || SHOOT_ANIM_MS);
 
                 if (data.hit && data.targetId) {
                     const tgt = gameState.players[data.targetId];
@@ -922,6 +942,15 @@ const Network = {
                 if (data.hit && data.targetId === myId) Sound.hurt();
                 // Hit-marker on our own crosshair when our shot landed.
                 if (data.hit && data.shooterId === myId) UI.hitMarker();
+                break;
+            }
+
+            case 'jump': {
+                // Another player jumped — stamp jumpAt (our clock) so the render
+                // loop edge-detects it and plays the jump animation. Our own jump
+                // was already triggered locally in Mechanics.jump().
+                const jp = gameState.players[data.id];
+                if (jp && data.id !== myId) jp.jumpAt = this.now();
                 break;
             }
 
@@ -1023,6 +1052,8 @@ const Network = {
             p.score = 0;
             p.revealedUntil = 0;
             p.disguiseLockUntil = 0;
+            p.shootingUntil = 0;
+            p.jumpAt = 0;
             p.color = p.role === 'Seeker' ? 0xff4757 : 0x2ed573;
             p.disguiseType = 'player';
             p.disguiseSize = 2;

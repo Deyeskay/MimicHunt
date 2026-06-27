@@ -103,6 +103,7 @@ const SHOT_RANGE = 60;         // max pulse travel / hit range (world units)
 const HIT_SCORE = 100;         // points per hit
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
 const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit
+const SHOOT_ANIM_MS = 1200;    // aim-stance window after a shot (upper-body shoot + face target + back-walk)
 let ammo = MAG_SIZE;           // local seeker's current magazine
 let reloading = false;
 let lastShotAt = 0;

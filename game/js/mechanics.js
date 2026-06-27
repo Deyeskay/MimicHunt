@@ -135,6 +135,10 @@ const Mechanics = {
     jump: function() {
         velocityY = JUMP_STRENGTH;
         isGrounded = false;
+        // Trigger the jump animation locally + on every peer.
+        const me = gameState.players[myId];
+        if (me) me.jumpAt = Network.now();
+        Network.sendJump();
     },
 
     // Seeker fires an energy pulse toward the crosshair. Client-side ammo +
@@ -158,6 +162,8 @@ const Mechanics = {
         Sound.pew();
         Level.spawnPulse(ray);
         Network.sendShot(ray);
+        // Enter aim-stance locally (face target + back-walk + upper-body shoot).
+        if (me) me.shootingUntil = now + SHOOT_ANIM_MS;
     },
 
     startReload: function() {
@@ -238,7 +244,14 @@ const Mechanics = {
         if (length > 0) {
             moveX = (moveX / length) * moveSpeed;
             moveZ = (moveZ / length) * moveSpeed;
-            localRotY = Math.atan2(moveX, moveZ);
+            localRotY = Math.atan2(moveX, moveZ);   // MOVEMENT heading (PUBG default)
+        }
+
+        // Aim-stance: while a seeker is in the post-shot window, face the
+        // crosshair/target instead of the movement direction (same convention as
+        // the W-forward heading). Retreating then plays the back-walk.
+        if (pData.role === 'Seeker' && Network.now() < (pData.shootingUntil || 0)) {
+            localRotY = cameraYaw + Math.PI;
         }
 
         let targetX = localPos.x + moveX;

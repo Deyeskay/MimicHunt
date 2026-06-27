@@ -131,23 +131,65 @@ const Level = {
             (gltf) => {
                 this.playerGLB = { scene: gltf.scene, animations: gltf.animations || [] };
 
-                // Pick idle/walk clips by name with sensible fallbacks.
+                // Pick clips by name with sensible fallbacks.
                 const anims = this.playerGLB.animations;
                 const byName = subs => anims.find(a =>
                     subs.some(s => (a.name || '').toLowerCase().includes(s)));
                 this.playerClips = {
-                    idle: byName(['idle', 'stand']) || anims[0] || null,
-                    walk: byName(['walk', 'run', 'move']) || anims[1] || anims[0] || null
+                    idle:  byName(['idle', 'stand']) || anims[0] || null,
+                    walk:  byName(['walk', 'move']) || anims[1] || anims[0] || null,
+                    run:   byName(['run', 'sprint']) || null,
+                    jump:  byName(['jump', 'leap']) || null,
+                    shoot: byName(['shoot', 'fire', 'attack', 'aim', 'gun']) || null
                 };
                 console.log('player.glb clips:', anims.map(a => a.name),
                     '→ idle:', this.playerClips.idle && this.playerClips.idle.name,
-                    'walk:', this.playerClips.walk && this.playerClips.walk.name);
+                    'walk:', this.playerClips.walk && this.playerClips.walk.name,
+                    'run:', this.playerClips.run && this.playerClips.run.name,
+                    'jump:', this.playerClips.jump && this.playerClips.jump.name,
+                    'shoot:', this.playerClips.shoot && this.playerClips.shoot.name);
+
+                // Build an additive, UPPER-BODY-ONLY version of the shoot clip so it
+                // overlays on top of any lower-body locomotion (legs keep walking).
+                this.playerClips.shootAdditive = this.buildUpperBodyAdditive(this.playerClips.shoot);
 
                 done();
             },
             undefined,
             (err) => { console.error("Failed: player.glb", err); done(); }
         );
+    },
+
+    // Build an ADDITIVE clip from the shoot clip that only touches UPPER-BODY
+    // bones (rotation tracks), so it can overlay on lower-body locomotion. Bones
+    // are split by name; tweak LOWER_BODY_RE if the console bone log shows the
+    // legs animating during a shot. Returns null if unavailable.
+    buildUpperBodyAdditive: function(shootClip) {
+        if (!shootClip || !this.playerGLB || !THREE.AnimationUtils) return null;
+        const LOWER_BODY_RE = /(hip|pelvis|thigh|leg|knee|shin|calf|foot|toe|root|ik)/i;
+
+        const bones = [];
+        this.playerGLB.scene.traverse(o => { if (o.isBone) bones.push(o.name); });
+        console.log('player.glb bones:', bones);
+
+        const keep = [];
+        shootClip.tracks.forEach(tr => {
+            const dot = tr.name.lastIndexOf('.');
+            const bone = dot >= 0 ? tr.name.slice(0, dot) : tr.name;
+            const prop = dot >= 0 ? tr.name.slice(dot + 1) : '';
+            if (LOWER_BODY_RE.test(bone)) return;   // skip legs / hips / root
+            if (prop === 'position') return;         // rotations only (no translation drift)
+            keep.push(tr.clone());
+        });
+        if (!keep.length) { console.warn('shoot mask: no upper-body tracks found'); return null; }
+
+        const clip = new THREE.AnimationClip(shootClip.name + '_upperAdditive', shootClip.duration, keep);
+        // Reference the IDLE pose (not the shoot clip's own frame 0, which is
+        // already aiming) so the additive delta is the full arm-raise+fire and
+        // visibly overlays on the walking lower body.
+        const refClip = (this.playerClips && this.playerClips.idle) || clip;
+        THREE.AnimationUtils.makeClipAdditive(clip, 0, refClip, 30);
+        return clip;
     },
 
     resize: function() {
@@ -220,12 +262,25 @@ const Level = {
         ring.position.y = 0.02;
         root.add(ring);
 
-        // Animation: build idle/walk actions; start in idle. Walk is started on
-        // demand (reset+fadeIn+play) so it always runs from a clean state.
+        // Animation: build the action set; start in idle. Locomotion actions are
+        // (re)started on demand. Jump is a one-shot; shoot is an additive
+        // upper-body overlay that layers on top of the locomotion.
         const mixer = new THREE.AnimationMixer(model);
+        const clips = this.playerClips || {};
         const actions = {};
-        if (this.playerClips && this.playerClips.idle) actions.idle = mixer.clipAction(this.playerClips.idle);
-        if (this.playerClips && this.playerClips.walk) actions.walk = mixer.clipAction(this.playerClips.walk);
+        if (clips.idle) actions.idle = mixer.clipAction(clips.idle);
+        if (clips.walk) actions.walk = mixer.clipAction(clips.walk);
+        if (clips.run)  actions.run  = mixer.clipAction(clips.run);
+        if (clips.jump) {
+            actions.jump = mixer.clipAction(clips.jump);
+            actions.jump.setLoop(THREE.LoopOnce, 1);
+            actions.jump.clampWhenFinished = true;
+        }
+        if (clips.shootAdditive) {
+            actions.shoot = mixer.clipAction(clips.shootAdditive);  // additive (clip.blendMode set)
+            actions.shoot.setEffectiveWeight(0);
+            actions.shoot.play();   // additive runs continuously; weight gates it
+        }
         if (actions.idle) actions.idle.play();
         else if (actions.walk) actions.walk.play();
 
@@ -235,6 +290,9 @@ const Level = {
         root.userData.hasClips = !!(actions.idle || actions.walk);
         root.userData.ring = ring;
         root.userData.current = 'idle';
+        root.userData.lastJumpAt = 0;
+        root.userData.jumpActive = false;
+        root.userData.shootOn = false;
         root.userData.lastPos = new THREE.Vector3(p.x, p.y, p.z);
         // For the procedural fallback (player.glb ships with no clips): bob the
         // model child around this grounded base Y so the foot ring stays put.
@@ -277,54 +335,107 @@ const Level = {
     updateCharacterAnim: function(mesh, p, dt) {
         const ud = mesh.userData;
 
-        // Instantaneous speed from rendered movement. Physics runs on a 60Hz
-        // setInterval while this runs on rAF, so individual frames can see zero
-        // movement — smooth with an EMA so one stale frame can't flip the state.
-        let inst = 0;
+        // Per-frame movement delta (speed + direction). Physics runs on a 60Hz
+        // setInterval while this runs on rAF, so frames can see zero movement —
+        // smooth speed AND direction with an EMA so a stale frame can't flip state.
+        let dx = 0, dz = 0;
         if (ud.lastPos && dt > 0) {
-            const dx = mesh.position.x - ud.lastPos.x;
-            const dz = mesh.position.z - ud.lastPos.z;
-            inst = Math.hypot(dx, dz) / dt;
+            dx = mesh.position.x - ud.lastPos.x;
+            dz = mesh.position.z - ud.lastPos.z;
         }
         if (ud.lastPos) ud.lastPos.set(mesh.position.x, mesh.position.y, mesh.position.z);
-        ud.speed = (ud.speed || 0) + (inst - (ud.speed || 0)) * Math.min(1, dt * 12);
+        const inst = dt > 0 ? Math.hypot(dx, dz) / dt : 0;
+        const a = Math.min(1, dt * 12);
+        ud.speed = (ud.speed || 0) + (inst - (ud.speed || 0)) * a;
+        ud.velX = (ud.velX || 0) + ((dt > 0 ? dx / dt : 0) - (ud.velX || 0)) * a;
+        ud.velZ = (ud.velZ || 0) + ((dt > 0 ? dz / dt : 0) - (ud.velZ || 0)) * a;
 
-        // Hysteresis: enter walk above 1.5, drop to idle below 0.5 — no toggling
-        // around a single threshold.
-        let moving = ud.current === 'walk';
+        let moving = (ud.current === 'walk' || ud.current === 'backwalk');
         if (ud.speed > 1.5) moving = true;
         else if (ud.speed < 0.5) moving = false;
-        if (p.isCaught) moving = false;             // caught hiders freeze
-        let target = moving ? 'walk' : 'idle';
+        if (p.isCaught) moving = false;             // eliminated players freeze
 
         if (ud.ring && p.isCaught) ud.ring.material.color.setHex(0x333333);
 
-        if (ud.hasClips) {
-            // Crossfade on actual state change only (hysteresis makes this rare,
-            // so the reset+play that guarantees clean playback won't cause the
-            // earlier flicker). The active clip then loops via mixer.update.
-            if (!ud.actions[target]) target = 'idle';
-            if (ud.actions[target] && ud.current !== target) {
-                const next = ud.actions[target];
-                const prev = ud.actions[ud.current];
-                next.reset();
-                next.setEffectiveWeight(1);
-                next.fadeIn(0.2);
-                next.play();
-                if (prev) prev.fadeOut(0.2);
-                ud.current = target;
+        if (!ud.hasClips) {
+            // Procedural fallback (model has no baked clips): bob + sway.
+            if (ud.model) {
+                ud.animT = (ud.animT || 0) + dt;
+                const freq = moving ? 8 : 2;
+                const amp = moving ? 0.18 : 0.05;
+                const bob = (Math.sin(ud.animT * freq) * 0.5 + 0.5) * amp;
+                ud.model.position.y = ud.modelBaseY + bob;
+                ud.model.rotation.z = moving ? Math.sin(ud.animT * freq) * 0.07 : 0;
             }
-            ud.mixer.update(dt);
-        } else if (ud.model) {
-            // Procedural fallback (model has no baked clips): bob up/down, plus a
-            // side-to-side sway while walking, so it doesn't look frozen.
-            ud.animT += dt;
-            const freq = moving ? 8 : 2;
-            const amp = moving ? 0.18 : 0.05;
-            const bob = (Math.sin(ud.animT * freq) * 0.5 + 0.5) * amp;
-            ud.model.position.y = ud.modelBaseY + bob;
-            ud.model.rotation.z = moving ? Math.sin(ud.animT * freq) * 0.07 : 0;
+            return;
         }
+
+        // --- Base layer: jump one-shot overrides locomotion ---
+        if (p.jumpAt && p.jumpAt > (ud.lastJumpAt || 0) && ud.actions.jump) {
+            ud.lastJumpAt = p.jumpAt;
+            const j = ud.actions.jump;
+            j.reset(); j.setEffectiveTimeScale(1); j.setEffectiveWeight(1);
+            j.fadeIn(0.1); j.play();
+            const prev = ud.actions[ud.current === 'backwalk' ? 'walk' : ud.current];
+            if (prev && prev !== j) prev.fadeOut(0.1);
+            ud.jumpActive = true;
+            ud.current = 'jump';
+        }
+        if (ud.jumpActive) {
+            const j = ud.actions.jump;
+            const dur = j ? j.getClip().duration : 0;
+            if (!j || j.time >= dur - 0.02 || !j.isRunning()) ud.jumpActive = false;
+        }
+
+        if (!ud.jumpActive) {
+            // Direction relative to facing → forward walk or reversed back-walk.
+            const fwdX = Math.sin(p.rotY), fwdZ = Math.cos(p.rotY);
+            const dotF = ud.velX * fwdX + ud.velZ * fwdZ;
+            let target = !moving ? 'idle' : (dotF < -0.2 ? 'backwalk' : 'walk');
+            if (target !== 'idle' && !ud.actions.walk) target = 'idle';
+
+            if (target !== ud.current) this._setBaseAction(ud, target);
+            // Keep the walk action's direction in sync every frame.
+            if ((ud.current === 'walk' || ud.current === 'backwalk') && ud.actions.walk) {
+                ud.actions.walk.setEffectiveTimeScale(ud.current === 'backwalk' ? -1 : 1);
+            }
+        }
+
+        // --- Additive overlay: upper-body shoot while in the shoot window ---
+        if (ud.actions.shoot) {
+            const shooting = !p.isCaught && Network.now() < (p.shootingUntil || 0);
+            if (shooting && !ud.shootOn) {
+                ud.actions.shoot.reset();
+                ud.actions.shoot.setEffectiveWeight(1);
+                ud.actions.shoot.fadeIn(0.1);
+                ud.actions.shoot.play();
+                ud.shootOn = true;
+            } else if (!shooting && ud.shootOn) {
+                ud.actions.shoot.fadeOut(0.25);
+                ud.shootOn = false;
+            }
+        }
+
+        ud.mixer.update(dt);
+    },
+
+    // Crossfade the base locomotion action. 'backwalk' reuses the walk action
+    // (reversed via timeScale by the caller), so switching walk<->backwalk does
+    // not refade.
+    _setBaseAction: function(ud, target) {
+        const map = { idle: 'idle', walk: 'walk', backwalk: 'walk', run: 'run', jump: 'jump' };
+        const nextName = ud.actions[map[target]] ? map[target] : 'idle';
+        const prevName = map[ud.current] || ud.current;
+        const next = ud.actions[nextName];
+        const prev = ud.actions[prevName];
+        if (next && next !== prev) {
+            next.reset();
+            next.setEffectiveWeight(1);
+            next.fadeIn(0.2);
+            next.play();
+            if (prev) prev.fadeOut(0.2);
+        }
+        ud.current = target;
     },
 
     // Aim ray for a shot. The HIT ray (o*, d*) is the CAMERA ray through the
