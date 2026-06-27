@@ -235,16 +235,21 @@ const Level = {
         if (developer && gameState.players[myId]) {
             const p = gameState.players[myId];
             const myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
-            if (!this.playerColliderHelper || this.playerColliderHelper.userData.r !== myRadius) {
+            // When disguised, the player takes the target prop's footprint AND
+            // its height (propHeight), so the cyan gizmo matches the yellow prop
+            // collider it's imitating instead of a constant 3-tall cylinder.
+            const myHeight = localDisguise.type === 'player' ? 3 : (localDisguise.propHeight || 3);
+            if (!this.playerColliderHelper ||
+                this.playerColliderHelper.userData.r !== myRadius ||
+                this.playerColliderHelper.userData.h !== myHeight) {
                 if (this.playerColliderHelper) scene.remove(this.playerColliderHelper);
-                const h = 3;
-                const geo = new THREE.CylinderGeometry(myRadius, myRadius, h, 24);
+                const geo = new THREE.CylinderGeometry(myRadius, myRadius, myHeight, 24);
                 const mat = new THREE.LineBasicMaterial({ color: 0x00e5ff });
                 mat.depthTest = false;
                 this.playerColliderHelper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
                 this.playerColliderHelper.renderOrder = 999;
                 this.playerColliderHelper.userData.r = myRadius;
-                this.playerColliderHelper.userData.h = h;
+                this.playerColliderHelper.userData.h = myHeight;
                 scene.add(this.playerColliderHelper);
                 geo.dispose();
             }

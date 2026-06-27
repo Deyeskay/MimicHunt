@@ -221,10 +221,54 @@ const Mechanics = {
             this.clearDisguise();
         }
 
+        // Disguising grows the player's collider to the prop's size, so if the
+        // hider was touching that prop it now overlaps it (and maybe others).
+        // Push the player to the nearest clear spot so it never spawns wedged
+        // inside a collider — and never into a different one.
+        this.resolveOverlap();
+
         // Disguise changes rarely, so replicate it as a discrete event rather
         // than in every movement packet. No-ops on the host (it's the Seeker
         // and never reaches here, and has no connToHost anyway).
         Network.sendDisguiseUpdate();
+    },
+
+    // True if a player-sized circle (myRadius) at (x,z) overlaps any collidable
+    // prop's circle. Used by the disguise push-out below.
+    overlapsAt: function(x, z, myRadius) {
+        for (let prop of mapProps3D) {
+            if (!PropLevel.hasCollision(prop)) continue;
+            const c = PropLevel.getPropCenter(prop);
+            if (Math.hypot(x - c.x, z - c.z) < (myRadius + prop.radius) - 0.001) return true;
+        }
+        return false;
+    },
+
+    // Move the local player out of any collider it currently overlaps to the
+    // nearest free spot, scanning outward in rings. Because overlapsAt() tests
+    // EVERY collider, the chosen spot is clear of all of them, so the player is
+    // never pushed from one collider into another. No-op if already clear.
+    resolveOverlap: function() {
+        const myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
+        if (!this.overlapsAt(localPos.x, localPos.z, myRadius)) return;
+
+        const SAMPLES = 24;          // directions tested per ring
+        const STEP = 0.25;           // ring spacing (world units)
+        const MAX_RINGS = 60;        // up to 15 units away before giving up
+        for (let ring = 1; ring <= MAX_RINGS; ring++) {
+            const d = ring * STEP;
+            for (let i = 0; i < SAMPLES; i++) {
+                const a = (i / SAMPLES) * Math.PI * 2;
+                const cx = Math.max(-100, Math.min(100, localPos.x + Math.cos(a) * d));
+                const cz = Math.max(-100, Math.min(100, localPos.z + Math.sin(a) * d));
+                if (!this.overlapsAt(cx, cz, myRadius)) {
+                    localPos.x = cx;
+                    localPos.z = cz;
+                    return;
+                }
+            }
+        }
+        // Fully boxed in (no clear spot within range) — leave the player put.
     },
 
     checkCollisions: function() {
