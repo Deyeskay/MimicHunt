@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check js/mechanics.js)",
+      "Bash(node --check js/props.js)"
+    ]
+  }
+}

@@ -659,7 +659,9 @@ const Level = {
                 scene.add(this.playerColliderHelper);
                 geo.dispose();
             }
-            this.playerColliderHelper.position.set(p.x, this.playerColliderHelper.userData.h / 2, p.z);
+            // Follow the player's body (incl. jumping) — centered on p.y, not a
+            // fixed ground height — so the gizmo rises with the character.
+            this.playerColliderHelper.position.set(p.x, p.y, p.z);
         } else if (!developer && this.playerColliderHelper) {
             scene.remove(this.playerColliderHelper);
             this.playerColliderHelper = null;

@@ -123,7 +123,8 @@ const PropLevel = {
     },
 
     // Fill any gameplay metadata the instance didn't specify from its prefab.
-    // Instance values always win (they're explicit overrides).
+    // Instance values always win when present (explicit per-level overrides); a
+    // field that's omitted falls back to the prefab's type default.
     resolveGameplay: function(prop) {
         const def = this.getPrefab(prop.model);
         if (prop.collision === undefined) prop.collision = def.collision;

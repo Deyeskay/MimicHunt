@@ -39,8 +39,8 @@ const PrefabLibrary = {
                  { radius: 0.18, yMin: 0.00, yMax: 0.55 },   // trunk
                  { radius: 0.95, yMin: 0.50, yMax: 1.00 }    // canopy (floating)
              ] },
-    rock:  { collision: true,  climbable: false, hideSpot: true,  canDisguise: true  },
-    bush:  { collision: false, climbable: false, hideSpot: true,  canDisguise: true  },
+    rock:  { collision: true,  climbable: true, hideSpot: true,  canDisguise: true  },
+    bush:  { collision: false, climbable: true, hideSpot: true,  canDisguise: true  },
     wall:  { collision: true,  climbable: false, hideSpot: false, canDisguise: false },
     spawn: { collision: false, climbable: false, hideSpot: false, canDisguise: false }
 };

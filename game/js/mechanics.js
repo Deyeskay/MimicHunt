@@ -280,40 +280,32 @@ const Mechanics = {
         }
 
         let baseHeight = localDisguise.type === 'player' ? PropLevel.PLAYER_BASE_HEIGHT : localDisguise.size / 2;
-        let standingOnSurface = false;
-        let surfaceHeight = 0;
 
+        // Floor under the player = the highest climbable surface it's standing
+        // over (and currently on/above), else the world ground. Gravity lands the
+        // player on this floor — so you can jump onto rocks/bushes and stand —
+        // and walking off the edge drops the floor so you fall again.
+        let floorY = baseHeight;
         for (let prop of mapProps3D) {
             if (!PropLevel.isClimbable(prop)) continue;
-
             const center = PropLevel.getPropCenter(prop);
-            let distXZ = Math.hypot(localPos.x - center.x, localPos.z - center.z);
-            let propTop = PropLevel.getPropTop(prop);
-
-            if (
-                distXZ < prop.radius + myRadius &&
-                Math.abs(localPos.y - (propTop + baseHeight)) < 0.15
-            ) {
-                standingOnSurface = true;
-                surfaceHeight = propTop + baseHeight;
-                break;
-            }
+            const distXZ = Math.hypot(localPos.x - center.x, localPos.z - center.z);
+            if (distXZ >= prop.radius + myRadius) continue;
+            const surf = PropLevel.getPropTop(prop) + baseHeight;
+            // Only a surface the player is on/above counts (small tolerance), so
+            // you can't pop up through a prop walked into from the side — you must
+            // jump onto it.
+            if (localPos.y >= surf - 0.3 && surf > floorY) floorY = surf;
         }
 
-        if (!standingOnSurface) {
-            velocityY += GRAVITY;
-            localPos.y += velocityY;
-            isGrounded = false;
+        velocityY += GRAVITY;
+        localPos.y += velocityY;
+        if (localPos.y <= floorY) {
+            localPos.y = floorY;
+            velocityY = 0;
+            isGrounded = true;
         } else {
-            localPos.y = surfaceHeight;
-            velocityY = 0;
-            isGrounded = true;
-        }
-
-        if (localPos.y <= baseHeight) {
-            localPos.y = baseHeight;
-            velocityY = 0;
-            isGrounded = true;
+            isGrounded = false;
         }
     },
 
