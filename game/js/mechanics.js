@@ -136,24 +136,17 @@ const Mechanics = {
         if (targetZ < -100) targetZ = -100;
         if (targetZ > 100) targetZ = 100;
 
-        let isColliding = false;
         let myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
 
-        for (let prop of mapProps3D) {
-            if (!PropLevel.hasCollision(prop)) continue;
-
-            const center = PropLevel.getPropCenter(prop);
-            let dist = Math.hypot(targetX - center.x, targetZ - center.z);
-            const propTop = PropLevel.getPropTop(prop);
-
-            if (dist < (myRadius + prop.radius) && localPos.y < propTop) {
-                isColliding = true;
-                break;
-            }
-        }
-
-        if (!isColliding) {
+        // Per-axis resolution gives wall-sliding: instead of cancelling the whole
+        // move when the combined target is blocked, try each axis on its own so
+        // the tangential component still applies and the player slides along the
+        // surface rather than sticking. X is committed first, then Z is tested
+        // against the updated X to avoid clipping around corners.
+        if (!this.blockedAt(targetX, localPos.z, myRadius)) {
             localPos.x = targetX;
+        }
+        if (!this.blockedAt(localPos.x, targetZ, myRadius)) {
             localPos.z = targetZ;
         }
 
@@ -233,8 +226,23 @@ const Mechanics = {
         Network.sendDisguiseUpdate();
     },
 
+    // True if a player-sized circle (myRadius) at (x,z) is blocked by a collider
+    // at the player's CURRENT height — props the player has climbed above
+    // (localPos.y >= propTop) don't block. Used for per-axis movement sliding.
+    blockedAt: function(x, z, myRadius) {
+        for (let prop of mapProps3D) {
+            if (!PropLevel.hasCollision(prop)) continue;
+            const center = PropLevel.getPropCenter(prop);
+            const dist = Math.hypot(x - center.x, z - center.z);
+            if (dist < (myRadius + prop.radius) && localPos.y < PropLevel.getPropTop(prop)) {
+                return true;
+            }
+        }
+        return false;
+    },
+
     // True if a player-sized circle (myRadius) at (x,z) overlaps any collidable
-    // prop's circle. Used by the disguise push-out below.
+    // prop's circle (ignores height). Used by the disguise push-out below.
     overlapsAt: function(x, z, myRadius) {
         for (let prop of mapProps3D) {
             if (!PropLevel.hasCollision(prop)) continue;
