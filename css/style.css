@@ -160,16 +160,31 @@ button.leave { background: rgba(255, 71, 87, 0.2); color: var(--accent-red); bor
 #timer-display { font-size: 1.3rem; color: #ffa502; font-family: monospace; }
 #combat-hud { font-family: monospace; }
 
-/* Hider health bar (top HUD). */
-#health-hud { align-items: center; }
+/* Bottom-center HUD pills: hider health bar + seeker reload indicator. */
+.bottom-center-hud {
+    position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+    z-index: 12; pointer-events: none;
+    background: rgba(26, 26, 36, 0.85); padding: 9px 18px; border-radius: 26px;
+    font-weight: bold; display: flex; align-items: center; gap: 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+#health-hud { border-color: var(--accent-green); }
+#reload-indicator { color: #ffa502; letter-spacing: 2px; border-color: #ffa502; }
 .hp-track {
-    width: 90px; height: 12px; background: rgba(255,255,255,0.18);
-    border-radius: 6px; overflow: hidden;
+    width: 220px; height: 16px; background: rgba(255,255,255,0.18);
+    border-radius: 8px; overflow: hidden;
 }
 .hp-fill {
     height: 100%; width: 100%; background: var(--accent-green);
     transition: width .15s ease, background .15s ease;
 }
+/* Blink for the reload indicator. */
+.blink { animation: hud-blink 0.7s steps(1, end) infinite; }
+@keyframes hud-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* Two-button modal action row (used by UI.showConfirm). */
+.modal-actions { display: flex; gap: 10px; justify-content: center; }
+.modal-actions button { min-width: 96px; }
 
 /* Seeker crosshair (centered; shown only for Seeker during HUNTING). */
 #crosshair {
@@ -256,7 +271,8 @@ button.leave { background: rgba(255, 71, 87, 0.2); color: var(--accent-red); bor
     .hud-header { gap: 6px; }
     .hud-card { padding: 5px 11px; font-size: 0.78rem; border-radius: 20px; gap: 5px; }
     #timer-display { font-size: 0.95rem; }
-    #health-hud .hp-track { width: 60px; height: 9px; }
+    #health-hud .hp-track { width: 150px; height: 12px; }
+    .bottom-center-hud { bottom: 14px; padding: 6px 14px; font-size: 0.85rem; }
     button.leave { padding: 5px 11px; font-size: 0.78rem; }
 
     #joystick-zone { width: 96px; height: 96px; }

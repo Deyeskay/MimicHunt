@@ -173,6 +173,7 @@ const Mechanics = {
         if (reloading) return;
         reloading = true;
         reloadUntil = Network.now() + RELOAD_MS;
+        Sound.reload();
     },
 
     // Finish a reload once its timer elapses (called every frame on host + client).

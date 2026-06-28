@@ -470,10 +470,18 @@ const Level = {
         const d = new THREE.Vector3();
         if (camera) { camera.getWorldPosition(o); camera.getWorldDirection(d); }
         else { o.set(localPos.x, localPos.y + 1, localPos.z); d.set(0, 0, -1); }
+        // Muzzle = the player's right hand: lower than the head and offset
+        // forward + right of the body so the bolt reads as fired from the held
+        // weapon (not the head). HAND_UP is below the old +1.0 chest origin.
+        const fX = -Math.sin(cameraYaw), fZ = -Math.cos(cameraYaw);   // forward
+        const rX = -fZ, rZ = fX;                                       // screen-right
+        const HAND_FWD = 0.45, HAND_RIGHT = 0.35, HAND_UP = 0.35;
         return {
             ox: o.x, oy: o.y, oz: o.z,
             dx: d.x, dy: d.y, dz: d.z,
-            mx: localPos.x, my: localPos.y + 1.0, mz: localPos.z
+            mx: localPos.x + fX * HAND_FWD + rX * HAND_RIGHT,
+            my: localPos.y + HAND_UP,
+            mz: localPos.z + fZ * HAND_FWD + rZ * HAND_RIGHT
         };
     },
 

@@ -15,8 +15,9 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
 - `#ui-layer` — in-game HUD + crosshair + mobile controls (`pointer-events:none`
   except `.interactive` children).
 - `#blind-overlay` — seekers' "YOU ARE BLINDED" during HIDING.
-- `#custom-modal` — generic modal (`UI.showModal(title,msg,cb)`), used for win/room
-  events.
+- `#custom-modal` — generic modal: `UI.showModal(title,msg,cb)` (single OK) for
+  win/room events, or `UI.showConfirm(title,msg,onConfirm,label)` (Yes/Cancel via
+  `#modal-cancel-btn` + `.modal-actions`) — used by the Exit Match confirm.
 - `#gameCanvas` — the Three.js canvas (z-index 1, behind the UI layer).
 
 ## Flow
@@ -34,12 +35,17 @@ menu ──host/join──► lobby ──(all ready, ≥1 hider & ≥1 seeker)�
 Top header (`.hud-header`, one nowrap row of `.hud-card` pills):
 - **Role badge** (name + ROLE; hider shows `(ELIMINATED)` when caught).
 - **Timer** (`PHASE: mm:ss`).
-- **Player count** (`👥 N`).
 - **Combat HUD** (`#combat-hud`, Seeker+HUNTING+alive): `🔫 ammo/MAG · ⭐ score`
   (or `RELOAD`).
+- **Player count** (`👥 N`, `#player-count-card`) — pushed to the right
+  (`margin-left:auto`) so it sits beside Exit.
+- **Exit Match** button (confirms via `UI.showConfirm` before leaving).
+
+Bottom-center (`.bottom-center-hud`, absolutely positioned):
 - **Health bar** (`#health-hud`/`#hp-fill`, Hider in-game): width = HP/MAX, green→
-  orange→red.
-- **Exit Match** button.
+  orange→red (220px track).
+- **RELOADING…** (`#reload-indicator`, Seeker reloading): blinks (`.blink`).
+
 Plus: centered `#crosshair` (Seeker+HUNTING+alive; `UI.hitMarker()` flashes it red
 on a landed hit); mobile **SHOOT** (seeker) / **PROP(F)** (hider) toggled by role.
 

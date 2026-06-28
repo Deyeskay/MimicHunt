@@ -5,6 +5,16 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
+- **Combat HUD/UX pass.** (1) Bolt muzzle moved from the chest (`localPos.y+1.0`) to
+  the **right hand** (forward+right offset, lower `y`) in `Level.getAimRay`. (2) New
+  `Sound.reload()` "cha-chunk" plays on `Mechanics.startReload`; a blinking
+  **RELOADING…** pill shows bottom-center (`#reload-indicator` + `.blink`, toggled in
+  `UI.updateHUD`). (3) Hider **health bar moved to bottom-center** (`#health-hud`
+  +`.bottom-center-hud`, wider 220px track) instead of the top header. (4) **Player
+  count** pill moved beside Exit (`margin-left:auto` on `#player-count-card`).
+  (5) **Exit Match now confirms** via new `UI.showConfirm(title,msg,onConfirm,label)`
+  (two-button modal; added `#modal-cancel-btn` + `.modal-actions`). Movement turn is
+  also lerped now (`TURN_LERP`) and walk speed halved (`moveSpeed=0.15`).
 - **Cache `?v=` bumping retired.** The user hard-reloads manually to validate, so we
   no longer bump the `?v=N` query on every change. `index.html` is left at its
   committed `v=24`; ignore version mismatches in older doc notes. (Still bump only if

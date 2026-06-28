@@ -9,7 +9,10 @@ function commitPlayerName() {
 
 document.getElementById('btn-host').addEventListener('click', () => { commitPlayerName(); Network.initHost(); });
 document.getElementById('btn-join').addEventListener('click', () => { commitPlayerName(); Network.initClient(); });
-document.getElementById('btn-leave').addEventListener('click', () => Network.leaveMatch());
+document.getElementById('btn-leave').addEventListener('click', () => {
+    UI.showConfirm('Exit Match?', 'Are you sure you want to leave the match?',
+        () => Network.leaveMatch(), 'Exit');
+});
 document.getElementById('btn-lobby-leave').addEventListener('click', () => Network.leaveMatch());
 
 document.getElementById('btn-settings').addEventListener('click', () => {
