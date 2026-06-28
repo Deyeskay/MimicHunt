@@ -24,6 +24,31 @@ camera.lookAt(camera.position + d)   // crosshair-centred aim
   `getWorldDirection`, so it always matches the crosshair regardless of the rig.
 - The editor preview camera is a separate orbit rig (don't confuse them).
 
+### Camera collision (Cinemachine-style decollision)
+The boom no longer passes through walls. Each frame, before positioning the camera, a
+ray is cast from the **head pivot** `(p.x, groundY+CAM_EYE, p.z)` outward along the
+desired camera offset (the normalized `offX/offZ`, which includes the shoulder) using
+the existing `PropLevel.raycastProps(...)` — the same ray-vs-collider test used for
+shots, so it covers **all collidable props** (walls, trees, rocks). If the nearest hit
+is closer than the full boom, the boom is clamped to `hit - CAM_CLEAR`, and the whole
+offset is scaled by `effectiveLen / boomLen` (pulling straight toward the pivot, so the
+camera **height stays fixed** and the shoulder offset shrinks proportionally — it slides
+along the wall as you rotate).
+```js
+const CAM_CLEAR = 0.4;   // keep camera this far in front of a wall (camera "radius")
+const CAM_MIN   = 1.0;   // never pull closer than this to the head pivot
+const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
+```
+- **Snap in, glide out:** when the clamped target is closer than the current distance it
+  is applied **instantly** (no clipping on fast turns); when space reopens it **lerps**
+  back out by `CAM_EXTEND`. The smoothed distance persists as `Level._camDist`.
+- The ray is **horizontal** (`dy=0`) at eye height to match the fixed camera height, so
+  tall walls block but low bushes the camera sits above are ignored.
+- `raycastProps` reads only static `mapProps3D`, **not** disguised hiders — so the camera
+  never pulls in toward a hider and reveals them.
+- **Tuning:** raise `CAM_CLEAR` (0.3–0.6) if the near plane still grazes walls; lower
+  `CAM_EXTEND` for a lazier extend, raise it for a snappier return.
+
 ## Camera vs character facing (PUBG decoupling)
 - The mouse/touch **look** orbits the camera (`cameraYaw`, `cameraPitch`) — it does
   **not** rotate the character.

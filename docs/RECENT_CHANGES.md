@@ -5,6 +5,18 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Camera collision (Cinemachine-style).** The third-person camera no longer clips
+  through walls/props. In `Level.render` (`js/level.js`), before positioning the camera
+  a ray is cast from the head pivot toward the desired camera spot via the existing
+  `PropLevel.raycastProps` (covers all collidable props — walls, trees, rocks). If a
+  collider is closer than the boom, the boom is clamped to `hit - CAM_CLEAR` and the
+  whole offset scaled toward the pivot (camera height stays fixed; shoulder offset
+  shrinks too → it "slides" along walls as you rotate). Feel = **snap in, glide out**:
+  pull-in is instant (no clipping on fast turns), extend eases by `CAM_EXTEND`; the
+  smoothed distance persists as `Level._camDist`. Tunables `CAM_CLEAR=0.4`, `CAM_MIN=1.0`,
+  `CAM_EXTEND=0.12`. Ray is horizontal at eye height (low bushes ignored); reads only
+  static `mapProps3D`, so it won't pull toward — and reveal — disguised hiders. See
+  [CAMERA_AND_CONTROLS.md](CAMERA_AND_CONTROLS.md).
 - **Google Analytics (GA4) added.** Standard `gtag.js` snippet in `index.html` `<head>`
   for the GA4 property **huntnhide** (Measurement ID `G-BNV1CHY5CV`, web data stream
   → `https://deyeskay.github.io/MimicHunt/`). Enhanced measurement is on (page views,

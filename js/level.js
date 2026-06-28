@@ -907,6 +907,14 @@ const Level = {
             const CAM_RIGHT = 1.7;
             const CAM_EYE = 2.6;
 
+            // --- Camera-collision tunables (Unity Cinemachine-style decollision): ---
+            //  CAM_CLEAR   keep the camera this far in front of a wall (camera "radius")
+            //  CAM_MIN     never pull closer than this to the head pivot
+            //  CAM_EXTEND  ease-out speed (0..1 per frame) when space reopens
+            const CAM_CLEAR = 0.4;
+            const CAM_MIN = 1.0;
+            const CAM_EXTEND = 0.12;
+
             // Horizontal forward (into the screen) + screen-right vectors.
             const fX = -Math.sin(cameraYaw), fZ = -Math.cos(cameraYaw);
             const rX = -fZ, rZ = fX;
@@ -914,10 +922,30 @@ const Level = {
             const cp = Math.cos(cameraPitch), sp = Math.sin(cameraPitch);
             const dX = fX * cp, dY = -sp, dZ = fZ * cp;
 
+            // Desired camera offset from the pivot (player's head), full boom incl. shoulder.
+            const offX = -fX * CAM_BACK + rX * CAM_RIGHT;
+            const offZ = -fZ * CAM_BACK + rZ * CAM_RIGHT;
+            const pivotY = groundY + CAM_EYE;
+            const boomLen = Math.hypot(offX, offZ);
+            const dirX = offX / boomLen, dirZ = offZ / boomLen;
+
+            // Cast from the head outward toward the desired camera spot (horizontal ray at
+            // eye height). The nearest collider hit clamps how far the camera can sit back,
+            // so it slides along walls/props instead of clipping through them.
+            const hit = PropLevel.raycastProps(p.x, pivotY, p.z, dirX, 0, dirZ, boomLen);
+            const targetLen = (hit < boomLen) ? Math.max(hit - CAM_CLEAR, CAM_MIN) : boomLen;
+
+            // Snap in instantly (no clipping on fast turns), glide back out smoothly.
+            if (this._camDist === undefined) this._camDist = boomLen;
+            this._camDist = (targetLen < this._camDist)
+                ? targetLen
+                : this._camDist + (targetLen - this._camDist) * CAM_EXTEND;
+
+            const scale = this._camDist / boomLen;
             camera.position.set(
-                p.x - fX * CAM_BACK + rX * CAM_RIGHT,
-                groundY + CAM_EYE,
-                p.z - fZ * CAM_BACK + rZ * CAM_RIGHT
+                p.x + offX * scale,
+                pivotY,
+                p.z + offZ * scale
             );
             // Aim straight along the look direction so the centred crosshair = the
             // shot direction; the right offset keeps the body left-of-centre.
