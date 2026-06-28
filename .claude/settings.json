@@ -13,7 +13,10 @@
       "Bash(git checkout *)",
       "Bash(node --check js/globals.js)",
       "Bash(node --check js/app.js)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(git commit *)",
+      "Bash(git reset *)",
+      "Bash(git restore *)"
     ]
   }
 }

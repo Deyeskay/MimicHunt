@@ -465,7 +465,10 @@ button{
     <div class="help-card">
         <h2>Load Level</h2>
         <div id="loadLevelList" class="modal-list"></div>
+        <div class="modal-label" style="margin-top:10px;">Or upload a level file (e.g. <code>forest.js</code>):</div>
+        <input type="file" id="levelFileInput" accept=".js,.json,.txt" style="display:none" onchange="uploadLevelFile(this)">
         <div class="modal-actions">
+            <button class="btn btn-primary" onclick="document.getElementById('levelFileInput').click()">⬆ Upload .js File</button>
             <button class="btn" onclick="closeModal('loadModal')">Close</button>
         </div>
     </div>
@@ -2119,6 +2122,32 @@ function loadLevelByName(name)
         currentLevelName = name;
         closeModal("loadModal");
     }
+}
+
+// Upload a level file from disk (registerLevel("x", [...]) / forestLevel = [...]
+// / raw array) and load it into the editor scene. Reuses applyLevelData.
+function uploadLevelFile(input)
+{
+    const file = input.files && input.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e)
+    {
+        const text = e.target.result;
+        if(applyLevelData(text))
+        {
+            // Prefer the registerLevel("name", ...) name; else the filename stem.
+            const m = text.match(/registerLevel\(\s*['"]([^'"]+)['"]/);
+            currentLevelName = m ? m[1] : file.name.replace(/\.[^.]+$/, "");
+            const nameInput = document.getElementById("exportLevelName");
+            if(nameInput) nameInput.value = currentLevelName;
+            closeModal("loadModal");
+        }
+        input.value = "";   // allow re-selecting the same file
+    };
+    reader.onerror = function(){ alert("Couldn't read the file."); input.value = ""; };
+    reader.readAsText(file);
 }
 
 function deleteLevelByName(name)

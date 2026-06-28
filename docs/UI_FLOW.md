@@ -74,6 +74,8 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
   **live 3D preview** (separate mini renderer); export the regenerated `prefabs.js`
   text; remembers edits in localStorage (`hnh_editor_prefabs`).
 - **Save/Export Level** + **Load Level** modals → localStorage (`hnh_editor_levels`);
-  export emits `registerLevel("name", [...])` to paste into `js/levels/`.
+  export emits `registerLevel("name", [...])` to paste into `js/levels/`. The Load
+  modal also has **⬆ Upload .js File** (`uploadLevelFile`) to load a level file from
+  disk (e.g. `js/levels/forest.js`) via `applyLevelData` (slices the `[...]` array).
 - Has its own CSS (dark pro UI); **not** covered by the game's responsive rules and
   loads `prefabs.js`/`props.js` at a stale `?v=7` (TODO).
