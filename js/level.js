@@ -140,10 +140,45 @@ const Level = {
         }
     },
 
+    // Developer: redraw the collider outlines for DISGUISED HIDERS (dynamic
+    // pseudo-props). Unlike buildColliderGizmos (static level props, built once),
+    // these move every frame, so this runs in the render loop. Drawn ORANGE to
+    // distinguish them from the yellow static props. Uses exactly what collision
+    // tests — Mechanics.getDynamicProps() → PropLevel.getColliders — so the
+    // outline is the real no-go shape other players hit.
+    updateDynamicColliderGizmos: function() {
+        if (!this.dynColliderHelpers) this.dynColliderHelpers = [];
+        this.dynColliderHelpers.forEach(h => scene.remove(h));
+        this.dynColliderHelpers.length = 0;
+        if (!developer || !scene || typeof Mechanics === 'undefined') return;
+
+        const dyn = Mechanics.getDynamicProps();
+        if (!dyn || !dyn.length) return;
+        for (const prop of dyn) {
+            if (!PropLevel.hasCollision(prop)) continue;
+            for (const c of PropLevel.getColliders(prop)) {
+                const h = Math.max(c.yMax - c.yMin, 0.1);
+                const geo = (c.shape === 'box')
+                    ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
+                    : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+                const mat = new THREE.LineBasicMaterial({ color: 0xffaa00 });
+                mat.depthTest = false;
+                const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+                if (c.shape === 'box') helper.rotation.y = c.rot || 0;
+                helper.renderOrder = 999;
+                scene.add(helper);
+                this.dynColliderHelpers.push(helper);
+                geo.dispose();
+            }
+        }
+    },
+
     // Toggle developer gizmos at runtime (console or 'G' key).
     setDeveloper: function(on) {
         developer = !!on;
         this.buildColliderGizmos();
+        this.updateDynamicColliderGizmos();   // clears them when turning dev off
         if (!developer && this.playerColliderHelper) {
             scene.remove(this.playerColliderHelper);
             this.playerColliderHelper = null;
@@ -643,6 +678,83 @@ const Level = {
         }
     },
 
+    // Build a floating name-tag Sprite (Minecraft-style): role-colored text + dark
+    // outline on a transparent canvas, drawn THROUGH walls at a CONSTANT screen size.
+    makeNameSprite: function(text, color) {
+        const W = 256, H = 64;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        ctx.font = 'bold 40px "Fredoka", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = 7;
+        ctx.strokeStyle = 'rgba(0,0,0,0.92)';   // dark outline for readability
+        ctx.strokeText(text, W / 2, H / 2 + 2);
+        ctx.fillStyle = color || '#ffffff';
+        ctx.fillText(text, W / 2, H / 2 + 2);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({
+            map: tex, transparent: true, depthTest: false, depthWrite: false,
+            fog: false, sizeAttenuation: false
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(0.14, 0.035, 1);   // constant screen size (4:1 canvas aspect)
+        sprite.renderOrder = 1000;          // draw on top → visible through walls
+        sprite.userData.text = text;
+        sprite.userData.color = color;
+        sprite.userData.tex = tex;
+        return sprite;
+    },
+
+    // Per-frame name tag above a player's head (through walls, constant screen size).
+    // Visibility (never your own tag, in-game only):
+    //   • Seeker tag (GREEN)  → seen by everyone (hiders + other seekers).
+    //   • Hider tag (RED)     → seen only by other HIDERS (teammate awareness; the
+    //     seeker must still find hiders, so seekers don't see hider tags).
+    // Self-manages create / recolor / rename / remove.
+    applyNameLabel: function(mesh, p, id) {
+        const me = gameState.players[myId];
+        const localIsHider = me && me.role === 'Hider';
+        const inGame = gameState.phase !== 'LOBBY';
+
+        let show = false, color = '#ffffff';
+        if (inGame && id !== myId && !p.isCaught) {
+            if (p.role === 'Seeker') { show = true; color = '#ff5a5a'; }                 // red, all viewers
+            else if (p.role === 'Hider' && localIsHider) { show = true; color = '#46e06a'; } // green, hiders only
+        }
+
+        let sprite = mesh.userData.nameSprite;
+
+        if (!show) {
+            if (sprite) {
+                mesh.remove(sprite);
+                if (sprite.userData.tex) sprite.userData.tex.dispose();
+                if (sprite.material) sprite.material.dispose();
+                mesh.userData.nameSprite = null;
+            }
+            return;
+        }
+
+        const label = p.name || (p.role === 'Seeker' ? 'SEEKER' : 'HIDER');
+        if (sprite && (sprite.userData.text !== label || sprite.userData.color !== color)) {
+            mesh.remove(sprite);            // name OR color changed → rebuild
+            if (sprite.userData.tex) sprite.userData.tex.dispose();
+            if (sprite.material) sprite.material.dispose();
+            sprite = null;
+        }
+        if (!sprite) {
+            sprite = this.makeNameSprite(label, color);
+            // Group origin = feet for characters (~3 tall); fallback box is centred.
+            sprite.position.set(0, mesh.userData.isCharacter ? 3.4 : 2.6, 0);
+            mesh.add(sprite);
+            mesh.userData.nameSprite = sprite;
+        }
+    },
+
     render: function() {
         if (!gameState || !gameState.players) return;
 
@@ -710,6 +822,8 @@ const Level = {
             if (mesh.userData.mixer) this.updateCharacterAnim(mesh, p, dt);
             // Red reveal blink after a hit.
             this.applyRevealBlink(mesh, p);
+            // Name tag above the head (seeker=green to all, hider=red to hiders).
+            this.applyNameLabel(mesh, p, id);
         }
 
         // Advance energy-pulse projectiles.
@@ -720,32 +834,65 @@ const Level = {
         // disguiseSize/2 when disguised) plus each prop radius is the no-go gap.
         if (developer && gameState.players[myId]) {
             const p = gameState.players[myId];
-            const myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
-            // When disguised, the player takes the target prop's footprint AND
-            // its height (propHeight), so the cyan gizmo matches the yellow prop
-            // collider it's imitating instead of a constant 3-tall cylinder.
-            const myHeight = localDisguise.type === 'player' ? 3 : (localDisguise.propHeight || 3);
-            if (!this.playerColliderHelper ||
-                this.playerColliderHelper.userData.r !== myRadius ||
-                this.playerColliderHelper.userData.h !== myHeight) {
+            // When disguised, mirror the disguised prop's COMPOUND colliders (e.g.
+            // tree = slim trunk + wide canopy) instead of one fat cylinder, so the
+            // cyan player gizmo matches the yellow prop collider it's imitating.
+            const dz = localDisguise.colliders;
+            const disguised = localDisguise.type !== 'player' && dz && dz.length;
+            const key = disguised
+                ? 'd:' + localDisguise.type + ':' + (localDisguise.propRadius || 0) + ':' + (localDisguise.propHeight || 0)
+                : 'player';
+            if (!this.playerColliderHelper || this.playerColliderHelper.userData.key !== key) {
                 if (this.playerColliderHelper) scene.remove(this.playerColliderHelper);
-                const geo = new THREE.CylinderGeometry(myRadius, myRadius, myHeight, 24);
+                const group = new THREE.Group();
                 const mat = new THREE.LineBasicMaterial({ color: 0x00e5ff });
                 mat.depthTest = false;
-                this.playerColliderHelper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-                this.playerColliderHelper.renderOrder = 999;
-                this.playerColliderHelper.userData.r = myRadius;
-                this.playerColliderHelper.userData.h = myHeight;
+                const addCyl = (radius, h, cy, cx, cz, rot) => {
+                    const geo = new THREE.CylinderGeometry(radius, radius, h, 24);
+                    const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                    seg.position.set(cx || 0, cy, cz || 0);
+                    if (rot) seg.rotation.y = rot;
+                    seg.renderOrder = 999;
+                    group.add(seg);
+                    geo.dispose();
+                };
+                const addBox = (hx, hz, h, cy, cx, cz, rot) => {
+                    const geo = new THREE.BoxGeometry(hx * 2, h, hz * 2);
+                    const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                    seg.position.set(cx || 0, cy, cz || 0);
+                    if (rot) seg.rotation.y = rot;
+                    seg.renderOrder = 999;
+                    group.add(seg);
+                    geo.dispose();
+                };
+                if (disguised) {
+                    // pieces are local with feet at y=0 → place relative to feet.
+                    dz.forEach(c => {
+                        const h = Math.max(c.yMax - c.yMin, 0.1);
+                        const cy = (c.yMin + c.yMax) / 2;
+                        if (c.shape === 'box') addBox(c.halfX, c.halfZ, h, cy, c.x, c.z, c.rot || 0);
+                        else addCyl(c.radius, h, cy, c.x, c.z, 0);
+                    });
+                } else {
+                    addCyl(1, 3, PropLevel.PLAYER_BASE_HEIGHT, 0, 0, 0);   // player body
+                }
+                this.playerColliderHelper = group;
+                this.playerColliderHelper.userData.key = key;
                 scene.add(this.playerColliderHelper);
-                geo.dispose();
             }
-            // Follow the player's body (incl. jumping) — centered on p.y, not a
-            // fixed ground height — so the gizmo rises with the character.
-            this.playerColliderHelper.position.set(p.x, p.y, p.z);
+            // Group origin = player's FEET (so the local-coord pieces sit on the
+            // ground), and it rises with the character while jumping. A disguised
+            // player's logical centre is at size/2 above its feet, a normal player
+            // at PLAYER_BASE_HEIGHT.
+            const feetDrop = disguised ? (localDisguise.size / 2) : PropLevel.PLAYER_BASE_HEIGHT;
+            this.playerColliderHelper.position.set(p.x, p.y - feetDrop, p.z);
         } else if (!developer && this.playerColliderHelper) {
             scene.remove(this.playerColliderHelper);
             this.playerColliderHelper = null;
         }
+
+        // Disguised-hider colliders (orange) — they move, so refresh every frame.
+        this.updateDynamicColliderGizmos();
 
         if (gameState.players[myId]) {
             const p = gameState.players[myId];

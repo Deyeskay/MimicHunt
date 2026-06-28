@@ -87,6 +87,33 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
   **purple** — `rebuildEditorColliders` colors `selectedObjects.includes(obj)`),
   per-object BoxHelpers + the primary's AxesHelper (detached during bounds reads so it
   doesn't inflate them).
+- **Inspector multi-edit (Unity-style):** with several objects selected the inspector
+  shows the **common** value per field; fields that differ go blank with a `—`
+  placeholder (numbers) or the indeterminate dash (checkboxes). Editing a field applies
+  to **all** selected objects in one undo step (`updateInspectorFields` +
+  `_commonNum`/`_commonBool`/`_setNumField`/`_setChkField`; `numChange`/`chkChange`).
+- **Delete** is via the **Delete key** only (the toolbar "Delete Selected" button was
+  removed); `deleteSelected()` still backs the shortcut.
+- **Inspector → Materials (Unity-style):** for a single selected object,
+  `refreshMaterialsSection` lists its materials (`#matSelect` if >1) and edits Albedo
+  color / Opacity / Emission(+intensity) / Metallic / Roughness / texture map (upload +
+  clear) live; controls a material lacks are hidden. Edits set `materialDirty` and reveal
+  a 💾 **save icon** plus a ↺ **reset icon** (right of the "Materials" heading); reset
+  (`resetMaterials`) restores every material to the pristine as-loaded snapshot captured by
+  `_snapshotMaterial` (color/opacity/emission/metallic/roughness/map) and clears the dirty
+  state. 💾 → `#matSaveModal` → `exportSelectedGlb()` exports the model (edited
+  materials/textures baked in) as a new `.glb` via `THREE.GLTFExporter` (binary download).
+  Material edits aren't in the undo stack and aren't stored in the level — persistence is
+  the exported GLB. Hidden for multi-select / spawn / no material.
+- **Prefab editor lock:** in the Edit Prefabs modal, when a type's `canDisguise` is on the
+  `collision` flag is greyed/disabled with a red ⚠ "not recommended" note (disguised
+  hiders rely on the collider); unchecking `canDisguise` re-enables it (`renderPrefabEditor`).
+- **Hierarchy search:** a `#hierarchy-search` box (with a clear **✕** that shows when
+  non-empty) filters the list by name
+  (case-insensitive substring). `refreshHierarchy` renders only matches into
+  `visibleHierarchy`; **Ctrl/Cmd-click toggle and Shift-click range-select operate over
+  the filtered list**, and arrow nav walks it too. Keydown handlers ignore W/E/R/Q/F/
+  Delete/nudge while a text field is focused (so you can type in the search).
 - **Hierarchy keyboard nav:** the `#hierarchy` panel is focusable (`tabindex`); while
   focused, **Up/Down arrows switch the selected object** (`navigateHierarchy`) instead
   of scrolling. In the viewport (panel not focused) arrows still nudge the object(s).

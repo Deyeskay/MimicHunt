@@ -59,6 +59,7 @@ const UI = {
         document.getElementById('ui-layer').style.display = 'flex';
         document.getElementById('gameCanvas').style.display = 'block';
         setTimeout(() => { Level.resize(); }, 50); // Ensures Canvas resizes to screen
+        if (typeof WakeLock !== 'undefined') WakeLock.enable();   // keep the screen awake in-match
     },
 
     transitionToLobby: function() {
@@ -69,6 +70,7 @@ const UI = {
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'flex';
+        if (typeof WakeLock !== 'undefined') WakeLock.disable();   // leaving the match → allow sleep
         this.renderLevelSelector();
     },
 
@@ -112,6 +114,7 @@ const UI = {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'flex';
+        if (typeof WakeLock !== 'undefined') WakeLock.disable();   // back at menu → allow sleep
 
         // Reset the lobby action button so a stale label (e.g. "Unready" from a
         // previous match) can't carry into the next room.
@@ -228,7 +231,12 @@ const UI = {
         let s = (gameState.timer % 60).toString().padStart(2, '0');
         document.getElementById('timer-display').innerText = `${gameState.phase}: ${m}:${s}`;
 
-        document.getElementById('blind-overlay').style.display = (gameState.phase === 'HIDING' && isSeeker) ? 'flex' : 'none';
+        const blinded = (gameState.phase === 'HIDING' && isSeeker);
+        document.getElementById('blind-overlay').style.display = blinded ? 'flex' : 'none';
+        if (blinded) {
+            const cd = document.getElementById('blind-countdown');
+            if (cd) cd.innerText = `${gameState.timer}s`;
+        }
 
         // Live player count (top-right pill). Keeps updating on host (60fps loop)
         // and clients (snapshot handler), including after a host migration.
@@ -277,6 +285,21 @@ const UI = {
         const shootBtn = document.getElementById('btn-action-shoot');
         const propBtn = document.getElementById('btn-action-disguise');
         if (shootBtn) shootBtn.style.display = isSeeker ? '' : 'none';
-        if (propBtn) propBtn.style.display = isSeeker ? 'none' : '';
+        if (propBtn) {
+            propBtn.style.display = isSeeker ? 'none' : '';
+            if (!isSeeker) {
+                const canAct = !me.isCaught && gameState.phase !== 'LOBBY';
+                if (canAct && Mechanics.isDisguised()) {
+                    // Disguised → offer Reset.
+                    propBtn.innerHTML = '🔄 Reset';
+                    propBtn.disabled = false;
+                } else {
+                    // Not disguised → enable + name the prop only when near one.
+                    const near = canAct ? Mechanics.findNearestDisguiseProp() : null;
+                    propBtn.innerHTML = near ? ('🔄 ' + near.model.toUpperCase()) : '🔄';
+                    propBtn.disabled = !near;
+                }
+            }
+        }
     }
 };

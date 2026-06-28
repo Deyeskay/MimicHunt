@@ -3,6 +3,92 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-06-29
+
+- **PWA + Screen Wake Lock.** The game is now an installable, offline-capable PWA and
+  keeps the phone awake during a match.
+  - *Wake Lock* (`WakeLock` in `js/app.js`): `navigator.wakeLock.request('screen')`
+    acquired on `UI.transitionToGame` and released on `transitionToLobby`/`transitionToMenu`;
+    re-acquired on `visibilitychange` (the OS drops the lock when the tab backgrounds).
+    Fixes phones dimming/auto-locking mid-game — fullscreen alone does NOT hold the screen
+    on. Needs a secure context (https/localhost); LAN testing over plain http won't get it.
+  - *PWA*: `manifest.json` (fullscreen, landscape, theme `#15131c`, SVG icon at
+    `assets/icons/icon.svg` + optional PNG 192/512 slots), `<link rel=manifest>` + Apple
+    meta tags in `index.html`, and `sw.js` registered from `js/app.js` (secure context only).
+  - *Service worker is NETWORK-FIRST on purpose* — the no-build hard-refresh workflow would
+    break under a cache-first SW. It only falls back to cache offline; hard-refresh
+    (Ctrl+Shift+R) bypasses the SW entirely. To wipe it during dev: DevTools → Application →
+    Service Workers → Unregister.
+  - *Icons*: the SVG covers Chrome/Android install; for crisp iOS home-screen icons drop
+    `icon-192.png` / `icon-512.png` into `assets/icons/` (already listed in the manifest).
+- **Dev mode: disguised-hider colliders now drawn (orange).** `buildColliderGizmos`
+  only outlines static `mapProps3D` props (built once), so disguised hiders — which are
+  dynamic pseudo-props rebuilt every tick by `Mechanics.getDynamicProps()` — had no
+  collider gizmo even though everyone collides with them. Added
+  `Level.updateDynamicColliderGizmos()`, called each render frame, drawing an **orange**
+  outline per dynamic-prop piece using the exact `PropLevel.getColliders(prop)` collision
+  geometry (yellow = static props, cyan = your own collider, orange = disguised hiders).
+  level.js.
+- **Client fix: disguised-hider colliders tracked the spawn point, not the player.**
+  `Mechanics.getDynamicProps()` built each disguised hider's pseudo-prop collider from
+  `gameState.players[id].x/z`. On a **client** those fields are only the remote player's
+  **spawn point** — the `snapshot` handler buffers transforms and never writes them back
+  to `gameState` (meshes render from the interpolated buffer instead). So on a client both
+  the collision *and* the dev gizmo for a disguised hider sat at spawn, far from where the
+  hider actually appeared (the host, with authoritative positions, looked correct). Fixed
+  by sampling the same interpolated snapshot (`Network.sampleSnapshot(now − INTERP_DELAY)`)
+  the renderer uses; falls back to `gameState` x/z on the host (empty buffer). This is the
+  real cause of the earlier "client hider collides with disguised hiders at an offset"
+  (not the player radius). mechanics.js.
+- **Editor: Materials reset icon.** A ↺ icon (right of the inspector's "Materials"
+  heading, next to 💾) restores every material of the selected object to its pristine
+  as-loaded values (`_snapshotMaterial` snapshot: color/opacity/emission/metallic/
+  roughness/map). Texture disposal now spares the original map (`_disposeIfNotOrig`) so
+  reset can put it back. Both icons show only when the materials are dirty. editor.html only.
+- **Editor: hierarchy search/filter.** A `#hierarchy-search` box filters the list by
+  name (case-insensitive); `refreshHierarchy` renders matches into `visibleHierarchy`,
+  and **Ctrl/Cmd-toggle, Shift-range, and arrow nav operate over the filtered list**.
+  Two fixes made shift-range reliable: the window placement `mousedown` now ignores
+  clicks inside `#right-panel` (it was raycasting the scene and corrupting the range
+  anchor), and `.hierarchy-item` is `user-select:none` (shift-click selected text
+  before). Keydown shortcuts (W/E/R/Q/F/Delete/nudge) are suppressed while a text
+  field is focused. editor.html only.
+- **Disguised hiders are solid (collide + standable).** Players never collided with
+  each other, so seekers walked through disguised hiders. Now a disguised hider acts as
+  a **dynamic pseudo-prop** that mimics the prop it's disguised as: `Mechanics.getDynamicProps()`
+  builds prop-like colliders (via `PropLevel.resolveColliders`) from each disguised
+  player's `disguiseType`/`propRadius`/`propHeight`/`propRotation` (excluding self +
+  caught), refreshed once per movement tick into `this._dynamicProps`. Movement
+  (`blockedAt` → new `_propBlocks` helper) and the climb floor model (new `_climbFloor`
+  helper) now test level props **and** these dynamic props — so seekers are blocked by a
+  disguised hider and can jump on / stand on it exactly like the real prop. Client-side
+  movement only (positions already replicate); no netcode change.
+- **Floating name tags (through walls, role-colored).** A name label hovers above each
+  player's head, drawn through walls (`depthTest:false`, `renderOrder 1000`) at a
+  constant on-screen size (`sizeAttenuation:false`). Visibility (never your own tag,
+  in-game only): **Seeker tags are RED and seen by everyone** (hiders + other seekers);
+  **Hider tags are GREEN and seen only by other hiders** (teammate awareness — the seeker
+  still has to find hiders). `THREE.Sprite` + `CanvasTexture` (`Level.makeNameSprite(text,
+  color)`), managed per-frame by `Level.applyNameLabel(mesh,p,id)` (called after
+  `applyRevealBlink` in the render loop) which creates/recolors/renames/removes it.
+  Client-render only — no netcode.
+- **Disguised players use the prop's compound collider.** When a hider disguises as a
+  prop, it now adopts that prop's compound colliders (e.g. tree = slim trunk + wide
+  canopy) instead of one fat cylinder: `Mechanics.applyDisguiseFromProp` computes
+  `localDisguise.colliders` (via `PropLevel.resolveColliders`) + a `groundRadius`
+  (the ground-level piece — trunk for a tree), `myColliderRadius()` drives movement
+  collision off it, and the dev player gizmo (`Level.render`) draws the full compound
+  shape. Rock/bush (single cylinder) are unchanged.
+- **Seeker hiding countdown.** The seeker's "YOU ARE BLINDED" overlay now shows a big
+  live countdown ("Hunt begins in {timer}s") from `gameState.timer`, updated in
+  `UI.updateHUD` (`#blind-countdown`).
+- **Smarter disguise button.** The hider's PROP button is now context-aware
+  (`UI.updateHUD` + `Mechanics.findNearestDisguiseProp`/`isDisguised`): `🔄` disabled
+  when not near a prop, `🔄 {PROPNAME}` (enabled) when near a disguisable prop, and
+  `🔄 Reset` when already disguised. `handleDisguiseSwap` now **resets to default if
+  disguised**, else disguises as the nearest prop (no-op if none). Reset returns the
+  hider to its own form (button goes back to disabled `🔄` unless still near a prop).
+
 ## 2026-06-28 (later)
 
 - **Event toasts.** A new bottom-center toast (above the health/reload row,

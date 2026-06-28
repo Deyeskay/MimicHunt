@@ -150,6 +150,40 @@ document.querySelectorAll('.fs-btn').forEach(b => b.addEventListener('click', to
 document.addEventListener('fullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
 document.addEventListener('webkitfullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
 syncFullscreenButtons();
+
+// --- Screen Wake Lock ---
+// Keep the display awake during a match — otherwise the phone dims/auto-locks on
+// its normal timer (fullscreen alone does NOT hold the screen on). Requires a
+// secure context (https or localhost). The OS releases the lock when the tab is
+// backgrounded, so we re-acquire on visibilitychange. UI.transitionTo* drives
+// enable()/disable() (enable on game start, disable back in lobby/menu).
+const WakeLock = {
+    _lock: null,
+    _want: false,
+    enable() { this._want = true; this._acquire(); },
+    disable() {
+        this._want = false;
+        if (this._lock) { try { this._lock.release(); } catch (e) {} this._lock = null; }
+    },
+    async _acquire() {
+        if (!this._want || this._lock || !('wakeLock' in navigator)) return;
+        try {
+            this._lock = await navigator.wakeLock.request('screen');
+            this._lock.addEventListener('release', () => { this._lock = null; });
+        } catch (e) { /* not visible / not secure — retried on visibilitychange */ }
+    }
+};
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') WakeLock._acquire();
+});
+
+// --- PWA service worker ---
+// Registered only in a secure context (https / localhost). Network-first (see
+// sw.js) so the no-build hard-refresh dev workflow still serves fresh source.
+if ('serviceWorker' in navigator &&
+    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+}
 // Load all level files (registry.js → LEVEL_FILES) before init reads LEVELS.
 loadLevelScripts().then(() =>
 {
