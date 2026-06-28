@@ -59,6 +59,7 @@ const UI = {
         document.getElementById('ui-layer').style.display = 'flex';
         document.getElementById('gameCanvas').style.display = 'block';
         setTimeout(() => { Level.resize(); }, 50); // Ensures Canvas resizes to screen
+        if (typeof WakeLock !== 'undefined') WakeLock.enable();   // keep the screen awake in-match
     },
 
     transitionToLobby: function() {
@@ -69,6 +70,7 @@ const UI = {
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'flex';
+        if (typeof WakeLock !== 'undefined') WakeLock.disable();   // leaving the match → allow sleep
         this.renderLevelSelector();
     },
 
@@ -112,6 +114,7 @@ const UI = {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'flex';
+        if (typeof WakeLock !== 'undefined') WakeLock.disable();   // back at menu → allow sleep
 
         // Reset the lobby action button so a stale label (e.g. "Unready" from a
         // previous match) can't carry into the next room.

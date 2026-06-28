@@ -5,6 +5,22 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **PWA + Screen Wake Lock.** The game is now an installable, offline-capable PWA and
+  keeps the phone awake during a match.
+  - *Wake Lock* (`WakeLock` in `js/app.js`): `navigator.wakeLock.request('screen')`
+    acquired on `UI.transitionToGame` and released on `transitionToLobby`/`transitionToMenu`;
+    re-acquired on `visibilitychange` (the OS drops the lock when the tab backgrounds).
+    Fixes phones dimming/auto-locking mid-game — fullscreen alone does NOT hold the screen
+    on. Needs a secure context (https/localhost); LAN testing over plain http won't get it.
+  - *PWA*: `manifest.json` (fullscreen, landscape, theme `#15131c`, SVG icon at
+    `assets/icons/icon.svg` + optional PNG 192/512 slots), `<link rel=manifest>` + Apple
+    meta tags in `index.html`, and `sw.js` registered from `js/app.js` (secure context only).
+  - *Service worker is NETWORK-FIRST on purpose* — the no-build hard-refresh workflow would
+    break under a cache-first SW. It only falls back to cache offline; hard-refresh
+    (Ctrl+Shift+R) bypasses the SW entirely. To wipe it during dev: DevTools → Application →
+    Service Workers → Unregister.
+  - *Icons*: the SVG covers Chrome/Android install; for crisp iOS home-screen icons drop
+    `icon-192.png` / `icon-512.png` into `assets/icons/` (already listed in the manifest).
 - **Dev mode: disguised-hider colliders now drawn (orange).** `buildColliderGizmos`
   only outlines static `mapProps3D` props (built once), so disguised hiders — which are
   dynamic pseudo-props rebuilt every tick by `Mechanics.getDynamicProps()` — had no
