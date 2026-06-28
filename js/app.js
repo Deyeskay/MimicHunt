@@ -43,17 +43,22 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
 // Live-apply the slider settings as the user drags (so changes are felt this
 // session immediately). Sensitivity is read live from GAME_SETTINGS by
 // Mechanics; FOV applies to the camera via Level.setFov.
+function setChip(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
 function syncSettingDisplays() {
     const s = document.getElementById('setting-sensitivity');
     const f = document.getElementById('setting-fov');
-    const sv = document.getElementById('val-sensitivity');
-    const fv = document.getElementById('val-fov');
-    if (s && sv) sv.innerText = Number(s.value).toFixed(4);
-    if (f && fv) fv.innerText = String(Math.round(Number(f.value)));
+    if (s) setChip('val-sensitivity', Number(s.value).toFixed(4));
+    if (f) setChip('val-fov', String(Math.round(Number(f.value))));
+    const ht = document.getElementById('setting-hide-time');
+    const hu = document.getElementById('setting-hunt-time');
+    if (ht) setChip('val-hide-time', String(parseInt(ht.value)));
+    if (hu) setChip('val-hunt-time', String(parseInt(hu.value)));
 }
 (function wireLiveSettings() {
     const sens = document.getElementById('setting-sensitivity');
     const fov = document.getElementById('setting-fov');
+    const hide = document.getElementById('setting-hide-time');
+    const hunt = document.getElementById('setting-hunt-time');
     if (sens) sens.addEventListener('input', () => {
         GAME_SETTINGS.mouseSensitivity = parseFloat(sens.value);
         syncSettingDisplays();
@@ -63,6 +68,9 @@ function syncSettingDisplays() {
         Level.setFov(GAME_SETTINGS.cameraFov);
         syncSettingDisplays();
     });
+    // Time sliders apply on Save; just keep their value chips live.
+    if (hide) hide.addEventListener('input', syncSettingDisplays);
+    if (hunt) hunt.addEventListener('input', syncSettingDisplays);
 })();
 
 document.getElementById('btn-lobby-action').addEventListener('click', () => {
