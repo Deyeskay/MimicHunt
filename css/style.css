@@ -248,6 +248,18 @@ button.leave {
 .btn-row { display: flex; gap: 12px; margin-top: 14px; }
 .btn-row button { flex: 1; }
 
+/* Fullscreen toggle button (menu corner + in-game HUD) */
+.fs-btn {
+    background: rgba(20, 22, 30, 0.72); color: #fff;
+    border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; cursor: pointer;
+    font-size: 1.15rem; line-height: 1; font-weight: normal; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.fs-btn:active { transform: scale(0.94); }
+.fs-float { position: fixed; top: 14px; right: 14px; width: 46px; height: 46px; z-index: 30;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
+.hud-fs-btn { width: 38px; height: 38px; }
+
 /* Red X close button (settings) */
 .close-x {
     position: absolute; top: -14px; right: -10px; width: 42px; height: 42px; padding: 0;

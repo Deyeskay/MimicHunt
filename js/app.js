@@ -120,10 +120,12 @@ window.addEventListener('resize', () => Level.resize());
 if (window.visualViewport) window.visualViewport.addEventListener('resize', () => Level.resize());
 window.addEventListener('orientationchange', () => setTimeout(() => Level.resize(), 250));
 
-// On touch devices, go fullscreen on the first tap so the browser address bar
-// collapses and the game gets the whole screen. (Fullscreen must be triggered by a
-// user gesture, so we wait for the first touch/click.)
-function goFullscreen() {
+// --- Fullscreen toggle (explicit button, like CrazyGames) ---
+// Hides the mobile browser address bar and gives the game the whole screen.
+function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function enterFullscreen() {
     const el = document.documentElement;
     const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
     if (req) { try { req.call(el); } catch (e) {} }
@@ -131,15 +133,23 @@ function goFullscreen() {
         try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
     }
 }
-if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
-    const onFirstTap = () => {
-        goFullscreen();
-        document.removeEventListener('touchend', onFirstTap);
-        document.removeEventListener('click', onFirstTap);
-    };
-    document.addEventListener('touchend', onFirstTap, { passive: true });
-    document.addEventListener('click', onFirstTap);
+function exitFullscreen() {
+    const x = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (x) { try { x.call(document); } catch (e) {} }
 }
+function toggleFullscreen() { isFullscreen() ? exitFullscreen() : enterFullscreen(); }
+
+function syncFullscreenButtons() {
+    const fs = isFullscreen();
+    document.querySelectorAll('.fs-btn').forEach(b => {
+        b.innerText = fs ? '🗗' : '⛶';
+        b.title = fs ? 'Exit Fullscreen' : 'Fullscreen';
+    });
+}
+document.querySelectorAll('.fs-btn').forEach(b => b.addEventListener('click', toggleFullscreen));
+document.addEventListener('fullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
+document.addEventListener('webkitfullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
+syncFullscreenButtons();
 // Load all level files (registry.js → LEVEL_FILES) before init reads LEVELS.
 loadLevelScripts().then(() =>
 {

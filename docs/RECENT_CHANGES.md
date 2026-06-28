@@ -12,10 +12,12 @@ each round of asset changes is in parentheses where relevant.
   new `notice` message; clients render it via `case 'notice'`. Toasts auto-dismiss
   (~4s), cap at 4, and a graceful `leave` sets `conn._dropped` to avoid a duplicate
   disconnect toast. (Shown in-game only — the lobby already lists players.)
-- **Mobile fullscreen.** First tap on a touch device requests fullscreen
-  (`goFullscreen` in `app.js`) so the browser address bar collapses; body uses
-  `100dvh`, viewport meta gains `viewport-fit=cover`, and the canvas refits on
-  `visualViewport` resize + `orientationchange`.
+- **Fullscreen button (CrazyGames-style).** Explicit ⛶ toggle (`toggleFullscreen` in
+  `app.js`, `.fs-btn`) — a floating button on the main menu (`#btn-fullscreen-menu`)
+  and an icon in the in-game HUD header (`#btn-fullscreen`); icon flips to 🗗 when
+  fullscreen. Collapses the mobile browser address bar. Body uses `100dvh`, viewport
+  meta gains `viewport-fit=cover`, and the canvas refits on `fullscreenchange` /
+  `visualViewport` resize / `orientationchange`.
 - **Menu/settings visual redesign (casual "wooden sign" theme).** Restyled the
   menu, settings, lobby and modals to match the `thumbnail.png` art style: a full
   scene background image (`assets/textures/background.png`, with a sky→grass gradient
