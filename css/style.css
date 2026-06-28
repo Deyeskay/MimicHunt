@@ -53,6 +53,44 @@ input {
 }
 input:focus { border-color: var(--accent-blue); outline: none; }
 
+/* --- Inline settings rows (Android-game style: label left, control right) --- */
+.settings-list { display: flex; flex-direction: column; }
+.setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 12px 2px; border-bottom: 1px solid #2f3542; text-align: left;
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row > label {
+    flex: 1; margin: 0; font-size: 0.95rem; color: var(--text-light, #fff);
+    display: flex; align-items: baseline; gap: 6px;
+}
+.setting-unit { color: #57606f; font-size: 0.78rem; }
+.setting-row input[type="number"] {
+    flex: 0 0 auto; width: 84px; padding: 8px; font-size: 0.95rem;
+}
+.setting-control { flex: 0 0 56%; display: flex; align-items: center; gap: 10px; }
+.setting-control input[type="range"] { flex: 1; }
+.setting-value {
+    min-width: 52px; text-align: right; font-weight: bold; font-size: 0.9rem;
+    color: var(--accent-blue); font-variant-numeric: tabular-nums;
+}
+/* Range slider theming (override the global big-padding input rule) */
+input[type="range"] {
+    -webkit-appearance: none; appearance: none; height: 6px; padding: 0;
+    background: #2f3542; border: none; border-radius: 999px; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--accent-blue); cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border: none; border-radius: 50%;
+    background: var(--accent-blue); cursor: pointer;
+}
+.setting-row input[type="checkbox"] {
+    flex: 0 0 auto; width: 22px; height: 22px; padding: 0; accent-color: var(--accent-green);
+}
+
 button {
     background: var(--accent-red); color: white; border: none; padding: 14px;
     border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer;

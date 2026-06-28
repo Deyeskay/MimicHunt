@@ -22,9 +22,11 @@ Check **[docs/TODO.md](docs/TODO.md)** for known issues / prioritized next work.
 ## Cardinal facts (don't re-derive these)
 
 - **No build step.** Plain scripts loaded in order by `index.html`. After editing any
-  `.js`/`.css`, bump the `?v=N` cache query (currently **`v=25`**) on **all** local
-  `<script>`/`<link>` tags in `index.html` *and* the loader version in
-  `js/levels/registry.js`, then hard-refresh.
+  `.js`/`.css`, the user **hard-refreshes** (Ctrl+Shift+R) to validate — do **not**
+  bump the `?v=N` cache query per change (only bump to bust a deployed cache).
+- **Edit text files only with the Edit/Write tools** — they preserve UTF-8 (no BOM).
+  Never use PowerShell `Set-Content`/`Out-File` on source files; it mojibakes
+  multi-byte characters (em-dashes, emoji).
 - **Cross-file globals.** Everything shares globals declared in `js/globals.js`
   (`gameState`, `localPos`, `cameraYaw`, combat consts, etc.). No modules/bundler.
 - **Verification is manual** — `node --check js/<file>.js` for syntax only; real

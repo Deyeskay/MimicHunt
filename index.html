@@ -72,24 +72,42 @@
 
     <div id="settings-screen" class="menu-screen" style="display:none;"> 
         <div class="menu-card"> 
-            <h2>Settings</h2> 
-            <div class="form-group"> 
-                <label>Hiding Time (sec)</label>
-                <input id="setting-hide-time" type="number" value="20"> 
-                <label>Hunting Time (sec)</label>
-                <input id="setting-hunt-time" type="number" value="90"> 
-                <label>Mouse Sensitivity</label>
-                <input id="setting-sensitivity" type="number" step="0.001" value="0.002"> 
-                <label>
-                    <input id="setting-invert-y" type="checkbox">
-                    Invert Camera
-                </label> 
-                <label>
-                    <input id="setting-mobile-ui" type="checkbox" checked>
-                    Show Mobile Controls
-                </label> 
-                <button id="btn-save-settings" class="success"> Save </button> 
-                <button id="btn-back-menu" class="secondary"> Back </button> 
+            <h2>Settings</h2>
+            <div class="form-group">
+                <div class="settings-list">
+                    <div class="setting-row">
+                        <label for="setting-hide-time">Hiding Time <span class="setting-unit">sec</span></label>
+                        <input id="setting-hide-time" type="number" value="20">
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-hunt-time">Hunting Time <span class="setting-unit">sec</span></label>
+                        <input id="setting-hunt-time" type="number" value="90">
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-sensitivity">Mouse Sensitivity</label>
+                        <div class="setting-control">
+                            <input id="setting-sensitivity" type="range" min="0.0005" max="0.01" step="0.0005" value="0.002">
+                            <span id="val-sensitivity" class="setting-value">0.0020</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-fov">Camera FOV</label>
+                        <div class="setting-control">
+                            <input id="setting-fov" type="range" min="45" max="90" step="1" value="60">
+                            <span id="val-fov" class="setting-value">60</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-invert-y">Invert Camera</label>
+                        <input id="setting-invert-y" type="checkbox">
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-mobile-ui">Show Mobile Controls</label>
+                        <input id="setting-mobile-ui" type="checkbox" checked>
+                    </div>
+                </div>
+                <button id="btn-save-settings" class="success" style="margin-top:14px;"> Save </button>
+                <button id="btn-back-menu" class="secondary"> Back </button>
             </div>
         </div>
     </div>

@@ -5,21 +5,39 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
-- **Per-role character models (v=26).** Seekers now render as `hunter.glb`, Hiders
-  as `player.glb` (previously both used `player.glb`). `Level.loadModels` loads both
-  GLBs through a new `Level.buildRig(gltf, path)` helper into `Level.rigs.player` /
+- **Cache `?v=` bumping retired.** The user hard-reloads manually to validate, so we
+  no longer bump the `?v=N` query on every change. `index.html` is left at its
+  committed `v=24`; ignore version mismatches in older doc notes. (Still bump only if
+  you specifically need to bust a *deployed* cache.)
+- **Settings screen redesigned + FOV/sensitivity controls.** Settings now use inline
+  rows (Android-game style: label left, control right) via `.settings-list`/
+  `.setting-row` (css). **Mouse Sensitivity** is now a range slider and there's a new
+  **Camera FOV** slider (45–90), both with a live value readout and **live apply**
+  while dragging (sensitivity is read live from `GAME_SETTINGS`; FOV applies through
+  `Level.setFov`). New setting `GAME_SETTINGS.cameraFov` (default 60); saved settings
+  are merged over defaults so old localStorage blobs gain new keys.
+  (`globals.js`, `index.html`, `css/style.css`, `js/app.js`, `Level.setFov`.)
+- **Per-role character models.** Seekers now render as `hunter.glb`, Hiders as
+  `player.glb` (previously both used `player.glb`). `Level.loadModels` loads both GLBs
+  through a new `Level.buildRig(gltf, path)` helper into `Level.rigs.player` /
   `Level.rigs.hunter` (each = `{scene, animations, clips}`); `Level.rigForRole(role)`
   picks the rig (Seeker → hunter, else player, with cross-fallback). `makeCharacterMesh`,
   `createPlayerMesh`, and the render self-heal use the rig instead of the old
   `Level.playerGLB`/`Level.playerClips` (both removed). See ANIMATION_SYSTEM.md.
-- **Player shadows (v=26).** Enabled `renderer.shadowMap` (PCFSoft); `dirLight`
-  casts shadows (2048² map, ±60 ortho frustum, near 0.5 / far 120, bias −0.0005);
-  ground `receiveShadow = true`; character clone meshes `castShadow = true` (set in
-  `buildRig` on the source + on each clone in `makeCharacterMesh`).
-- **Camera FOV 75° → 60° (v=26).** Fixes the perspective stretch toward the screen
-  edges while orbiting (Unity third-person default). `Level.init` PerspectiveCamera.
+- **Player shadows.** Enabled `renderer.shadowMap` (PCFSoft); `dirLight` casts shadows
+  (2048² map, ±60 ortho frustum, near 0.5 / far 120, bias −0.0005); ground
+  `receiveShadow = true`; character clone meshes `castShadow = true` (set in `buildRig`
+  on the source + on each clone in `makeCharacterMesh`).
+- **Camera FOV default 75° → 60°.** Fixes the perspective stretch toward the screen
+  edges while orbiting (Unity third-person default). Now sourced from
+  `GAME_SETTINGS.cameraFov` in `Level.init` and adjustable in Settings (above).
   *Note: lower FOV slightly enlarges the on-screen character; revisit CAM_BACK if it
   reads too close.*
+- **Fixed: encoding corruption.** A previous PowerShell `Set-Content -Encoding utf8`
+  version-bump re-read UTF-8 as Windows-1252 and mojibaked `index.html`/`registry.js`
+  (em-dashes, rotate-overlay emoji). Restored from git. **Never edit text files with
+  PowerShell `Set-Content`/`Out-File` — use the Edit/Write tools (they preserve
+  UTF-8, no BOM).**
 
 ## 2026-06-28
 

@@ -10,6 +10,7 @@ let GAME_SETTINGS = {
     hidingTime: 20,
     huntingTime: 90,
     mouseSensitivity: 0.002,
+    cameraFov: 60,
     invertY: false,
     showMobileControls: true,
     playerName: ''

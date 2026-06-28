@@ -76,5 +76,8 @@ camera.lookAt(camera.position + d)   // crosshair-centred aim
   phones.
 
 ## Settings that affect controls (`GAME_SETTINGS`)
-`mouseSensitivity` (also scales touch look ×1.5), `invertY`, `showMobileControls`
-(toggles `.mobile-controls` via `body.hide-mobile-controls`).
+`mouseSensitivity` (also scales touch look ×1.5), `cameraFov` (default 60; read in
+`Level.init`, changeable live via `Level.setFov` + the Settings FOV slider — clamped
+40–100), `invertY`, `showMobileControls` (toggles `.mobile-controls` via
+`body.hide-mobile-controls`). The Settings screen sliders for sensitivity and FOV
+apply live while dragging.

@@ -3,7 +3,7 @@
 Repo root layout (tracked files; `assets/models/*.glb` also tracked but omitted):
 
 ```
-index.html            game page (loads all js/ in order; ?v=26)
+index.html            game page (loads all js/ in order; ?v= no longer bumped, hard-refresh)
 editor.html           standalone level + prefab editor (separate page)
 css/style.css         all game styles (HUD, menus, responsive, rotate overlay)
 js/

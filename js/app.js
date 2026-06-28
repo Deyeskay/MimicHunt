@@ -24,15 +24,43 @@ document.getElementById('btn-back-menu').addEventListener('click', () => {
 
 document.getElementById('btn-save-settings').addEventListener('click', () => {
 
-    GAME_SETTINGS.hidingTime = parseInt(document.getElementById('setting-hide-time').value); 
-    GAME_SETTINGS.huntingTime = parseInt(document.getElementById('setting-hunt-time').value); 
-    GAME_SETTINGS.mouseSensitivity = parseFloat(document.getElementById('setting-sensitivity').value); 
-    GAME_SETTINGS.invertY = document.getElementById('setting-invert-y').checked; 
+    GAME_SETTINGS.hidingTime = parseInt(document.getElementById('setting-hide-time').value);
+    GAME_SETTINGS.huntingTime = parseInt(document.getElementById('setting-hunt-time').value);
+    GAME_SETTINGS.mouseSensitivity = parseFloat(document.getElementById('setting-sensitivity').value);
+    GAME_SETTINGS.cameraFov = parseInt(document.getElementById('setting-fov').value);
+    GAME_SETTINGS.invertY = document.getElementById('setting-invert-y').checked;
     GAME_SETTINGS.showMobileControls = document.getElementById('setting-mobile-ui').checked;
 
+    Level.setFov(GAME_SETTINGS.cameraFov);
+    refreshMobileControls();
     localStorage.setItem('hidehunt_settings',JSON.stringify(GAME_SETTINGS));
     UI.showModal("Saved","Settings saved successfully.");
 });
+
+// Live-apply the slider settings as the user drags (so changes are felt this
+// session immediately). Sensitivity is read live from GAME_SETTINGS by
+// Mechanics; FOV applies to the camera via Level.setFov.
+function syncSettingDisplays() {
+    const s = document.getElementById('setting-sensitivity');
+    const f = document.getElementById('setting-fov');
+    const sv = document.getElementById('val-sensitivity');
+    const fv = document.getElementById('val-fov');
+    if (s && sv) sv.innerText = Number(s.value).toFixed(4);
+    if (f && fv) fv.innerText = String(Math.round(Number(f.value)));
+}
+(function wireLiveSettings() {
+    const sens = document.getElementById('setting-sensitivity');
+    const fov = document.getElementById('setting-fov');
+    if (sens) sens.addEventListener('input', () => {
+        GAME_SETTINGS.mouseSensitivity = parseFloat(sens.value);
+        syncSettingDisplays();
+    });
+    if (fov) fov.addEventListener('input', () => {
+        GAME_SETTINGS.cameraFov = Math.round(Number(fov.value));
+        Level.setFov(GAME_SETTINGS.cameraFov);
+        syncSettingDisplays();
+    });
+})();
 
 document.getElementById('btn-lobby-action').addEventListener('click', () => {
     if (isHost)
@@ -92,13 +120,17 @@ const savedSettings = localStorage.getItem('hidehunt_settings');
 
 if(savedSettings)
 {
-    GAME_SETTINGS = JSON.parse(savedSettings); 
-    document.getElementById('setting-hide-time').value = GAME_SETTINGS.hidingTime; 
-    document.getElementById('setting-hunt-time').value = GAME_SETTINGS.huntingTime; 
-    document.getElementById('setting-sensitivity').value = GAME_SETTINGS.mouseSensitivity; 
-    document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY; 
+    // Merge over the defaults so settings added in newer versions (e.g. cameraFov)
+    // keep their default when an older saved blob is loaded.
+    GAME_SETTINGS = Object.assign({}, GAME_SETTINGS, JSON.parse(savedSettings));
+    document.getElementById('setting-hide-time').value = GAME_SETTINGS.hidingTime;
+    document.getElementById('setting-hunt-time').value = GAME_SETTINGS.huntingTime;
+    document.getElementById('setting-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
+    document.getElementById('setting-fov').value = GAME_SETTINGS.cameraFov;
+    document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY;
     document.getElementById('setting-mobile-ui').checked = GAME_SETTINGS.showMobileControls;
 }
+syncSettingDisplays();
 
 // Pre-fill the name input from the last saved name.
 myName = GAME_SETTINGS.playerName || '';

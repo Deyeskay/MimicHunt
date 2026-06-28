@@ -26,9 +26,12 @@ authoritative-host star topology, no backend.
 
 ## Cardinal facts (so you don't re-derive them)
 - **No build step.** Plain ES5/ES6 scripts loaded in order by `index.html`. Edit a
-  `.js`, bump the `?v=N` cache query (currently **`v=26`**) on **all** local
-  `<script>`/`<link>` tags in `index.html` *and* the loader version in
-  `js/levels/registry.js`, then hard-refresh.
+  `.js`/`.css` and **hard-refresh** (Ctrl+Shift+R) to validate — the `?v=N` cache
+  query is **no longer bumped per change** (the user hard-reloads manually). Only bump
+  it if you must bust a *deployed* cache. `index.html` currently sits at `v=24`.
+- **Edit text files only with the Edit/Write tools** (they preserve UTF-8, no BOM).
+  Never use PowerShell `Set-Content`/`Out-File` on source files — it re-encodes
+  multi-byte chars (em-dashes, emoji) into mojibake.
 - **Cross-file globals.** Everything shares globals declared in `js/globals.js`
   (`gameState`, `localPos`, `cameraYaw`, combat consts, etc.). No modules.
 - **Verification is manual** — `node --check js/<file>.js` for syntax only; real

@@ -45,7 +45,7 @@ Ordered roughly by priority. Check RECENT_CHANGES.md for what just shipped.
   `main` == `version1` (full project + models). Local-only `master`, `version2`.
 - `.claude/settings.json` has an intentional uncommitted local change — leave it out
   of commits unless asked.
-- Keep `?v=` in sync between `index.html` and `js/levels/registry.js` on every change
-  (currently **v=26**).
+- `?v=` cache-busting is **no longer bumped per change** — the user hard-refreshes
+  (Ctrl+Shift+R). `index.html` sits at `v=24`. Only bump to bust a deployed cache.
 - These docs replaced the old `game/js/...`-path docs after the folder flatten; keep
   them current (especially RECENT_CHANGES.md) when resuming.

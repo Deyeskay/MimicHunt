@@ -6,7 +6,10 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
 ## Screens (DOM, in `index.html`)
 - `#rotate-overlay` — portrait-only "rotate device" cover (landscape lock).
 - `#menu-screen` — name input, Host / Join (code), Settings button.
-- `#settings-screen` — hide/hunt time, sensitivity, invert-Y, mobile-UI toggle.
+- `#settings-screen` — inline rows (`.settings-list`/`.setting-row`): hide/hunt time,
+  Mouse Sensitivity (slider), Camera FOV (slider, live), invert-Y, mobile-UI toggle.
+  Sliders apply live (sensitivity via `GAME_SETTINGS`, FOV via `Level.setFov`); Save
+  persists to `localStorage`.
 - `#lobby-screen` — title/room code, level carousel (`#lobby-level`), player list,
   warning, Ready / Leave.
 - `#ui-layer` — in-game HUD + crosshair + mobile controls (`pointer-events:none`

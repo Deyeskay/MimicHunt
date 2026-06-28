@@ -2,11 +2,17 @@ const Level = {
     init: function() {
         const canvas = document.getElementById('gameCanvas');
         renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         scene.fog = new THREE.Fog(0x87ceeb, 20, 100);
 
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Vertical FOV from settings (default 60° — Unity's third-person default;
+        // the old 75° produced noticeable perspective stretch toward the screen
+        // edges while orbiting). Adjustable live via the Settings screen → setFov().
+        const fov = (typeof GAME_SETTINGS !== 'undefined' && GAME_SETTINGS.cameraFov) || 60;
+        camera = new THREE.PerspectiveCamera(fov, window.innerWidth / window.innerHeight, 0.1, 1000);
 
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
@@ -14,6 +20,13 @@ const Level = {
         scene.add(hemiLight);
         const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
         dirLight.position.set(10, 20, 10);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.set(2048, 2048);
+        // Orthographic shadow frustum covering the play area around the origin.
+        const sc = dirLight.shadow.camera;
+        sc.left = -60; sc.right = 60; sc.top = 60; sc.bottom = -60;
+        sc.near = 0.5; sc.far = 120;
+        dirLight.shadow.bias = -0.0005;
         scene.add(dirLight);
 
         const groundGeo = new THREE.PlaneGeometry(200, 200);
@@ -21,7 +34,7 @@ const Level = {
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = 0;
-        ground.receiveShadow = false;
+        ground.receiveShadow = true;
         scene.add(ground);
 
         // Load the first registered level as the default. Levels come from the
@@ -113,7 +126,7 @@ const Level = {
             { key: "bush", path: "assets/models/bush1.glb" }
         ];
 
-        const total = files.length + 1;   // + the animated player character
+        const total = files.length + 2;   // + the two animated characters (player + hunter)
         let loaded = 0;
         const done = () => { loaded++; if (loaded === total) callback(); };
 
@@ -126,78 +139,97 @@ const Level = {
             );
         });
 
-        // Animated player character — keep BOTH scene and animations. If it
-        // fails, the game falls back to box/cylinder primitives.
-        loader.load(
-            "assets/models/player.glb",
-            (gltf) => {
-                this.playerGLB = { scene: gltf.scene, animations: gltf.animations || [] };
-
-                // Pick clips by name with sensible fallbacks.
-                const anims = this.playerGLB.animations;
-                const byName = subs => anims.find(a =>
-                    subs.some(s => (a.name || '').toLowerCase().includes(s)));
-                this.playerClips = {
-                    idle:  byName(['idle', 'stand']) || anims[0] || null,
-                    walk:  byName(['walk', 'move']) || anims[1] || anims[0] || null,
-                    run:   byName(['run', 'sprint']) || null,
-                    jump:  byName(['jump', 'leap']) || null,
-                    shoot: byName(['shoot', 'fire', 'attack', 'aim', 'gun']) || null
-                };
-                console.log('player.glb clips:', anims.map(a => a.name),
-                    '→ idle:', this.playerClips.idle && this.playerClips.idle.name,
-                    'walk:', this.playerClips.walk && this.playerClips.walk.name,
-                    'run:', this.playerClips.run && this.playerClips.run.name,
-                    'jump:', this.playerClips.jump && this.playerClips.jump.name,
-                    'shoot:', this.playerClips.shoot && this.playerClips.shoot.name);
-
-                // Build an additive, UPPER-BODY-ONLY version of the shoot clip so it
-                // overlays on top of any lower-body locomotion (legs keep walking).
-                this.playerClips.shootAdditive = this.buildUpperBodyAdditive(this.playerClips.shoot);
-
-                done();
-            },
+        // Animated characters — Hiders use player.glb, Seekers use hunter.glb.
+        // Each is processed into a "rig" (scene + animations + split clips). If a
+        // model fails to load the game falls back to box/cylinder primitives (and
+        // if only hunter.glb is missing, seekers fall back to the player rig).
+        this.rigs = this.rigs || {};
+        const loadRig = (key, path) => loader.load(
+            path,
+            (gltf) => { this.rigs[key] = this.buildRig(gltf, path); done(); },
             undefined,
-            (err) => { console.error("Failed: player.glb", err); done(); }
+            (err) => { console.error("Failed:", path, err); done(); }
         );
+        loadRig('player', "assets/models/player.glb");   // Hider
+        loadRig('hunter', "assets/models/hunter.glb");   // Seeker
     },
 
-    // Build an ADDITIVE clip from the shoot clip that only touches UPPER-BODY
-    // bones (rotation tracks), so it can overlay on lower-body locomotion. Bones
-    // are split by name; tweak LOWER_BODY_RE if the console bone log shows the
-    // legs animating during a shot. Returns null if unavailable.
-    buildUpperBodyAdditive: function(shootClip) {
-        if (!shootClip || !this.playerGLB || !THREE.AnimationUtils) return null;
+    // Process a loaded character GLB into a rig: its scene + animations + the
+    // per-layer split clips used by makeCharacterMesh. Also flags its meshes to
+    // cast shadows (SkeletonUtils clones inherit this).
+    buildRig: function(gltf, path) {
+        const rig = { scene: gltf.scene, animations: gltf.animations || [] };
+        const anims = rig.animations;
+        const byName = subs => anims.find(a =>
+            subs.some(s => (a.name || '').toLowerCase().includes(s)));
+
+        // Pick clips by name with sensible fallbacks.
+        const c = {
+            idle:  byName(['idle', 'stand']) || anims[0] || null,
+            walk:  byName(['walk', 'move']) || anims[1] || anims[0] || null,
+            run:   byName(['run', 'sprint']) || null,
+            jump:  byName(['jump', 'leap']) || null,
+            shoot: byName(['shoot', 'fire', 'attack', 'aim', 'gun']) || null
+        };
+        console.log(path, 'clips:', anims.map(a => a.name),
+            '→ idle:', c.idle && c.idle.name, 'walk:', c.walk && c.walk.name,
+            'run:', c.run && c.run.name, 'jump:', c.jump && c.jump.name,
+            'shoot:', c.shoot && c.shoot.name);
+
+        // Split clips into LOWER-body (legs/hips) and UPPER-body (spine/arms/head)
+        // layers on disjoint bone sets — lets the upper body play the shoot clip as
+        // a true OVERRIDE while the legs keep locomotion (additive fought the
+        // animated "searching" idle).
+        c.idleLower = this.splitClip(c.idle, true);
+        c.idleUpper = this.splitClip(c.idle, false);
+        c.walkLower = this.splitClip(c.walk, true);
+        c.walkUpper = this.splitClip(c.walk, false);
+        c.runLower  = this.splitClip(c.run, true);
+        c.runUpper  = this.splitClip(c.run, false);
+        c.shootUpper = this.splitClip(c.shoot, false);  // upper-only shoot override
+        rig.clips = c;
+
+        rig.scene.traverse(o => { if (o.isMesh) o.castShadow = true; });
+        return rig;
+    },
+
+    // The character rig for a role: Seeker → hunter.glb, Hider → player.glb.
+    // Falls back to whichever rig loaded if its preferred one is missing.
+    rigForRole: function(role) {
+        const r = this.rigs || {};
+        return role === "Seeker" ? (r.hunter || r.player) : (r.player || r.hunter);
+    },
+
+    // Split a clip into a lower-body or upper-body sub-clip by bone name, so the
+    // two halves can be driven by independent layers (legs locomotion + upper-body
+    // shoot override). keepLower=true keeps hips/legs/feet; false keeps spine/
+    // arms/head. Tweak LOWER_BODY_RE if the console bone log shows a mis-split.
+    splitClip: function(clip, keepLower) {
+        if (!clip) return null;
         const LOWER_BODY_RE = /(hip|pelvis|thigh|leg|knee|shin|calf|foot|toe|root|ik)/i;
-
-        const bones = [];
-        this.playerGLB.scene.traverse(o => { if (o.isBone) bones.push(o.name); });
-        console.log('player.glb bones:', bones);
-
         const keep = [];
-        shootClip.tracks.forEach(tr => {
+        clip.tracks.forEach(tr => {
             const dot = tr.name.lastIndexOf('.');
             const bone = dot >= 0 ? tr.name.slice(0, dot) : tr.name;
-            const prop = dot >= 0 ? tr.name.slice(dot + 1) : '';
-            if (LOWER_BODY_RE.test(bone)) return;   // skip legs / hips / root
-            if (prop === 'position') return;         // rotations only (no translation drift)
-            keep.push(tr.clone());
+            if (LOWER_BODY_RE.test(bone) === !!keepLower) keep.push(tr.clone());
         });
-        if (!keep.length) { console.warn('shoot mask: no upper-body tracks found'); return null; }
-
-        const clip = new THREE.AnimationClip(shootClip.name + '_upperAdditive', shootClip.duration, keep);
-        // Reference the IDLE pose (not the shoot clip's own frame 0, which is
-        // already aiming) so the additive delta is the full arm-raise+fire and
-        // visibly overlays on the walking lower body.
-        const refClip = (this.playerClips && this.playerClips.idle) || clip;
-        THREE.AnimationUtils.makeClipAdditive(clip, 0, refClip, 30);
-        return clip;
+        if (!keep.length) return null;
+        return new THREE.AnimationClip(clip.name + (keepLower ? '_lower' : '_upper'),
+            clip.duration, keep);
     },
 
     resize: function() {
         if (!renderer) return;
         renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+    },
+
+    // Change the camera FOV live (from the Settings screen). Clamped to a sane
+    // third-person range.
+    setFov: function(fov) {
+        if (!camera) return;
+        camera.fov = Math.max(40, Math.min(100, fov));
         camera.updateProjectionMatrix();
     },
 
@@ -217,7 +249,7 @@ const Level = {
         }
 
         // Seeker or undisguised hider → animated character (when loaded).
-        if (this.playerGLB && THREE.SkeletonUtils) {
+        if (this.rigForRole(p.role) && THREE.SkeletonUtils) {
             return this.makeCharacterMesh(p);
         }
 
@@ -240,7 +272,10 @@ const Level = {
     makeCharacterMesh: function(p) {
         const root = new THREE.Group();
 
-        const model = THREE.SkeletonUtils.clone(this.playerGLB.scene);
+        // Pick the rig for this role (Seeker → hunter.glb, Hider → player.glb).
+        const rig = this.rigForRole(p.role);
+        const model = THREE.SkeletonUtils.clone(rig.scene);
+        model.traverse(o => { if (o.isMesh) o.castShadow = true; });
 
         // Scale to ~3 tall by measuring the actual clone (respects any intrinsic
         // scale in the GLB), then drop it so its feet sit at the group origin
@@ -264,40 +299,38 @@ const Level = {
         ring.position.y = 0.02;
         root.add(ring);
 
-        // Animation: build the action set; start in idle. Locomotion actions are
-        // (re)started on demand. Jump is a one-shot; shoot is an additive
-        // upper-body overlay that layers on top of the locomotion.
+        // Two animation layers on disjoint bone sets: LOWER (legs) + UPPER
+        // (spine/arms). The upper layer crossfades idle/walk <-> shoot as a real
+        // override (no additive), so a shot replaces the searching idle on the
+        // torso while the legs keep their locomotion. Jump is a full-body one-shot.
         const mixer = new THREE.AnimationMixer(model);
-        const clips = this.playerClips || {};
-        const actions = {};
-        if (clips.idle) actions.idle = mixer.clipAction(clips.idle);
-        if (clips.walk) actions.walk = mixer.clipAction(clips.walk);
-        if (clips.run)  actions.run  = mixer.clipAction(clips.run);
-        if (clips.jump) {
-            actions.jump = mixer.clipAction(clips.jump);
-            actions.jump.setLoop(THREE.LoopOnce, 1);
-            actions.jump.clampWhenFinished = true;
-        }
-        if (clips.shootAdditive) {
-            actions.shoot = mixer.clipAction(clips.shootAdditive);  // additive (clip.blendMode set)
-            actions.shoot.setEffectiveWeight(0);
-            actions.shoot.play();   // additive runs continuously; weight gates it
-        }
-        if (actions.idle) actions.idle.play();
-        else if (actions.walk) actions.walk.play();
+        const clips = rig.clips || {};
+        const act = (clip, once) => {
+            if (!clip) return null;
+            const a = mixer.clipAction(clip);
+            if (once) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; }
+            return a;
+        };
+        const lower = { idle: act(clips.idleLower), walk: act(clips.walkLower), run: act(clips.runLower) };
+        const upper = { idle: act(clips.idleUpper), walk: act(clips.walkUpper), run: act(clips.runUpper), shoot: act(clips.shootUpper) };
+        const jumpAction = act(clips.jump, true);
+        if (lower.idle) { lower.idle.setEffectiveWeight(1); lower.idle.play(); }
+        if (upper.idle) { upper.idle.setEffectiveWeight(1); upper.idle.play(); }
 
         root.userData.isCharacter = true;
         root.userData.mixer = mixer;
-        root.userData.actions = actions;
-        root.userData.hasClips = !!(actions.idle || actions.walk);
+        root.userData.lower = lower;
+        root.userData.upper = upper;
+        root.userData.jumpAction = jumpAction;
+        root.userData.hasClips = !!(lower.idle || upper.idle || lower.walk || upper.walk);
         root.userData.ring = ring;
-        root.userData.current = 'idle';
-        root.userData.lastJumpAt = 0;
+        root.userData.lowerCur = 'idle';
+        root.userData.upperCur = 'idle';
         root.userData.jumpActive = false;
-        root.userData.shootOn = false;
+        root.userData.lastJumpAt = 0;
         root.userData.lastPos = new THREE.Vector3(p.x, p.y, p.z);
-        // For the procedural fallback (player.glb ships with no clips): bob the
-        // model child around this grounded base Y so the foot ring stays put.
+        // Procedural fallback refs (model without baked clips): bob the model
+        // child around this grounded base Y so the foot ring stays put.
         root.userData.model = model;
         root.userData.modelBaseY = model.position.y;
         root.userData.animT = 0;
@@ -352,7 +385,7 @@ const Level = {
         ud.velX = (ud.velX || 0) + ((dt > 0 ? dx / dt : 0) - (ud.velX || 0)) * a;
         ud.velZ = (ud.velZ || 0) + ((dt > 0 ? dz / dt : 0) - (ud.velZ || 0)) * a;
 
-        let moving = (ud.current === 'walk' || ud.current === 'backwalk');
+        let moving = (ud.lowerCur === 'walk');
         if (ud.speed > 1.5) moving = true;
         else if (ud.speed < 0.5) moving = false;
         if (p.isCaught) moving = false;             // eliminated players freeze
@@ -372,72 +405,60 @@ const Level = {
             return;
         }
 
-        // --- Base layer: jump one-shot overrides locomotion ---
-        if (p.jumpAt && p.jumpAt > (ud.lastJumpAt || 0) && ud.actions.jump) {
+        // --- Jump: full-body one-shot that overrides BOTH layers ---
+        if (p.jumpAt && p.jumpAt > (ud.lastJumpAt || 0) && ud.jumpAction) {
             ud.lastJumpAt = p.jumpAt;
-            const j = ud.actions.jump;
-            j.reset(); j.setEffectiveTimeScale(1); j.setEffectiveWeight(1);
-            j.fadeIn(0.1); j.play();
-            const prev = ud.actions[ud.current === 'backwalk' ? 'walk' : ud.current];
-            if (prev && prev !== j) prev.fadeOut(0.1);
+            const j = ud.jumpAction;
+            j.reset(); j.setEffectiveTimeScale(1); j.setEffectiveWeight(1); j.fadeIn(0.1); j.play();
+            this._fadeOutLayer(ud.lower, 0.1);
+            this._fadeOutLayer(ud.upper, 0.1);
             ud.jumpActive = true;
-            ud.current = 'jump';
         }
         if (ud.jumpActive) {
-            const j = ud.actions.jump;
+            const j = ud.jumpAction;
             const dur = j ? j.getClip().duration : 0;
-            if (!j || j.time >= dur - 0.02 || !j.isRunning()) ud.jumpActive = false;
-        }
-
-        if (!ud.jumpActive) {
-            // Direction relative to facing → forward walk or reversed back-walk.
-            const fwdX = Math.sin(p.rotY), fwdZ = Math.cos(p.rotY);
-            const dotF = ud.velX * fwdX + ud.velZ * fwdZ;
-            let target = !moving ? 'idle' : (dotF < -0.2 ? 'backwalk' : 'walk');
-            if (target !== 'idle' && !ud.actions.walk) target = 'idle';
-
-            if (target !== ud.current) this._setBaseAction(ud, target);
-            // Keep the walk action's direction in sync every frame.
-            if ((ud.current === 'walk' || ud.current === 'backwalk') && ud.actions.walk) {
-                ud.actions.walk.setEffectiveTimeScale(ud.current === 'backwalk' ? -1 : 1);
+            if (!j || j.time >= dur - 0.02 || !j.isRunning()) {
+                ud.jumpActive = false;
+                if (j) j.fadeOut(0.15);
+                this._playLayer(ud.lower, ud.lowerCur, 0.15);
+                this._playLayer(ud.upper, ud.upperCur, 0.15);
+            } else {
+                ud.mixer.update(dt);
+                return;
             }
         }
 
-        // --- Additive overlay: upper-body shoot while in the shoot window ---
-        if (ud.actions.shoot) {
-            const shooting = !p.isCaught && Network.now() < (p.shootingUntil || 0);
-            if (shooting && !ud.shootOn) {
-                ud.actions.shoot.reset();
-                ud.actions.shoot.setEffectiveWeight(1);
-                ud.actions.shoot.fadeIn(0.1);
-                ud.actions.shoot.play();
-                ud.shootOn = true;
-            } else if (!shooting && ud.shootOn) {
-                ud.actions.shoot.fadeOut(0.25);
-                ud.shootOn = false;
-            }
-        }
+        // Movement direction relative to facing → reversed walk for back-pedal.
+        const fwdX = Math.sin(p.rotY), fwdZ = Math.cos(p.rotY);
+        const back = moving && (ud.velX * fwdX + ud.velZ * fwdZ) < -0.2;
+
+        // LOWER body: idle / walk (back-pedal = reversed walk).
+        const lowerT = (moving && ud.lower.walk) ? 'walk' : 'idle';
+        if (lowerT !== ud.lowerCur) { this._crossfade(ud.lower, ud.lowerCur, lowerT, 0.2); ud.lowerCur = lowerT; }
+        if (ud.lower.walk) ud.lower.walk.setEffectiveTimeScale(back ? -1 : 1);
+
+        // UPPER body: shoot overrides; otherwise mirror the locomotion.
+        const shooting = !p.isCaught && ud.upper.shoot && Network.now() < (p.shootingUntil || 0);
+        const upperT = shooting ? 'shoot' : ((moving && ud.upper.walk) ? 'walk' : 'idle');
+        if (upperT !== ud.upperCur) { this._crossfade(ud.upper, ud.upperCur, upperT, 0.15); ud.upperCur = upperT; }
+        if (ud.upper.walk && upperT === 'walk') ud.upper.walk.setEffectiveTimeScale(back ? -1 : 1);
 
         ud.mixer.update(dt);
     },
 
-    // Crossfade the base locomotion action. 'backwalk' reuses the walk action
-    // (reversed via timeScale by the caller), so switching walk<->backwalk does
-    // not refade.
-    _setBaseAction: function(ud, target) {
-        const map = { idle: 'idle', walk: 'walk', backwalk: 'walk', run: 'run', jump: 'jump' };
-        const nextName = ud.actions[map[target]] ? map[target] : 'idle';
-        const prevName = map[ud.current] || ud.current;
-        const next = ud.actions[nextName];
-        const prev = ud.actions[prevName];
-        if (next && next !== prev) {
-            next.reset();
-            next.setEffectiveWeight(1);
-            next.fadeIn(0.2);
-            next.play();
-            if (prev) prev.fadeOut(0.2);
-        }
-        ud.current = target;
+    // Crossfade within one layer (disjoint bone set → clean override).
+    _crossfade: function(layer, fromName, toName, dur) {
+        if (fromName === toName) return;
+        const next = layer[toName], prev = layer[fromName];
+        if (next) { next.reset(); next.setEffectiveWeight(1); next.fadeIn(dur); next.play(); }
+        if (prev && prev !== next) prev.fadeOut(dur);
+    },
+    _fadeOutLayer: function(layer, dur) {
+        for (const k in layer) if (layer[k]) layer[k].fadeOut(dur);
+    },
+    _playLayer: function(layer, name, dur) {
+        const a = layer[name] || layer.idle;
+        if (a) { a.reset(); a.setEffectiveWeight(1); a.fadeIn(dur); a.play(); }
     },
 
     // Aim ray for a shot. The HIT ray (o*, d*) is the CAMERA ray through the
@@ -591,7 +612,7 @@ const Level = {
             // it now — this self-heals the load race that left one client on
             // primitives.
             const wantCharacter = (p.role === "Seeker" || p.disguiseType === "player")
-                && !!this.playerGLB && !!THREE.SkeletonUtils;
+                && !!this.rigForRole(p.role) && !!THREE.SkeletonUtils;
 
             if (
                 playerMeshes[id] &&
