@@ -104,12 +104,18 @@ body{
     border-bottom:1px solid var(--border);
     border-radius:var(--radius) var(--radius) 0 0;
 }
+.search-wrap{ position:relative; margin:6px; }
 #hierarchy-search{
-    margin:6px; padding:7px 10px; font-size:12.5px;
+    width:100%; margin:0; padding:7px 26px 7px 10px; font-size:12.5px;
     background:#1b1b22; color:var(--text); border:1px solid var(--border);
     border-radius:6px; outline:none;
 }
 #hierarchy-search:focus{ border-color:var(--accent); }
+.search-clear{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    cursor:pointer; color:var(--muted); font-size:12px; display:none; user-select:none;
+}
+.search-clear:hover{ color:var(--text); }
 #hierarchyList{
     flex:1;
     overflow-y:auto;
@@ -324,6 +330,26 @@ button{
 .pf-del{ background:transparent; border:none; color:var(--muted); font-size:14px; cursor:pointer; padding:7px 6px; border-radius:6px; }
 .pf-del:hover{ color:#fca5a5; background:rgba(239,68,68,.15); }
 .pf-empty{ color:var(--muted); font-size:12.5px; padding:6px 0; }
+.pf-flag-disabled{ opacity:0.45; cursor:not-allowed; }
+.pf-flag-warn{ color:#ff6b6b; font-size:11px; line-height:1.3; margin:2px 0 6px 4px; }
+
+/* Inspector → Materials section */
+.mat-head{ display:flex; align-items:center; justify-content:space-between; }
+.mat-head-actions{ display:flex; align-items:center; gap:8px; }
+.mat-save{ cursor:pointer; font-size:15px; }
+.mat-save:hover{ filter:brightness(1.3); }
+.mat-select{ width:100%; margin-bottom:8px; background:#1b1b22; color:var(--text);
+    border:1px solid var(--border); border-radius:6px; padding:5px; font-size:12px; }
+.mat-row{ display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; color:var(--muted); }
+.mat-row > span:first-child{ flex:0 0 64px; }
+.mat-row input[type=range]{ flex:1; }
+.mat-row input[type=color]{ width:34px; height:24px; border:1px solid var(--border);
+    background:transparent; cursor:pointer; padding:0; border-radius:4px; }
+.mat-val{ flex:0 0 34px; text-align:right; font-style:normal; color:var(--text); }
+.mat-thumb{ width:26px; height:26px; border:1px solid var(--border); border-radius:4px;
+    background:#11141a center/cover no-repeat; flex:0 0 26px; }
+.mat-mapclear{ cursor:pointer; color:#ff6b6b; font-size:12px; }
+.btn-mini{ padding:4px 9px; font-size:11px; }
 
 /* ---------- View gizmo (Unity-style axis snap + Persp/Iso toggle) ---------- */
 #viewGizmo{ position:fixed; top:18px; right:320px; width:104px; height:104px; z-index:120; user-select:none; }
@@ -396,7 +422,10 @@ button{
 
     <div id="hierarchy" class="panel" tabindex="0">
         <div class="hierarchy-header">Hierarchy</div>
-        <input id="hierarchy-search" type="text" placeholder="Search objects…" autocomplete="off">
+        <div class="search-wrap">
+            <input id="hierarchy-search" type="text" placeholder="Search objects…" autocomplete="off">
+            <span id="hierarchy-search-clear" class="search-clear" title="Clear">✕</span>
+        </div>
         <div id="hierarchyList"></div>
     </div>
 
@@ -440,6 +469,42 @@ button{
                 <label><input type="checkbox" id="chkSpawnPoint"> Spawn Point</label>
                 <label><input type="checkbox" id="chkSeekerSpawn"> Seeker Spawn</label>
                 <label><input type="checkbox" id="chkHiderSpawn"> Hider Spawn</label>
+            </div>
+        </div>
+
+        <div class="field" id="materialsField">
+            <label class="mat-head">Materials
+                <span class="mat-head-actions">
+                    <span id="matResetBtn" class="mat-save" title="Reset materials to original values" style="display:none;">↺</span>
+                    <span id="matSaveBtn" class="mat-save" title="Save edited material to a new .glb" style="display:none;">💾</span>
+                </span>
+            </label>
+            <div id="matNote" class="pf-empty">Select one object to edit materials.</div>
+            <div id="matControls" style="display:none;">
+                <select id="matSelect" class="mat-select" style="display:none;"></select>
+                <div class="mat-row"><span>Albedo</span><input id="matColor" type="color"></div>
+                <div class="mat-row"><span>Opacity</span>
+                    <input id="matOpacity" type="range" min="0" max="1" step="0.01">
+                    <i id="matOpacityVal" class="mat-val">1.00</i>
+                </div>
+                <div class="mat-row" id="matEmissiveRow"><span>Emission</span>
+                    <input id="matEmissive" type="color">
+                    <input id="matEmissiveInt" type="range" min="0" max="3" step="0.05" title="Emission intensity">
+                </div>
+                <div class="mat-row" id="matMetalRow"><span>Metallic</span>
+                    <input id="matMetalness" type="range" min="0" max="1" step="0.01">
+                    <i id="matMetalnessVal" class="mat-val">0.00</i>
+                </div>
+                <div class="mat-row" id="matRoughRow"><span>Roughness</span>
+                    <input id="matRoughness" type="range" min="0" max="1" step="0.01">
+                    <i id="matRoughnessVal" class="mat-val">1.00</i>
+                </div>
+                <div class="mat-row"><span>Texture</span>
+                    <span id="matMapThumb" class="mat-thumb"></span>
+                    <button class="btn btn-mini" id="matMapUploadBtn">Upload</button>
+                    <span id="matMapClear" class="mat-mapclear" title="Remove texture" style="display:none;">✕</span>
+                    <input id="matMapFile" type="file" accept="image/*" style="display:none;">
+                </div>
             </div>
         </div>
 
@@ -564,9 +629,24 @@ button{
     <div id="vgPersp" title="Toggle Perspective / Orthographic">Persp</div>
 </div>
 
+<!-- Export the selected object (with edited materials) as a new .glb -->
+<div id="matSaveModal" class="help-modal">
+    <div class="help-card">
+        <h2>Save material → .glb</h2>
+        <label class="modal-label">File name</label>
+        <input id="matSaveName" class="modal-input" type="text" placeholder="tree_custom" maxlength="40">
+        <div id="matSaveStatus" class="modal-status"></div>
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="exportSelectedGlb()">⬇ Export .glb</button>
+            <button class="btn" onclick="closeModal('matSaveModal')">Close</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 <script src="js/prefabs.js?v=7"></script>
 <script src="js/props.js?v=7"></script>
 
@@ -886,10 +966,29 @@ function renderPrefabEditor() {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.checked = !!def[f];
-        cb.onchange = () => { def[f] = cb.checked; persistPrefabs(); collidersDirty = true; refreshPrefabPreview(); };
+
+        // 'collision' is locked while 'canDisguise' is on — disguised hiders rely on
+        // the prop's collider, so changing it is discouraged. Grey it out + warn.
+        const lockCollision = (f === 'collision' && def.canDisguise);
+        if (lockCollision) { cb.disabled = true; label.classList.add('pf-flag-disabled'); }
+
+        cb.onchange = () => {
+            def[f] = cb.checked;
+            persistPrefabs();
+            collidersDirty = true;
+            refreshPrefabPreview();
+            if (f === 'canDisguise') renderPrefabEditor();   // re-lock/unlock collision
+        };
         label.appendChild(cb);
         label.appendChild(document.createTextNode(' ' + f));
         flags.appendChild(label);
+
+        if (lockCollision) {
+            const warn = document.createElement('div');
+            warn.className = 'pf-flag-warn';
+            warn.innerHTML = '⚠ Not recommended to change while “canDisguise” is on — disguised hiders rely on this collider.';
+            flags.appendChild(warn);
+        }
     });
     renderPrefabColliderRows();
     refreshPrefabPreview();
@@ -1202,6 +1301,234 @@ function clearInspector() {
     ['chkCollision','chkClimbable','chkHideSpot','chkSpawnPoint','chkSeekerSpawn','chkHiderSpawn'].forEach(id => {
         const el = document.getElementById(id); el.checked = false; el.indeterminate = false;
     });
+    // Materials section → idle state.
+    const mc = document.getElementById('matControls'); if (mc) mc.style.display = 'none';
+    const mn = document.getElementById('matNote'); if (mn) { mn.style.display = ''; mn.textContent = 'Select one object to edit materials.'; }
+    _setMatDirtyUI(false);
+}
+
+//////////////////////////////////////////////////////
+// Inspector → Materials (Unity-style) + GLB export
+//////////////////////////////////////////////////////
+let activeMaterials = [];   // distinct materials of the single inspected object
+
+function getObjectMaterials(obj) {
+    const mats = [];
+    obj.traverse(c => {
+        if (c.isMesh && c.material) {
+            (Array.isArray(c.material) ? c.material : [c.material]).forEach(m => {
+                if (m && mats.indexOf(m) === -1) { _snapshotMaterial(m); mats.push(m); }
+            });
+        }
+    });
+    return mats;
+}
+// Capture a material's pristine values on first inspection, so Reset can restore them.
+function _snapshotMaterial(m) {
+    if (!m.userData) m.userData = {};
+    if (m.userData._matOrig) return;
+    m.userData._matOrig = {
+        color: m.color ? m.color.getHex() : null,
+        opacity: (m.opacity != null ? m.opacity : 1),
+        transparent: !!m.transparent,
+        emissive: m.emissive ? m.emissive.getHex() : null,
+        emissiveIntensity: (m.emissiveIntensity != null ? m.emissiveIntensity : 1),
+        metalness: ('metalness' in m) ? m.metalness : null,
+        roughness: ('roughness' in m) ? m.roughness : null,
+        map: m.map || null
+    };
+}
+// Dispose a material's current map only if it isn't the pristine original (so Reset works).
+function _disposeIfNotOrig(m) {
+    const o = m.userData && m.userData._matOrig;
+    if (m.map && (!o || m.map !== o.map)) m.map.dispose();
+}
+// Show/hide the Save + Reset icons together based on the dirty state.
+function _setMatDirtyUI(dirty) {
+    const sb = document.getElementById('matSaveBtn');
+    const rb = document.getElementById('matResetBtn');
+    if (sb) sb.style.display = dirty ? '' : 'none';
+    if (rb) rb.style.display = dirty ? '' : 'none';
+}
+function _matHex(col) { return '#' + col.getHexString(); }
+function _singleSelected() { return selectedObjects.length === 1 ? selectedObjects[0] : null; }
+function _activeMat() {
+    const s = _singleSelected();
+    if (!s) return null;
+    return activeMaterials[s.userData._matIdx || 0] || null;
+}
+function _markMatDirty() {
+    const s = _singleSelected();
+    if (!s) return;
+    s.userData.materialDirty = true;
+    _setMatDirtyUI(true);
+}
+
+// Rebuild the Materials section for the current selection (single object only).
+function refreshMaterialsSection() {
+    const note = document.getElementById('matNote');
+    const ctrls = document.getElementById('matControls');
+    const saveBtn = document.getElementById('matSaveBtn');
+    if (!note || !ctrls) return;
+
+    const s = _singleSelected();
+    activeMaterials = s ? getObjectMaterials(s) : [];
+    const usable = s && s.userData.data && s.userData.data.model !== 'spawn' && activeMaterials.length;
+
+    if (!usable) {
+        note.style.display = '';
+        note.textContent = (selectedObjects.length > 1) ? 'Select one object to edit materials.'
+            : (s ? 'No editable material.' : 'Select one object to edit materials.');
+        ctrls.style.display = 'none';
+        _setMatDirtyUI(false);
+        return;
+    }
+    note.style.display = 'none';
+    ctrls.style.display = '';
+    _setMatDirtyUI(!!s.userData.materialDirty);
+
+    const sel = document.getElementById('matSelect');
+    if (activeMaterials.length > 1) {
+        sel.style.display = '';
+        sel.innerHTML = '';
+        activeMaterials.forEach((m, i) => {
+            const o = document.createElement('option');
+            o.value = i; o.textContent = m.name || ('Material ' + (i + 1));
+            sel.appendChild(o);
+        });
+        let idx = s.userData._matIdx || 0;
+        if (idx >= activeMaterials.length) idx = 0;
+        s.userData._matIdx = idx;
+        sel.value = idx;
+    } else {
+        sel.style.display = 'none';
+        s.userData._matIdx = 0;
+    }
+    _populateMatControls();
+}
+
+function _populateMatControls() {
+    const m = _activeMat();
+    if (!m) return;
+    const row = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+
+    document.getElementById('matColor').value = m.color ? _matHex(m.color) : '#ffffff';
+    const op = (m.opacity != null ? m.opacity : 1);
+    document.getElementById('matOpacity').value = op;
+    document.getElementById('matOpacityVal').textContent = Number(op).toFixed(2);
+
+    const hasEmis = !!m.emissive;
+    row('matEmissiveRow', hasEmis);
+    if (hasEmis) {
+        document.getElementById('matEmissive').value = _matHex(m.emissive);
+        document.getElementById('matEmissiveInt').value = (m.emissiveIntensity != null ? m.emissiveIntensity : 1);
+    }
+    const hasMetal = ('metalness' in m);
+    row('matMetalRow', hasMetal);
+    if (hasMetal) { document.getElementById('matMetalness').value = m.metalness; document.getElementById('matMetalnessVal').textContent = Number(m.metalness).toFixed(2); }
+    const hasRough = ('roughness' in m);
+    row('matRoughRow', hasRough);
+    if (hasRough) { document.getElementById('matRoughness').value = m.roughness; document.getElementById('matRoughnessVal').textContent = Number(m.roughness).toFixed(2); }
+
+    const thumb = document.getElementById('matMapThumb');
+    const clr = document.getElementById('matMapClear');
+    const src = m.map && m.map.image && m.map.image.src;
+    if (src) { thumb.style.background = '#11141a center/cover no-repeat'; thumb.style.backgroundImage = 'url(' + src + ')'; clr.style.display = ''; }
+    else if (m.map) { thumb.style.background = '#3a3a44'; thumb.style.backgroundImage = 'none'; clr.style.display = ''; }
+    else { thumb.style.background = '#11141a'; thumb.style.backgroundImage = 'none'; clr.style.display = 'none'; }
+}
+
+function wireMaterialControls() {
+    const byId = id => document.getElementById(id);
+    byId('matSelect').addEventListener('change', e => {
+        const s = _singleSelected(); if (s) { s.userData._matIdx = parseInt(e.target.value) || 0; _populateMatControls(); }
+    });
+    byId('matColor').addEventListener('input', e => { const m = _activeMat(); if (m && m.color) { m.color.set(e.target.value); m.needsUpdate = true; _markMatDirty(); } });
+    byId('matOpacity').addEventListener('input', e => {
+        const m = _activeMat(); if (!m) return; const v = parseFloat(e.target.value);
+        m.opacity = v; m.transparent = v < 1; m.needsUpdate = true;
+        byId('matOpacityVal').textContent = v.toFixed(2); _markMatDirty();
+    });
+    byId('matEmissive').addEventListener('input', e => { const m = _activeMat(); if (m && m.emissive) { m.emissive.set(e.target.value); m.needsUpdate = true; _markMatDirty(); } });
+    byId('matEmissiveInt').addEventListener('input', e => { const m = _activeMat(); if (m && m.emissiveIntensity != null) { m.emissiveIntensity = parseFloat(e.target.value); m.needsUpdate = true; _markMatDirty(); } });
+    byId('matMetalness').addEventListener('input', e => { const m = _activeMat(); if (!m || !('metalness' in m)) return; const v = parseFloat(e.target.value); m.metalness = v; byId('matMetalnessVal').textContent = v.toFixed(2); _markMatDirty(); });
+    byId('matRoughness').addEventListener('input', e => { const m = _activeMat(); if (!m || !('roughness' in m)) return; const v = parseFloat(e.target.value); m.roughness = v; byId('matRoughnessVal').textContent = v.toFixed(2); _markMatDirty(); });
+
+    byId('matMapUploadBtn').addEventListener('click', () => byId('matMapFile').click());
+    byId('matMapFile').addEventListener('change', e => {
+        const m = _activeMat(); const file = e.target.files && e.target.files[0];
+        if (m && file) {
+            const reader = new FileReader();
+            reader.onload = ev => new THREE.TextureLoader().load(ev.target.result, tex => {
+                tex.flipY = false; tex.encoding = THREE.sRGBEncoding;
+                _disposeIfNotOrig(m); m.map = tex; m.needsUpdate = true; _markMatDirty(); _populateMatControls();
+            });
+            reader.readAsDataURL(file);
+        }
+        e.target.value = '';
+    });
+    byId('matMapClear').addEventListener('click', () => { const m = _activeMat(); if (!m) return; _disposeIfNotOrig(m); m.map = null; m.needsUpdate = true; _markMatDirty(); _populateMatControls(); });
+
+    byId('matResetBtn').addEventListener('click', resetMaterials);
+
+    byId('matSaveBtn').addEventListener('click', () => {
+        const s = _singleSelected(); if (!s) return;
+        byId('matSaveName').value = (s.userData.data.model || 'model') + '_custom';
+        byId('matSaveStatus').textContent = '';
+        openModal('matSaveModal');
+    });
+}
+wireMaterialControls();
+
+// Restore every material of the selected object to its pristine (as-loaded) values.
+function resetMaterials() {
+    const s = _singleSelected();
+    if (!s) return;
+    activeMaterials.forEach(m => {
+        const o = m.userData && m.userData._matOrig;
+        if (!o) return;
+        if (o.color != null && m.color) m.color.setHex(o.color);
+        m.opacity = o.opacity; m.transparent = o.transparent;
+        if (o.emissive != null && m.emissive) m.emissive.setHex(o.emissive);
+        if (m.emissiveIntensity != null) m.emissiveIntensity = o.emissiveIntensity;
+        if (o.metalness != null && 'metalness' in m) m.metalness = o.metalness;
+        if (o.roughness != null && 'roughness' in m) m.roughness = o.roughness;
+        if (m.map !== o.map) { _disposeIfNotOrig(m); m.map = o.map; }
+        m.needsUpdate = true;
+    });
+    s.userData.materialDirty = false;
+    _setMatDirtyUI(false);
+    _populateMatControls();
+}
+
+// Export the selected object (edited materials/textures baked in) as a new .glb.
+function exportSelectedGlb() {
+    const s = _singleSelected();
+    const status = document.getElementById('matSaveStatus');
+    if (!s) { status.textContent = 'No single object selected.'; return; }
+    if (typeof THREE.GLTFExporter === 'undefined') { status.textContent = 'GLTFExporter failed to load.'; return; }
+    const name = ((document.getElementById('matSaveName').value || 'model').trim()) || 'model';
+    status.textContent = 'Exporting…';
+
+    // Clean clone: upright at origin (instance scale kept) so the .glb is a reusable
+    // model carrying the edited materials/textures.
+    const clone = s.clone(true);
+    clone.position.set(0, 0, 0);
+    clone.rotation.set(0, 0, 0);
+
+    new THREE.GLTFExporter().parse(clone, result => {
+        try {
+            const blob = new Blob([result], { type: 'model/gltf-binary' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = name + '.glb';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+            s.userData.materialDirty = false;
+            _setMatDirtyUI(false);
+            status.textContent = 'Saved ' + name + '.glb ✓ — drop it in assets/models/ + register to reuse.';
+        } catch (err) { status.textContent = 'Export failed: ' + err.message; }
+    }, { binary: true });
 }
 
 let isTransforming = false;
@@ -1896,6 +2223,8 @@ function updateInspectorFields() {
     _setChkField('chkSpawnPoint', _commonBool('spawnPoint'));
     _setChkField('chkSeekerSpawn',_commonBool('seekerSpawn'));
     _setChkField('chkHiderSpawn', _commonBool('hiderSpawn'));
+
+    refreshMaterialsSection();
 }
 
 
@@ -2520,10 +2849,16 @@ document.querySelectorAll('#viewGizmo .vg-axis, #viewGizmo .vg-hub').forEach(el 
     el.addEventListener('click', () => snapView(el.dataset.view)));
 document.getElementById('vgPersp').addEventListener('click', toggleProjection);
 
-// Wire the hierarchy search box → filter the list live.
+// Wire the hierarchy search box → filter the list live, with a clear ✕.
 (function () {
     const hs = document.getElementById('hierarchy-search');
-    if (hs) hs.addEventListener('input', () => { hierarchyFilter = hs.value; refreshHierarchy(); });
+    const clr = document.getElementById('hierarchy-search-clear');
+    if (!hs) return;
+    const syncClear = () => { if (clr) clr.style.display = hs.value ? 'block' : 'none'; };
+    hs.addEventListener('input', () => { hierarchyFilter = hs.value; refreshHierarchy(); syncClear(); });
+    if (clr) clr.addEventListener('click', () => {
+        hs.value = ''; hierarchyFilter = ''; refreshHierarchy(); syncClear(); hs.focus();
+    });
 })();
 
 

@@ -25,7 +25,8 @@
       "Bash(node --check js/ui.js)",
       "Bash(node --check /tmp/ed_search.js)",
       "Bash(node --check /tmp/ed_s2.js)",
-      "Bash(node --check /tmp/ed_insp.js)"
+      "Bash(node --check /tmp/ed_insp.js)",
+      "Bash(node --check /tmp/ed_mat.js)"
     ]
   }
 }
