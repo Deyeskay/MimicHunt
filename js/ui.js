@@ -40,6 +40,19 @@ const UI = {
         document.getElementById('status-msg').innerText = msg;
     },
 
+    // Transient bottom-center notification (player left / eliminated / disconnected).
+    // Auto-dismisses; CSS handles the fade in/out.
+    toast: function(text) {
+        const box = document.getElementById('toast-container');
+        if (!box) return;
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.innerText = text;
+        box.appendChild(el);
+        while (box.children.length > 4) box.removeChild(box.firstChild);   // cap visible
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4100);
+    },
+
     transitionToGame: function() {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'none';

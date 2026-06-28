@@ -116,6 +116,40 @@ function animate() {
 
 // --- INITIALIZE APPLICATION ---
 window.addEventListener('resize', () => Level.resize());
+// Mobile browser toolbars show/hide without firing 'resize' — refit on those too.
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => Level.resize());
+window.addEventListener('orientationchange', () => setTimeout(() => Level.resize(), 250));
+
+// --- Fullscreen toggle (explicit button, like CrazyGames) ---
+// Hides the mobile browser address bar and gives the game the whole screen.
+function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+}
+function enterFullscreen() {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (req) { try { req.call(el); } catch (e) {} }
+    if (screen.orientation && screen.orientation.lock) {
+        try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
+    }
+}
+function exitFullscreen() {
+    const x = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if (x) { try { x.call(document); } catch (e) {} }
+}
+function toggleFullscreen() { isFullscreen() ? exitFullscreen() : enterFullscreen(); }
+
+function syncFullscreenButtons() {
+    const fs = isFullscreen();
+    document.querySelectorAll('.fs-btn').forEach(b => {
+        b.innerText = fs ? '🗗' : '⛶';
+        b.title = fs ? 'Exit Fullscreen' : 'Fullscreen';
+    });
+}
+document.querySelectorAll('.fs-btn').forEach(b => b.addEventListener('click', toggleFullscreen));
+document.addEventListener('fullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
+document.addEventListener('webkitfullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
+syncFullscreenButtons();
 // Load all level files (registry.js → LEVEL_FILES) before init reads LEVELS.
 loadLevelScripts().then(() =>
 {

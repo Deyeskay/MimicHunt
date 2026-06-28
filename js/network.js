@@ -76,6 +76,14 @@ const Network = {
         });
     },
 
+    // Host-only: show an event toast locally AND on every client (e.g. a player
+    // left / was eliminated / disconnected). Clients render it via case 'notice'.
+    notify(text) {
+        if (!text) return;
+        if (typeof UI !== 'undefined' && UI.toast) UI.toast(text);
+        this.broadcast({ type: 'notice', text: text });
+    },
+
     sendToHost(packet) {
         if (connToHost && connToHost.open) connToHost.send(packet);
     },
@@ -344,7 +352,12 @@ const Network = {
         // Hit-marker on our own crosshair when we (the host seeker) land a shot.
         if (hit && shooterId === myId) UI.hitMarker();
 
-        if (eliminated) Mechanics.checkWinConditions();
+        if (eliminated) {
+            const tn = (gameState.players[targetId] && gameState.players[targetId].name) || 'A hider';
+            const sn = (shooter && shooter.name) || 'Seeker';
+            this.notify('💀 ' + tn + ' was eliminated by ' + sn);
+            Mechanics.checkWinConditions();
+        }
     },
 
     /*=================================================================
@@ -570,14 +583,18 @@ const Network = {
                 // Lobby liveness heartbeat only — timestamp already refreshed.
                 break;
 
-            case 'leave':
-                // Client voluntarily left
+            case 'leave': {
+                // Client voluntarily left.
+                const lname = (gameState.players[conn.peer] && gameState.players[conn.peer].name) || 'A player';
+                conn._dropped = true;   // suppress the follow-up close → no duplicate toast
                 delete gameState.players[conn.peer];
                 connections = connections.filter(c => c !== conn);
                 UI.updateLobby();
                 this.broadcast({ type: 'lobbySync', players: gameState.players });
+                this.notify('👋 ' + lname + ' left the game');
                 this.checkHostAlone();
                 break;
+            }
 
             case 'lobbyReady':
                 if (gameState.players[conn.peer]) {
@@ -669,6 +686,7 @@ const Network = {
         if (conn._dropped) return;
         conn._dropped = true;
 
+        const dname = (gameState.players[conn.peer] && gameState.players[conn.peer].name) || 'A player';
         delete gameState.players[conn.peer];
         connections = connections.filter(c => c.peer !== conn.peer);
         // Stop awaiting a survivor that will never reconnect.
@@ -678,6 +696,7 @@ const Network = {
         }
         UI.updateLobby();
         this.broadcast({ type: 'lobbySync', players: gameState.players });
+        this.notify('⚠️ ' + dname + ' disconnected');
         this.checkHostAlone();
     },
 
@@ -919,6 +938,11 @@ const Network = {
                 if (p) p.isCaught = true;
                 break;
             }
+
+            case 'notice':
+                // Host-broadcast event toast (player left / eliminated / disconnected).
+                if (data.text) UI.toast(data.text);
+                break;
 
             case 'shot': {
                 // Authoritative result of a seeker's energy-pulse shot.

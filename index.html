@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>3D P2P Hide & Hunt</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,6 +40,7 @@
             <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
             <div class="hud-card" id="combat-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
             <div class="hud-card" id="player-count-card" style="border-color: var(--accent-blue); margin-left:auto;">👥 <span id="player-count">1</span></div>
+            <button id="btn-fullscreen" class="interactive fs-btn hud-fs-btn" title="Fullscreen">⛶</button>
             <button id="btn-leave" class="interactive leave">Exit Match</button>
         </div>
 
@@ -48,6 +49,9 @@
         <!-- Bottom-center HUD: hider health bar / seeker reload indicator. -->
         <div id="health-hud" class="bottom-center-hud" style="display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
         <div id="reload-indicator" class="bottom-center-hud" style="display:none;">RELOADING…</div>
+
+        <!-- Event toasts (player left / eliminated / disconnected), stacked above the bottom HUD. -->
+        <div id="toast-container"></div>
 
         <div id="mouse-hint" style="position:absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none;">
             Click screen to Lock Mouse. Press ESC to unlock.
@@ -64,6 +68,7 @@
     </div>
 
     <div id="menu-screen" class="menu-screen">
+        <button id="btn-fullscreen-menu" class="fs-btn fs-float" title="Fullscreen">⛶</button>
         <div class="menu-card">
             <h1 class="game-title"><span class="t-3d">3D</span> <span class="t-hide">HIDE&nbsp;&amp;</span> <span class="t-hunt">HUNT</span></h1>
             <p class="subtitle">MODULAR WEBRTC PROTOTYPE</p>
