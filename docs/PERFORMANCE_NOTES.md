@@ -45,8 +45,10 @@ costs and choices are worth knowing.
 ## Assets
 - `player.glb` (Hider) and `hunter.glb` (Seeker) are each loaded once into a rig
   (`Level.rigs.player` / `Level.rigs.hunter`); all characters of a role clone their
-  rig's scene via SkeletonUtils. Props are tiny. No textures (flat materials +
-  lighting), keeping draw state simple.
+  rig's scene via SkeletonUtils. Props are tiny. The only textures are two small
+  **procedural canvas textures** (256² grass for the ground via
+  `Level.makeGroundTexture`, 256² stone-brick for walls via `PropLevel.getWallTexture`,
+  cached/shared) — generated in code, no image files; models stay flat-shaded.
 
 ## Lighting & shadows
 - `AmbientLight(0xffffff,0.9)` + `HemisphereLight(...,0.6)` + `DirectionalLight(...,1.2)`.

@@ -30,7 +30,8 @@ const Level = {
         scene.add(dirLight);
 
         const groundGeo = new THREE.PlaneGeometry(200, 200);
-        const groundMat = new THREE.MeshLambertMaterial({ color: 0x228B22 });
+        const groundTex = this.makeGroundTexture();
+        const groundMat = new THREE.MeshLambertMaterial(groundTex ? { map: groundTex } : { color: 0x228B22 });
         const ground = new THREE.Mesh(groundGeo, groundMat);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = 0;
@@ -42,6 +43,29 @@ const Level = {
         // pick which one, and loadLevel() swaps it in at game start.
         const def = (typeof LEVELS !== 'undefined' && LEVELS[0]) ? LEVELS[0].props : [];
         this.loadLevel(def);
+    },
+
+    // Procedural grass texture (no asset files): a green base with speckled
+    // light/dark noise + faint blade flecks, tiled across the ground. Returns null
+    // if canvas isn't available (falls back to a flat color).
+    makeGroundTexture: function() {
+        if (typeof document === 'undefined') return null;
+        const c = document.createElement('canvas');
+        c.width = c.height = 256;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#2f7d32';
+        ctx.fillRect(0, 0, 256, 256);
+        for (let i = 0; i < 4000; i++) {
+            const x = Math.random() * 256, y = Math.random() * 256;
+            const g = 80 + (Math.random() * 110 | 0);
+            const a = 0.25 + Math.random() * 0.4;
+            ctx.fillStyle = 'rgba(' + (25 + (Math.random() * 30 | 0)) + ',' + g + ',' + (25 + (Math.random() * 25 | 0)) + ',' + a + ')';
+            ctx.fillRect(x, y, 2, Math.random() < 0.3 ? 4 : 2);
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(40, 40);    // ~5 world units per tile across the 200×200 plane
+        return tex;
     },
 
     // Swap the active level: remove the previous level's prop meshes and spawn

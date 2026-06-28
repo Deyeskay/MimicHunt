@@ -3,12 +3,43 @@ const PropLevel = {
     PLAYER_BASE_HEIGHT: 1.5,
 
     createWallMesh: function() {
-        const mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshLambertMaterial({ color: this.WALL_COLOR })
-        );
+        const tex = this.getWallTexture();
+        const mat = tex
+            ? new THREE.MeshLambertMaterial({ map: tex })
+            : new THREE.MeshLambertMaterial({ color: this.WALL_COLOR });
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.scale.set(4, 3, 0.3);
         return mesh;
+    },
+
+    // Procedural stone-brick texture (no asset files), cached + shared by all walls.
+    // Sandstone courses with mortar lines + per-brick shading. Returns null if a
+    // canvas isn't available (falls back to a flat color).
+    getWallTexture: function() {
+        if (this._wallTex) return this._wallTex;
+        if (typeof document === 'undefined' || typeof THREE === 'undefined') return null;
+        const W = 256, H = 256, rows = 6, cols = 4;
+        const c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#5a5048';           // mortar
+        ctx.fillRect(0, 0, W, H);
+        const bh = H / rows, bw = W / cols, gap = 3;
+        for (let r = 0; r < rows; r++) {
+            const off = (r % 2) ? bw / 2 : 0;   // running-bond offset
+            for (let i = -1; i < cols; i++) {
+                const x = i * bw + off + gap, y = r * bh + gap;
+                const w = bw - gap * 2, h = bh - gap * 2;
+                const shade = 150 + (Math.random() * 50 | 0);
+                ctx.fillStyle = 'rgb(' + shade + ',' + (shade - 22) + ',' + (shade - 55) + ')';
+                ctx.fillRect(x, y, w, h);
+            }
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 2);
+        this._wallTex = tex;
+        return tex;
     },
 
     applyScale: function(mesh, scale) {

@@ -5,6 +5,12 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
+- **Ground + wall textures (procedural).** The ground plane now uses a generated
+  grass `CanvasTexture` (`Level.makeGroundTexture`, repeat 40×40) and walls a
+  generated stone-brick `CanvasTexture` (`PropLevel.getWallTexture`, cached/shared,
+  repeat 2×2). No image files — drawn on a `<canvas>` in code; both fall back to the
+  old flat color if canvas is unavailable. Swap in real images by setting `map` to a
+  `TextureLoader().load(...)` instead.
 - **Walls are climbable.** `wall` prefab `climbable: true`, so you can jump onto and
   stand/walk/run on walls like rocks/bushes. The floor-model climb check in
   `Mechanics.handleLocalMovement` is now **footprint-aware** (per collider piece:
