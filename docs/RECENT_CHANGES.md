@@ -5,6 +5,19 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
+- **Menu/settings visual redesign (casual "wooden sign" theme).** Restyled the
+  menu, settings, lobby and modals to match the `thumbnail.png` art style: a full
+  scene background image (`assets/textures/background.png`, with a sky→grass gradient
+  fallback), chunky beveled **wood-plank panels** with corner bolts,
+  **candy-gradient buttons** with a 3D press (green primary / blue secondary / red
+  close+exit), bold **cream outlined rounded type** (Google "Fredoka" font), a 3D
+  **HIDE & HUNT** title (white/green/orange), recessed wood inputs, and settings rows
+  as recessed slots with **colored icon badges** + themed sliders + value chips.
+  Settings now uses sliders for Hiding/Hunting time too (with value chips, synced in
+  `app.js`), a red ✕ close, and side-by-side SAVE/BACK. Candy button styling is
+  **scoped to `.menu-card`/`.modal-card`** (excluding `.role-btn`) so the in-game HUD,
+  mobile controls and lobby role-toggle keep their existing look. All in `index.html`
+  + `css/style.css` (+ small `app.js` chip sync); no gameplay/JS-logic changes.
 - **Ground + wall textures.** The ground uses the real image
   `assets/textures/grass.png` (loaded async via `Level.loadGroundImage`, repeat 24×24)
   with a generated grass `CanvasTexture` (`Level.makeGroundTexture`, repeat 40×40) as

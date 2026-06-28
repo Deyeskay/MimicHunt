@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D P2P Hide & Hunt</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
@@ -62,58 +65,67 @@
 
     <div id="menu-screen" class="menu-screen">
         <div class="menu-card">
-            <h1>3D Hide & Hunt</h1>
-            <p>Modular WebRTC Prototype</p>
-            <button id="btn-settings" class="secondary" style="margin-bottom:15px;">⚙ Settings</button>
+            <h1 class="game-title"><span class="t-3d">3D</span> <span class="t-hide">HIDE&nbsp;&amp;</span> <span class="t-hunt">HUNT</span></h1>
+            <p class="subtitle">MODULAR WEBRTC PROTOTYPE</p>
+            <button id="btn-settings" class="success" style="margin-bottom:15px;">⚙ SETTINGS</button>
             <div class="form-group">
                 <input type="text" id="input-player-name" placeholder="YOUR NAME" maxlength="16" style="margin-bottom:10px;">
-                <button id="btn-host">Host New Session</button>
-                <div style="font-size:0.8rem; margin: 5px 0;">— OR —</div>
+                <button id="btn-host" class="success">HOST NEW SESSION</button>
+                <div class="or-divider">OR</div>
                 <input type="text" id="input-room-id" placeholder="4-DIGIT CODE" maxlength="4">
-                <button id="btn-join" class="secondary">Join Room</button>
+                <button id="btn-join" class="secondary">JOIN ROOM</button>
             </div>
             <div id="status-msg" style="margin-top:15px; font-size:0.85rem; color: var(--accent-blue);"></div>
         </div>
     </div>
 
-    <div id="settings-screen" class="menu-screen" style="display:none;"> 
-        <div class="menu-card"> 
-            <h2>Settings</h2>
+    <div id="settings-screen" class="menu-screen" style="display:none;">
+        <div class="menu-card settings-card">
+            <button class="close-x" title="Close" onclick="document.getElementById('btn-back-menu').click()">✕</button>
+            <h2 class="panel-title">SETTINGS</h2>
             <div class="form-group">
                 <div class="settings-list">
                     <div class="setting-row">
-                        <label for="setting-hide-time">Hiding Time <span class="setting-unit">sec</span></label>
-                        <input id="setting-hide-time" type="number" value="20">
+                        <label for="setting-hide-time"><span class="set-icon ic-time">⏱️</span> HIDING TIME <span class="setting-unit">sec</span></label>
+                        <div class="setting-control">
+                            <input id="setting-hide-time" type="range" min="5" max="60" step="5" value="20">
+                            <span id="val-hide-time" class="setting-value">20</span>
+                        </div>
                     </div>
                     <div class="setting-row">
-                        <label for="setting-hunt-time">Hunting Time <span class="setting-unit">sec</span></label>
-                        <input id="setting-hunt-time" type="number" value="90">
+                        <label for="setting-hunt-time"><span class="set-icon ic-hunt">🔦</span> HUNTING TIME <span class="setting-unit">sec</span></label>
+                        <div class="setting-control">
+                            <input id="setting-hunt-time" type="range" min="30" max="300" step="10" value="90">
+                            <span id="val-hunt-time" class="setting-value">90</span>
+                        </div>
                     </div>
                     <div class="setting-row">
-                        <label for="setting-sensitivity">Mouse Sensitivity</label>
+                        <label for="setting-sensitivity"><span class="set-icon ic-mouse">🎯</span> MOUSE SENSITIVITY</label>
                         <div class="setting-control">
                             <input id="setting-sensitivity" type="range" min="0.0005" max="0.01" step="0.0005" value="0.002">
                             <span id="val-sensitivity" class="setting-value">0.0020</span>
                         </div>
                     </div>
                     <div class="setting-row">
-                        <label for="setting-fov">Camera FOV</label>
+                        <label for="setting-fov"><span class="set-icon ic-fov">📷</span> CAMERA FOV</label>
                         <div class="setting-control">
                             <input id="setting-fov" type="range" min="45" max="90" step="1" value="60">
                             <span id="val-fov" class="setting-value">60</span>
                         </div>
                     </div>
                     <div class="setting-row">
-                        <label for="setting-invert-y">Invert Camera</label>
+                        <label for="setting-invert-y"><span class="set-icon ic-invert">🔄</span> INVERT CAMERA</label>
                         <input id="setting-invert-y" type="checkbox">
                     </div>
                     <div class="setting-row">
-                        <label for="setting-mobile-ui">Show Mobile Controls</label>
+                        <label for="setting-mobile-ui"><span class="set-icon ic-mobile">📱</span> SHOW MOBILE CONTROLS</label>
                         <input id="setting-mobile-ui" type="checkbox" checked>
                     </div>
                 </div>
-                <button id="btn-save-settings" class="success" style="margin-top:14px;"> Save </button>
-                <button id="btn-back-menu" class="secondary"> Back </button>
+                <div class="btn-row">
+                    <button id="btn-save-settings" class="success"> SAVE </button>
+                    <button id="btn-back-menu" class="secondary"> BACK </button>
+                </div>
             </div>
         </div>
     </div>
