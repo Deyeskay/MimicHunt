@@ -45,7 +45,7 @@ const PrefabLibrary = {
     bush:  { collision: false, climbable: true, hideSpot: true,  canDisguise: true  },
     // Wall uses a BOX collider (oriented by rotation.y) instead of a cylinder —
     // a long thin wall should block as a rectangle, not a fat round column.
-    wall:  { collision: true,  climbable: false, hideSpot: false, canDisguise: false,
+    wall:  { collision: true,  climbable: true,  hideSpot: false, canDisguise: false,
              colliderShape: 'box' },
     spawn: { collision: false, climbable: false, hideSpot: false, canDisguise: false }
 };

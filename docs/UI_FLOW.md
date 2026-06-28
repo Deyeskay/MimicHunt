@@ -68,13 +68,28 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
 ## The editor (`editor.html`, separate page)
 - Place props (model buttons), transform gizmo (W/E/R, Q local/world), inspector
   (position/rotation/scale + gameplay/spawn checkboxes), hierarchy list.
-- **Show Colliders** toggle (yellow gizmos; the **selected** object's collider is
-  drawn **purple** — `rebuildEditorColliders` colors `obj === selectedObject`),
-  selection BoxHelper + AxesHelper (detached during bounds reads so it doesn't
-  inflate them).
+- **Selection & gizmo via a pivot.** The gizmo never attaches to the mesh directly —
+  it attaches to a `transformPivot` group. Single selection: pivot takes the object's
+  rotation, so Move/Scale follow the object's own axes even when it's rotated AND
+  non-uniformly scaled (attaching the gizmo straight to a scaled mesh shears its
+  axes). On drag, selected objects are parented under the pivot (`pivot.attach`) and
+  baked back on release (`scene.attach`). `positionPivot()` re-centres it each idle
+  frame. State: `selectedObjects[]` (all) + `selectedObject` (primary/inspector).
+- **Multi-select:** Ctrl/Cmd-click toggles, Shift-click range-selects (hierarchy and
+  viewport). The pivot sits at the centroid (world axes) so Move/Rotate/Scale apply to
+  all selected at once (`setSelection`/`selectObject(obj, additive)`). One yellow
+  BoxHelper per selected object; arrow-nudge moves all selected.
+- **Undo / redo:** full-scene snapshots (`snapshotScene`/`applySnapshot`).
+  **Ctrl+Z** undo; **Ctrl+Y**, **Ctrl+R** (page-reload suppressed), or **Ctrl+Shift+Z**
+  redo. `pushUndo()` is called before every mutation (place, duplicate, delete, gizmo
+  drag, inspector edit, level load).
+- **Show Colliders** toggle (yellow gizmos; **selected** objects' colliders draw
+  **purple** — `rebuildEditorColliders` colors `selectedObjects.includes(obj)`),
+  per-object BoxHelpers + the primary's AxesHelper (detached during bounds reads so it
+  doesn't inflate them).
 - **Hierarchy keyboard nav:** the `#hierarchy` panel is focusable (`tabindex`); while
   focused, **Up/Down arrows switch the selected object** (`navigateHierarchy`) instead
-  of scrolling. In the viewport (panel not focused) arrows still nudge the object.
+  of scrolling. In the viewport (panel not focused) arrows still nudge the object(s).
 - **Edit Prefabs** modal: edit `PrefabLibrary` per type (flags + colliders) with a
   **live 3D preview** (separate mini renderer); export the regenerated `prefabs.js`
   text; remembers edits in localStorage (`hnh_editor_prefabs`).

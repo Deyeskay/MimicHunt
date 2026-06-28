@@ -441,12 +441,12 @@ registerLevel("Forest", [
         "id": "wall_28",
         "model": "wall",
         "x": -7.16,
-        "y": 1.5,
+        "y": 9.41,
         "z": -4.68,
-        "bottomY": 0,
+        "bottomY": -0.49,
         "scale": {
             "x": 100,
-            "y": 3,
+            "y": 19.8,
             "z": 0.3
         },
         "rotation": {
@@ -459,12 +459,12 @@ registerLevel("Forest", [
         "id": "wall_29",
         "model": "wall",
         "x": -6.98,
-        "y": 1.5,
+        "y": 9.41,
         "z": 45.26,
-        "bottomY": 0,
+        "bottomY": -0.49,
         "scale": {
             "x": 100,
-            "y": 3,
+            "y": 19.8,
             "z": 0.3
         },
         "rotation": {
@@ -477,84 +477,84 @@ registerLevel("Forest", [
         "id": "wall_30",
         "model": "wall",
         "x": 42.87,
-        "y": 1.5,
+        "y": 9.41,
         "z": 20.27,
-        "bottomY": 0,
+        "bottomY": -0.49,
         "scale": {
             "x": 50,
-            "y": 3,
+            "y": 19.8,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": -90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_31",
         "model": "wall",
         "x": -34.28,
-        "y": 1.5,
+        "y": 3.74,
         "z": 22.27,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 20,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_32",
         "model": "wall",
         "x": -20.28,
-        "y": 1.5,
+        "y": 3.74,
         "z": 35.19,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 20,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_35",
         "model": "wall",
         "x": -27.44,
-        "y": 1.5,
+        "y": 3.74,
         "z": 11.18,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 10.42,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_36",
         "model": "wall",
         "x": -6.3,
-        "y": 1.5,
+        "y": 3.74,
         "z": 29.67,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 16.62,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -567,12 +567,12 @@ registerLevel("Forest", [
         "id": "wall_37",
         "model": "wall",
         "x": -4.3,
-        "y": 1.5,
+        "y": 3.74,
         "z": 15.44,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 16.62,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -585,12 +585,12 @@ registerLevel("Forest", [
         "id": "wall_38",
         "model": "wall",
         "x": -42.04,
-        "y": 1.5,
+        "y": 2.69,
         "z": 38.52,
-        "bottomY": 0,
+        "bottomY": 0.27,
         "scale": {
             "x": 9.51,
-            "y": 3,
+            "y": 4.84,
             "z": 0.3
         },
         "rotation": {
@@ -603,12 +603,12 @@ registerLevel("Forest", [
         "id": "wall_39",
         "model": "wall",
         "x": -48.76,
-        "y": 1.5,
+        "y": 3.74,
         "z": 26.4,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 9.51,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -621,48 +621,48 @@ registerLevel("Forest", [
         "id": "wall_40",
         "model": "wall",
         "x": -46.84,
-        "y": 1.5,
+        "y": 3.74,
         "z": 36.44,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 10.42,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_42",
         "model": "wall",
         "x": -44.11,
-        "y": 1.5,
+        "y": 3.74,
         "z": 23.88,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 10.42,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_43",
         "model": "wall",
         "x": -42.68,
-        "y": 1.5,
+        "y": 3.74,
         "z": 12.66,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 9.51,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -675,66 +675,66 @@ registerLevel("Forest", [
         "id": "wall_45",
         "model": "wall",
         "x": -42.11,
-        "y": 1.5,
+        "y": 3.74,
         "z": 7.44,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 10.42,
-            "y": 3,
+            "y": 7.88,
             "z": 0.48
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_46",
         "model": "wall",
         "x": -51.4,
-        "y": 1.5,
+        "y": 3.74,
         "z": 13.93,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 10.42,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_47",
         "model": "wall",
         "x": -53.67,
-        "y": 1.5,
+        "y": 3.74,
         "z": 1.68,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 5.57,
-            "y": 3,
+            "y": 7.88,
             "z": 0.22
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_48",
         "model": "wall",
         "x": -50.93,
-        "y": 1.5,
+        "y": 3.74,
         "z": -0.98,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 5.57,
-            "y": 3,
+            "y": 7.88,
             "z": 0.22
         },
         "rotation": {
@@ -747,12 +747,12 @@ registerLevel("Forest", [
         "id": "wall_49",
         "model": "wall",
         "x": -32.73,
-        "y": 1.5,
+        "y": 1.79,
         "z": 0.73,
-        "bottomY": 0,
+        "bottomY": -0.65,
         "scale": {
             "x": 4,
-            "y": 3,
+            "y": 4.88,
             "z": 3.26
         },
         "rotation": {
@@ -765,48 +765,48 @@ registerLevel("Forest", [
         "id": "wall_50",
         "model": "wall",
         "x": 16.16,
-        "y": 1.5,
+        "y": 3.74,
         "z": 18.67,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 10.42,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_51",
         "model": "wall",
         "x": 25,
-        "y": 1.5,
+        "y": 3.74,
         "z": 18.11,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 20,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_52",
         "model": "wall",
         "x": 29.42,
-        "y": 1.5,
+        "y": 3.74,
         "z": 17.63,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 16.62,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -819,12 +819,12 @@ registerLevel("Forest", [
         "id": "wall_53",
         "model": "wall",
         "x": 3.68,
-        "y": 1.5,
+        "y": 3.74,
         "z": 0.01,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -837,12 +837,12 @@ registerLevel("Forest", [
         "id": "wall_54",
         "model": "wall",
         "x": 35.66,
-        "y": 1.5,
+        "y": 3.74,
         "z": 1.86,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -855,48 +855,48 @@ registerLevel("Forest", [
         "id": "wall_55",
         "model": "wall",
         "x": 7.35,
-        "y": 1.5,
+        "y": 3.74,
         "z": 3.54,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_56",
         "model": "wall",
         "x": 16.25,
-        "y": 1.5,
+        "y": 3.74,
         "z": 3.71,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_57",
         "model": "wall",
         "x": 23.07,
-        "y": 1.5,
+        "y": 3.74,
         "z": 33.2,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 16.62,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
@@ -909,174 +909,174 @@ registerLevel("Forest", [
         "id": "wall_58",
         "model": "wall",
         "x": 32.17,
-        "y": 1.5,
+        "y": 3.74,
         "z": 5.28,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_59",
         "model": "wall",
         "x": 31.19,
-        "y": 1.5,
+        "y": 3.74,
         "z": 29.57,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_60",
         "model": "wall",
         "x": 2.06,
-        "y": 1.5,
+        "y": 3.74,
         "z": 33.14,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_61",
         "model": "wall",
         "x": 23.85,
-        "y": 1.5,
+        "y": 3.74,
         "z": 41.72,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_62",
         "model": "wall",
         "x": 36.42,
-        "y": 1.5,
+        "y": 3.74,
         "z": 36.08,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_63",
         "model": "wall",
         "x": -9.27,
-        "y": 1.5,
+        "y": 3.74,
         "z": 38.15,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_64",
         "model": "wall",
         "x": -14.61,
-        "y": 1.5,
+        "y": 3.74,
         "z": 31.66,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": -4.25,
-            "y": 3,
+            "y": 7.88,
             "z": 0.2
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_65",
         "model": "wall",
         "x": -3.64,
-        "y": 1.5,
+        "y": 3.74,
         "z": 41.65,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 7.31,
-            "y": 3,
+            "y": 7.88,
             "z": 0.3
         },
         "rotation": {
-            "x": -180,
+            "x": 0,
             "y": 90,
-            "z": -180
+            "z": 0
         }
     },
     {
         "id": "wall_66",
         "model": "wall",
         "x": -27.92,
-        "y": 1.5,
+        "y": 3.74,
         "z": 34.18,
-        "bottomY": 0,
+        "bottomY": -0.2,
         "scale": {
             "x": 11.08,
-            "y": 3,
+            "y": 7.88,
             "z": 0.23
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": 90,
-            "z": 180
+            "z": 0
         }
     },
     {
         "id": "wall_67",
         "model": "wall",
         "x": -19.31,
-        "y": 1.5,
+        "y": 1.79,
         "z": 6.4,
-        "bottomY": 0,
+        "bottomY": -0.65,
         "scale": {
             "x": 4,
-            "y": 3,
+            "y": 4.88,
             "z": 7.9
         },
         "rotation": {
@@ -1089,12 +1089,12 @@ registerLevel("Forest", [
         "id": "wall_68",
         "model": "wall",
         "x": 8.86,
-        "y": 1.5,
+        "y": 1.79,
         "z": 27.54,
-        "bottomY": 0,
+        "bottomY": -0.65,
         "scale": {
             "x": 4,
-            "y": 3,
+            "y": 4.88,
             "z": 7.13
         },
         "rotation": {
@@ -1127,18 +1127,18 @@ registerLevel("Forest", [
         "id": "wall_70",
         "model": "wall",
         "x": -56.87,
-        "y": 1.5,
+        "y": 9.41,
         "z": 20.31,
-        "bottomY": 0,
+        "bottomY": -0.49,
         "scale": {
             "x": 50,
-            "y": 3,
+            "y": 19.8,
             "z": 0.3
         },
         "rotation": {
-            "x": 180,
+            "x": 0,
             "y": -90,
-            "z": 180
+            "z": 0
         }
     },
     {

@@ -301,14 +301,29 @@ const Mechanics = {
         let floorY = baseHeight;
         for (let prop of mapProps3D) {
             if (!PropLevel.isClimbable(prop)) continue;
-            const center = PropLevel.getPropCenter(prop);
-            const distXZ = Math.hypot(localPos.x - center.x, localPos.z - center.z);
-            if (distXZ >= prop.radius + myRadius) continue;
             const surf = PropLevel.getPropTop(prop) + baseHeight;
             // Only a surface the player is on/above counts (small tolerance), so
             // you can't pop up through a prop walked into from the side — you must
             // jump onto it.
-            if (localPos.y >= surf - 0.3 && surf > floorY) floorY = surf;
+            if (!(localPos.y >= surf - 0.3 && surf > floorY)) continue;
+
+            // Is the player over this prop's footprint? Test each collider piece in
+            // its own shape (oriented box for walls, circle otherwise) so you stand
+            // on the actual top surface — not a fat circle around a thin wall.
+            let over = false;
+            const pieces = PropLevel.getColliders(prop);
+            for (let i = 0; i < pieces.length; i++) {
+                const c = pieces[i];
+                if (c.shape === 'box') {
+                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                    const px = localPos.x - c.x, pz = localPos.z - c.z;
+                    const lx = px * cs + pz * sn, lz = -px * sn + pz * cs;
+                    if (Math.abs(lx) <= c.halfX + myRadius && Math.abs(lz) <= c.halfZ + myRadius) { over = true; break; }
+                } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
+                    over = true; break;
+                }
+            }
+            if (over) floorY = surf;
         }
 
         velocityY += GRAVITY;

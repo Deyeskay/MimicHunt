@@ -5,6 +5,12 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
+- **Walls are climbable.** `wall` prefab `climbable: true`, so you can jump onto and
+  stand/walk/run on walls like rocks/bushes. The floor-model climb check in
+  `Mechanics.handleLocalMovement` is now **footprint-aware** (per collider piece:
+  oriented-box for walls, circle otherwise) so you stand on the wall's actual top, not
+  a fat circle around it. (forest.js walls don't bake `climbable`; arena.js still bakes
+  `climbable:false` everywhere — strip it for arena walls too. See TODO.)
 - **Box colliders for walls.** Walls (`colliderShape:'box'` in prefabs.js) now use a
   single oriented **box** collider instead of a fat cylinder. New `bounds.localX/localZ`
   (rotation-removed extents) in `computeBounds`; box branch in `resolveColliders`

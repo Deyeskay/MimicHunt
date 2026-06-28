@@ -20,7 +20,8 @@
       "Bash(awk '/^<script>$/{f=1; next} /^<\\\\/script>$/{if\\(f\\){f=0}} f' editor.html)",
       "Bash(node --check /tmp/editor_main.js)",
       "Bash(awk '/^<script>$/{f=1; next} /^<\\\\/script>$/{f=0} f' editor.html)",
-      "Bash(node --check /tmp/editor_main2.js)"
+      "Bash(node --check /tmp/editor_main2.js)",
+      "Bash(node --check js/prefabs.js)"
     ]
   }
 }
