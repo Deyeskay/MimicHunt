@@ -212,13 +212,13 @@ const Network = {
     },
 
     /*=================================================================
-      Send the local player's disguise to the host as a discrete event
-      (only when it actually changes — see Mechanics.handleDisguiseSwap).
-      No-ops on the host, which has no connToHost.
+      Replicate the local player's disguise as a discrete event (only when it
+      actually changes — see Mechanics.handleDisguiseSwap). A client sends it to
+      the host (which relays to the others); the HOST broadcasts it straight to
+      all clients — the host can be a Hider now, and sendToHost is a no-op for it.
     =================================================================*/
     sendDisguiseUpdate() {
-        this.sendToHost({
-            type: 'clientDisguise',
+        const payload = {
             disguiseType: localDisguise.type,
             disguiseSize: localDisguise.size,
             propScale: localDisguise.propScale,
@@ -226,7 +226,13 @@ const Network = {
             propRadius: localDisguise.propRadius,
             propRotation: localDisguise.propRotation,
             color: localDisguise.color
-        });
+        };
+        if (isHost) {
+            // Our roster entry is already updated by the caller; tell every client.
+            this.broadcast(Object.assign({ type: 'disguise', id: myId }, payload));
+        } else {
+            this.sendToHost(Object.assign({ type: 'clientDisguise' }, payload));
+        }
     },
 
     // Seeker fired an energy pulse. Host applies it directly; a client routes the

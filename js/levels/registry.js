@@ -32,7 +32,7 @@ function loadLevelScripts() {
     if (typeof document === 'undefined') return Promise.resolve();
     return LEVEL_FILES.reduce((chain, file) => chain.then(() => new Promise(resolve => {
         const s = document.createElement('script');
-        s.src = 'js/levels/' + file + '?v=22';
+        s.src = 'js/levels/' + file + '?v=23';
         s.onload = resolve;
         s.onerror = () => { console.warn('Level failed to load:', file); resolve(); };
         document.head.appendChild(s);
