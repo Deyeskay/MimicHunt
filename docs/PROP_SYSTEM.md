@@ -31,6 +31,15 @@ the safe accessor.
 This is why a tree has a **slim trunk you can walk up to** plus a **wide canopy
 floating overhead you can pass under** — instead of one fat cylinder.
 
+**Box colliders.** A prefab with `colliderShape: 'box'` (e.g. `wall`) resolves to a
+single **oriented box** piece `{shape:'box', x,z, halfX, halfZ, rot, yMin, yMax}`
+instead of a cylinder — so a long thin wall blocks as a rectangle, not a fat round
+column. `halfX/halfZ` are the prop's **local** half-extents (from
+`computeBounds.localX/localZ`, measured with rotation removed) and `rot` is its
+`rotation.y`. All consumers branch on `c.shape`: `blockedAt` (circle-vs-oriented-box),
+`raycastProps` (ray-vs-oriented-box 2D slab), and the editor/game gizmos (a box
+wireframe). Cylinder pieces carry `shape:'cylinder'`.
+
 `prop.radius`/`centerX/centerZ/topY/bottomY/height` (from `computeBounds`/`enrichProp`)
 are still used by disguise sizing, climbing, spawns, and the hit radius — only
 **movement blocking** and **shot occlusion** use the compound pieces.

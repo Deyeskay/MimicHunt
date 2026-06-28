@@ -5,6 +5,15 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
+- **Box colliders for walls.** Walls (`colliderShape:'box'` in prefabs.js) now use a
+  single oriented **box** collider instead of a fat cylinder. New `bounds.localX/localZ`
+  (rotation-removed extents) in `computeBounds`; box branch in `resolveColliders`
+  (`{shape:'box',halfX,halfZ,rot,…}`); box handling in `Mechanics.blockedAt`
+  (circle-vs-OBB), `PropLevel.raycastProps` (ray-vs-OBB slab), and the collider gizmos
+  in level.js + editor (incl. prefab preview). Cylinder pieces now tagged
+  `shape:'cylinder'`. See PROP_SYSTEM.md.
+- **Editor: selected collider purple + hierarchy arrow-key nav + upload level + view
+  gizmo.** (see earlier editor notes; editor.html only.)
 - **Combat HUD/UX pass.** (1) Bolt muzzle moved from the chest (`localPos.y+1.0`) to
   the **right hand** (forward+right offset, lower `y`) in `Level.getAimRay`. (2) New
   `Sound.reload()` "cha-chunk" plays on `Mechanics.startReload`; a blinking

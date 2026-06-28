@@ -68,8 +68,13 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
 ## The editor (`editor.html`, separate page)
 - Place props (model buttons), transform gizmo (W/E/R, Q local/world), inspector
   (position/rotation/scale + gameplay/spawn checkboxes), hierarchy list.
-- **Show Colliders** toggle (yellow gizmos), selection BoxHelper + AxesHelper
-  (detached during bounds reads so it doesn't inflate them).
+- **Show Colliders** toggle (yellow gizmos; the **selected** object's collider is
+  drawn **purple** — `rebuildEditorColliders` colors `obj === selectedObject`),
+  selection BoxHelper + AxesHelper (detached during bounds reads so it doesn't
+  inflate them).
+- **Hierarchy keyboard nav:** the `#hierarchy` panel is focusable (`tabindex`); while
+  focused, **Up/Down arrows switch the selected object** (`navigateHierarchy`) instead
+  of scrolling. In the viewport (panel not focused) arrows still nudge the object.
 - **Edit Prefabs** modal: edit `PrefabLibrary` per type (flags + colliders) with a
   **live 3D preview** (separate mini renderer); export the regenerated `prefabs.js`
   text; remembers edits in localStorage (`hnh_editor_prefabs`).
@@ -77,5 +82,13 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
   export emits `registerLevel("name", [...])` to paste into `js/levels/`. The Load
   modal also has **⬆ Upload .js File** (`uploadLevelFile`) to load a level file from
   disk (e.g. `js/levels/forest.js`) via `applyLevelData` (slices the `[...]` array).
+- **View gizmo** (`#viewGizmo`, top-right of the viewport, Unity-style): click the
+  colored axis balls (X/Y/Z + hollow negatives) to snap to that orthographic-style
+  view via `snapView` (sets `orbitYaw`/`orbitPitch`; the orbit loop rebuilds the
+  camera). The hub returns to the default iso angle. The **Persp/Iso** label
+  (`#vgPersp` → `toggleProjection`) swaps the active camera between a Perspective and
+  an Orthographic camera (`setProjection` reassigns the global `camera` +
+  `transformControls.camera`; `animate` keeps the ortho frustum framed to
+  `orbitDistance`).
 - Has its own CSS (dark pro UI); **not** covered by the game's responsive rules and
   loads `prefabs.js`/`props.js` at a stale `?v=7` (TODO).

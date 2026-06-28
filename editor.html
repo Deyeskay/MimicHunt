@@ -94,6 +94,8 @@ body{
     max-height:42vh;
     overflow:hidden;
 }
+/* When focused, arrow Up/Down navigate the list (see keydown handler). */
+#hierarchy:focus{ outline:none; box-shadow:0 0 0 2px var(--accent); }
 .hierarchy-header{
     background:var(--header);
     padding:11px 14px;
@@ -314,6 +316,29 @@ button{
 .pf-del:hover{ color:#fca5a5; background:rgba(239,68,68,.15); }
 .pf-empty{ color:var(--muted); font-size:12.5px; padding:6px 0; }
 
+/* ---------- View gizmo (Unity-style axis snap + Persp/Iso toggle) ---------- */
+#viewGizmo{ position:fixed; top:18px; right:320px; width:104px; height:104px; z-index:120; user-select:none; }
+#viewGizmo .vg-disc{ position:absolute; inset:0; border-radius:50%; background:rgba(20,22,28,0.5); border:1px solid rgba(255,255,255,0.08); }
+#viewGizmo .vg-line{ position:absolute; left:52px; top:52px; height:2px; width:38px; transform-origin:0 50%; background:rgba(255,255,255,0.22); }
+.vg-line.vg-lx{ transform:translateY(-1px) rotate(0deg); }
+.vg-line.vg-ly{ transform:translateY(-1px) rotate(-90deg); }
+.vg-line.vg-lz{ width:34px; transform:translateY(-1px) rotate(135deg); }
+#viewGizmo .vg-axis{ position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font:bold 11px/1 system-ui,sans-serif; color:#fff;
+    cursor:pointer; border:1.5px solid transparent; transition:transform .08s; }
+#viewGizmo .vg-axis:hover{ transform:scale(1.18); }
+#viewGizmo .vg-axis.vg-neg{ width:13px; height:13px; margin:-6.5px 0 0 -6.5px; background:transparent !important; }
+.vg-x{ background:#e5484d; }  .vg-xn{ border-color:#e5484d; }
+.vg-y{ background:#3fb950; }  .vg-yn{ border-color:#3fb950; }
+.vg-z{ background:#4493f8; }  .vg-zn{ border-color:#4493f8; }
+#viewGizmo .vg-hub{ position:absolute; left:52px; top:52px; width:14px; height:14px; margin:-7px 0 0 -7px;
+    border-radius:50%; background:rgba(255,255,255,0.85); cursor:pointer; }
+#viewGizmo .vg-hub:hover{ background:#fff; }
+#vgPersp{ position:absolute; left:50%; bottom:-22px; transform:translateX(-50%); font:bold 11px/1 system-ui,sans-serif;
+    color:#cfd3dc; cursor:pointer; background:rgba(20,22,28,0.7); padding:5px 11px; border-radius:11px;
+    border:1px solid rgba(255,255,255,0.1); white-space:nowrap; }
+#vgPersp:hover{ color:#fff; border-color:rgba(255,255,255,0.25); }
+
 /* ---------- Responsive ---------- */
 @media (max-width:760px){
     #toolbar{ left:8px; top:8px; width:46vw; padding:11px; max-height:calc(100vh - 16px); }
@@ -361,7 +386,7 @@ button{
 
 <div id="right-panel">
 
-    <div id="hierarchy" class="panel">
+    <div id="hierarchy" class="panel" tabindex="0">
         <div class="hierarchy-header">Hierarchy</div>
         <div id="hierarchyList"></div>
     </div>
@@ -514,6 +539,22 @@ button{
     </div>
 </div>
 
+<!-- Unity-style view gizmo: click an axis to snap to that view; Persp toggles Ortho. -->
+<div id="viewGizmo" title="Click an axis to snap the view">
+    <div class="vg-disc"></div>
+    <div class="vg-line vg-lx"></div>
+    <div class="vg-line vg-ly"></div>
+    <div class="vg-line vg-lz"></div>
+    <div class="vg-axis vg-zn vg-neg" data-view="-z" style="left:76px;top:30px" title="Back (-Z)"></div>
+    <div class="vg-axis vg-xn vg-neg" data-view="-x" style="left:14px;top:52px" title="Left (-X)"></div>
+    <div class="vg-axis vg-yn vg-neg" data-view="-y" style="left:52px;top:90px" title="Bottom (-Y)"></div>
+    <div class="vg-hub" data-view="iso" title="Isometric / default angle"></div>
+    <div class="vg-axis vg-z" data-view="z" style="left:28px;top:74px" title="Front (+Z)">Z</div>
+    <div class="vg-axis vg-x" data-view="x" style="left:90px;top:52px" title="Right (+X)">X</div>
+    <div class="vg-axis vg-y" data-view="y" style="left:52px;top:14px" title="Top (+Y)">Y</div>
+    <div id="vgPersp" title="Toggle Perspective / Orthographic">Persp</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
@@ -630,6 +671,51 @@ camera = new THREE.PerspectiveCamera(
 camera.position.set(0,20,30);
 camera.lookAt(0,0,0);
 
+// --- Dual projection (Perspective <-> Orthographic/Iso) for the view gizmo ---
+const PERSP_FOV = 75;
+let perspCamera = camera;                 // the camera created above
+let orthoCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.1, 5000);
+orthoCamera.up.copy(camera.up);
+let isOrtho = false;
+
+// Snap the orbit camera to a standard axis view (or the default iso angle).
+// The animate() loop rebuilds camera.position from orbitYaw/orbitPitch, so just
+// setting these snaps the view next frame. Pitch ~±1.5607 (not exactly ±π/2) so
+// the top/bottom views don't hit the lookAt up-vector singularity.
+function snapView(view)
+{
+    const P = {
+        'x':  [ Math.PI/2,  0       ],   // +X → right side
+        '-x': [ -Math.PI/2, 0       ],   // -X → left side
+        'y':  [ 0,          1.5607  ],   // +Y → top-down
+        '-y': [ 0,         -1.5607  ],   // -Y → bottom-up
+        'z':  [ 0,          0       ],   // +Z → front
+        '-z': [ Math.PI,    0       ],   // -Z → back
+        'iso':[ Math.PI/4,  0.6     ]    // default angled view
+    }[view];
+    if (!P) return;
+    orbitYaw = P[0];
+    orbitPitch = P[1];
+}
+
+// Swap the active camera between perspective and orthographic, preserving the
+// current pose. Orthographic gives the flat Unity "Iso" look (no perspective
+// foreshortening). transformControls + the selection raycaster read the global
+// `camera`, so reassigning it is enough.
+function setProjection(ortho)
+{
+    if (ortho === isOrtho) return;
+    isOrtho = ortho;
+    const next = ortho ? orthoCamera : perspCamera;
+    next.position.copy(camera.position);
+    next.quaternion.copy(camera.quaternion);
+    camera = next;
+    if (transformControls) transformControls.camera = camera;
+    const label = document.getElementById('vgPersp');
+    if (label) label.textContent = ortho ? 'Iso' : 'Persp';
+}
+function toggleProjection() { setProjection(!isOrtho); }
+
 renderer = new THREE.WebGLRenderer({
     antialias:true
 });
@@ -712,13 +798,19 @@ function rebuildEditorColliders() {
         const propLike = { rotation: { y: THREE.MathUtils.radToDeg(obj.rotation.y) } };
         const pieces = PropLevel.resolveColliders(propLike, bounds, def);
 
+        // Selected object's collider is drawn purple; everything else yellow.
+        const colliderColor = (obj === selectedObject) ? 0xb14eff : 0xffff00;
+
         pieces.forEach(c => {
             const h = Math.max(c.yMax - c.yMin, 0.1);
-            const geo = new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
-            const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+            const geo = (c.shape === 'box')
+                ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
+                : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+            const mat = new THREE.LineBasicMaterial({ color: colliderColor });
             mat.depthTest = false;
             const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
             helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+            if (c.shape === 'box') helper.rotation.y = c.rot || 0;
             helper.renderOrder = 999;
             scene.add(helper);
             editorColliderHelpers.push(helper);
@@ -985,11 +1077,14 @@ function buildPrefabPreviewContent() {
 
     PropLevel.resolveColliders(propLike, bounds, def).forEach(c => {
         const hh = Math.max(c.yMax - c.yMin, 0.1);
-        const geo = new THREE.CylinderGeometry(c.radius, c.radius, hh, 24);
+        const geo = (c.shape === 'box')
+            ? new THREE.BoxGeometry(c.halfX * 2, hh, c.halfZ * 2)
+            : new THREE.CylinderGeometry(c.radius, c.radius, hh, 24);
         const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
         mat.depthTest = false;
         const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
         helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+        if (c.shape === 'box') helper.rotation.y = c.rot || 0;
         helper.renderOrder = 999;
         pfScene.add(helper);
         pfGizmos.push(helper);
@@ -1482,6 +1577,17 @@ window.addEventListener(
     "keydown",
     e =>
     {
+        // If the Hierarchy panel is focused, Up/Down switch the selected object
+        // (and we suppress the default list scroll + the object-nudge below).
+        const inHierarchy = document.activeElement &&
+            document.activeElement.closest &&
+            document.activeElement.closest('#hierarchy');
+        if (inHierarchy && (e.key === "ArrowUp" || e.key === "ArrowDown"))
+        {
+            e.preventDefault();
+            navigateHierarchy(e.key === "ArrowDown" ? 1 : -1);
+            return;
+        }
 
         if(selectedObject)
         {
@@ -1621,6 +1727,8 @@ function refreshHierarchy()
         item.onclick=()=>
         {
             selectObject(obj);
+            // Focus the panel so Up/Down arrows navigate the list afterwards.
+            document.getElementById("hierarchy").focus();
         };
 
         list.appendChild(item);
@@ -1650,6 +1758,21 @@ function selectObject(obj) {
     // Populate inspector fields
     updateInspectorFields();
     refreshHierarchy();
+}
+
+// Move the hierarchy selection by dir (-1 up, +1 down) and scroll it into view.
+// Used by the keydown handler when the hierarchy panel is focused.
+function navigateHierarchy(dir) {
+    if (!placedObjects.length) return;
+    let idx = placedObjects.indexOf(selectedObject);
+    if (idx === -1) idx = (dir > 0 ? -1 : 0);   // nothing selected → first/last
+    const next = Math.max(0, Math.min(placedObjects.length - 1, idx + dir));
+    selectObject(placedObjects[next]);          // rebuilds the list
+
+    const list = document.getElementById("hierarchyList");
+    const active = list && list.querySelector(".hierarchy-item.active");
+    if (active) active.scrollIntoView({ block: "nearest" });
+    document.getElementById("hierarchy").focus();   // keep focus for continued nav
 }
 
 function updateInspectorFields() {
@@ -2209,6 +2332,20 @@ function animate()
         orbitTarget
     );
 
+    // Keep the orthographic frustum framing the same world span the perspective
+    // camera would at this distance, so zoom (wheel → orbitDistance) still works
+    // and switching projection doesn't jump the framing.
+    if (camera.isOrthographicCamera)
+    {
+        const h = 2 * orbitDistance * Math.tan(THREE.MathUtils.degToRad(PERSP_FOV / 2));
+        const aspect = window.innerWidth / window.innerHeight;
+        camera.left = -h * aspect / 2;
+        camera.right = h * aspect / 2;
+        camera.top = h / 2;
+        camera.bottom = -h / 2;
+        camera.updateProjectionMatrix();
+    }
+
     renderer.render(
         scene,
         camera
@@ -2216,6 +2353,11 @@ function animate()
 }
 
 animate();
+
+// Wire the view gizmo (axis snap + projection toggle).
+document.querySelectorAll('#viewGizmo .vg-axis, #viewGizmo .vg-hub').forEach(el =>
+    el.addEventListener('click', () => snapView(el.dataset.view)));
+document.getElementById('vgPersp').addEventListener('click', toggleProjection);
 
 
 //help button script

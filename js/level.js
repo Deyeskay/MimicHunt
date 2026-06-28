@@ -73,14 +73,18 @@ const Level = {
             if (prop.model === 'spawn') continue;
             if (!PropLevel.hasCollision(prop)) continue;
 
-            // One outline per collider piece (e.g. trunk + canopy for a tree).
+            // One outline per collider piece (e.g. trunk + canopy for a tree, or
+            // an oriented box for a wall).
             for (const c of PropLevel.getColliders(prop)) {
                 const h = Math.max(c.yMax - c.yMin, 0.1);
-                const geo = new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+                const geo = (c.shape === 'box')
+                    ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
+                    : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
                 const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
                 mat.depthTest = false;   // draw over geometry like editor gizmos
                 const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
                 helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+                if (c.shape === 'box') helper.rotation.y = c.rot || 0;
                 helper.renderOrder = 999;
                 scene.add(helper);
                 this.colliderHelpers.push(helper);

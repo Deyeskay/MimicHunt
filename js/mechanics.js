@@ -381,8 +381,25 @@ const Mechanics = {
             const pieces = PropLevel.getColliders(prop);
             for (let i = 0; i < pieces.length; i++) {
                 const c = pieces[i];
-                if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)
-                    && pBottom < c.yMax && pTop > c.yMin) {
+                if (!(pBottom < c.yMax && pTop > c.yMin)) continue;   // vertical band
+
+                if (c.shape === 'box') {
+                    // Circle (player) vs oriented box: transform the point into the
+                    // box's local frame, clamp to the box, compare the distance to
+                    // the nearest edge against myRadius.
+                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                    const px = x - c.x, pz = z - c.z;
+                    const lx = px * cs + pz * sn;        // local frame (-rot)
+                    const lz = -px * sn + pz * cs;
+                    const dxBox = Math.abs(lx) - c.halfX;
+                    const dzBox = Math.abs(lz) - c.halfZ;
+                    if (dxBox <= 0 && dzBox <= 0) return true;   // center inside box
+                    const ex = Math.max(dxBox, 0), ez = Math.max(dzBox, 0);
+                    if (ex * ex + ez * ez < myRadius * myRadius) return true;
+                    continue;
+                }
+
+                if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)) {
                     return true;
                 }
             }

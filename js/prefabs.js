@@ -13,6 +13,8 @@
     climbable   – player can stand on top
     hideSpot    – counts as a hiding spot (also disguisable)
     canDisguise – a Hider can disguise as this prop type
+    colliderShape – 'box' for a single oriented box collider (walls); omit for
+                  the default cylinder shape (used with/without `colliders`)
     colliders   – OPTIONAL compound collider shape used for movement blocking
                   (PropLevel.resolveColliders). Omit for a single auto cylinder
                   (the model's full bounding box). Each piece is in FRACTIONS of
@@ -41,7 +43,10 @@ const PrefabLibrary = {
              ] },
     rock:  { collision: true,  climbable: true, hideSpot: true,  canDisguise: true  },
     bush:  { collision: false, climbable: true, hideSpot: true,  canDisguise: true  },
-    wall:  { collision: true,  climbable: false, hideSpot: false, canDisguise: false },
+    // Wall uses a BOX collider (oriented by rotation.y) instead of a cylinder —
+    // a long thin wall should block as a rectangle, not a fat round column.
+    wall:  { collision: true,  climbable: false, hideSpot: false, canDisguise: false,
+             colliderShape: 'box' },
     spawn: { collision: false, climbable: false, hideSpot: false, canDisguise: false }
 };
 
