@@ -58,7 +58,7 @@ camera.lookAt(camera.position + d)   // crosshair-centred aim
   `jump`/`handleDisguiseSwap`/`fireShot`.
 
 ## Movement, collision, climbing (`handleLocalMovement`)
-- Speed `0.3`/tick. World clamp ±100.
+- Speed `moveSpeed = 0.15`/tick (~9 u/s; was 0.3). World clamp ±100.
 - **Per-axis wall sliding**: X then Z tested independently via `blockedAt` (compound
   collider test) so you slide along surfaces instead of sticking.
 - **Climbing (floor model)**: each frame finds the **highest climbable surface** the

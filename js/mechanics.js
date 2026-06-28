@@ -227,7 +227,7 @@ const Mechanics = {
         if (!pData || pData.isCaught) return;
         if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
 
-        const moveSpeed = 0.3;
+        const moveSpeed = 0.15;   // units per 60Hz tick (~9 u/s). Tune for feel.
         let moveX = 0;
         let moveZ = 0;
 
