@@ -5,6 +5,30 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Dev mode: disguised-hider colliders now drawn (orange).** `buildColliderGizmos`
+  only outlines static `mapProps3D` props (built once), so disguised hiders — which are
+  dynamic pseudo-props rebuilt every tick by `Mechanics.getDynamicProps()` — had no
+  collider gizmo even though everyone collides with them. Added
+  `Level.updateDynamicColliderGizmos()`, called each render frame, drawing an **orange**
+  outline per dynamic-prop piece using the exact `PropLevel.getColliders(prop)` collision
+  geometry (yellow = static props, cyan = your own collider, orange = disguised hiders).
+  level.js.
+- **Client fix: disguised-hider colliders tracked the spawn point, not the player.**
+  `Mechanics.getDynamicProps()` built each disguised hider's pseudo-prop collider from
+  `gameState.players[id].x/z`. On a **client** those fields are only the remote player's
+  **spawn point** — the `snapshot` handler buffers transforms and never writes them back
+  to `gameState` (meshes render from the interpolated buffer instead). So on a client both
+  the collision *and* the dev gizmo for a disguised hider sat at spawn, far from where the
+  hider actually appeared (the host, with authoritative positions, looked correct). Fixed
+  by sampling the same interpolated snapshot (`Network.sampleSnapshot(now − INTERP_DELAY)`)
+  the renderer uses; falls back to `gameState` x/z on the host (empty buffer). This is the
+  real cause of the earlier "client hider collides with disguised hiders at an offset"
+  (not the player radius). mechanics.js.
+- **Editor: Materials reset icon.** A ↺ icon (right of the inspector's "Materials"
+  heading, next to 💾) restores every material of the selected object to its pristine
+  as-loaded values (`_snapshotMaterial` snapshot: color/opacity/emission/metallic/
+  roughness/map). Texture disposal now spares the original map (`_disposeIfNotOrig`) so
+  reset can put it back. Both icons show only when the materials are dirty. editor.html only.
 - **Editor: hierarchy search/filter.** A `#hierarchy-search` box filters the list by
   name (case-insensitive); `refreshHierarchy` renders matches into `visibleHierarchy`,
   and **Ctrl/Cmd-toggle, Shift-range, and arrow nav operate over the filtered list**.

@@ -140,10 +140,45 @@ const Level = {
         }
     },
 
+    // Developer: redraw the collider outlines for DISGUISED HIDERS (dynamic
+    // pseudo-props). Unlike buildColliderGizmos (static level props, built once),
+    // these move every frame, so this runs in the render loop. Drawn ORANGE to
+    // distinguish them from the yellow static props. Uses exactly what collision
+    // tests — Mechanics.getDynamicProps() → PropLevel.getColliders — so the
+    // outline is the real no-go shape other players hit.
+    updateDynamicColliderGizmos: function() {
+        if (!this.dynColliderHelpers) this.dynColliderHelpers = [];
+        this.dynColliderHelpers.forEach(h => scene.remove(h));
+        this.dynColliderHelpers.length = 0;
+        if (!developer || !scene || typeof Mechanics === 'undefined') return;
+
+        const dyn = Mechanics.getDynamicProps();
+        if (!dyn || !dyn.length) return;
+        for (const prop of dyn) {
+            if (!PropLevel.hasCollision(prop)) continue;
+            for (const c of PropLevel.getColliders(prop)) {
+                const h = Math.max(c.yMax - c.yMin, 0.1);
+                const geo = (c.shape === 'box')
+                    ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
+                    : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+                const mat = new THREE.LineBasicMaterial({ color: 0xffaa00 });
+                mat.depthTest = false;
+                const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+                if (c.shape === 'box') helper.rotation.y = c.rot || 0;
+                helper.renderOrder = 999;
+                scene.add(helper);
+                this.dynColliderHelpers.push(helper);
+                geo.dispose();
+            }
+        }
+    },
+
     // Toggle developer gizmos at runtime (console or 'G' key).
     setDeveloper: function(on) {
         developer = !!on;
         this.buildColliderGizmos();
+        this.updateDynamicColliderGizmos();   // clears them when turning dev off
         if (!developer && this.playerColliderHelper) {
             scene.remove(this.playerColliderHelper);
             this.playerColliderHelper = null;
@@ -855,6 +890,9 @@ const Level = {
             scene.remove(this.playerColliderHelper);
             this.playerColliderHelper = null;
         }
+
+        // Disguised-hider colliders (orange) — they move, so refresh every frame.
+        this.updateDynamicColliderGizmos();
 
         if (gameState.players[myId]) {
             const p = gameState.players[myId];

@@ -483,6 +483,15 @@ const Mechanics = {
     getDynamicProps: function() {
         const out = [];
         if (typeof gameState === 'undefined' || !gameState.players) return out;
+        // Use the SAME interpolated render position the meshes use. On a CLIENT,
+        // gameState.players[id].x/z for remote players is only their spawn point
+        // (snapshots are buffered, never written back — Network 'snapshot' case),
+        // so reading it would anchor a disguised hider's collider/gizmo at spawn,
+        // far from where they actually appear. Sampling the snapshot buffer makes
+        // collision + the dev gizmo track the rendered position. On the HOST the
+        // buffer is empty → sampled is null → we fall back to the authoritative x/z.
+        const sampled = (typeof Network !== 'undefined' && Network.sampleSnapshot)
+            ? Network.sampleSnapshot(Network.now() - Network.INTERP_DELAY) : null;
         for (const id in gameState.players) {
             if (id === myId) continue;
             const p = gameState.players[id];
@@ -491,11 +500,14 @@ const Mechanics = {
             const def = PropLevel.getPrefab(p.disguiseType);
             const R = p.propRadius || (p.disguiseSize ? p.disguiseSize / 2 : 1);
             const H = p.propHeight || 2;
+            const s = sampled && sampled[id];
+            const px = s ? s.x : p.x;
+            const pz = s ? s.z : p.z;
             const bounds = { radius: R, height: H, bottomY: 0, topY: H,
-                centerX: p.x, centerZ: p.z, localX: R * 2, localZ: R * 2 };
+                centerX: px, centerZ: pz, localX: R * 2, localZ: R * 2 };
             const pieces = PropLevel.resolveColliders({ rotation: p.propRotation || { y: 0 } }, bounds, def);
             out.push({
-                model: p.disguiseType, x: p.x, z: p.z, centerX: p.x, centerZ: p.z,
+                model: p.disguiseType, x: px, z: pz, centerX: px, centerZ: pz,
                 radius: R, height: H, bottomY: 0, topY: H, colliders: pieces,
                 collision: def.collision, climbable: def.climbable
             });
