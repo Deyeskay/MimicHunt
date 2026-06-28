@@ -28,11 +28,13 @@ camera.lookAt(camera.position + d)   // crosshair-centred aim
 - The mouse/touch **look** orbits the camera (`cameraYaw`, `cameraPitch`) — it does
   **not** rotate the character.
 - The **character** faces its **movement heading**: `Mechanics.handleLocalMovement`
-  sets `localRotY = atan2(moveX, moveZ)` (movement is computed relative to
-  `cameraYaw`). `applyLocalTransform`/`clientMove` send `localRotY` (not `cameraYaw`)
-  as `rotY`. Idle keeps the last facing.
-- **Exception — aim-stance:** while a Seeker's `shootingUntil` is active,
-  `localRotY = cameraYaw + Math.PI` (face the crosshair/target); retreating then
+  computes a `targetRotY = atan2(moveX, moveZ)` (movement is relative to `cameraYaw`)
+  and **smoothly lerps `localRotY` toward it** (`TURN_LERP = 0.2`/tick, shortest
+  angular path) so the character pivots instead of snapping. Position movement still
+  follows the instant input direction. `applyLocalTransform`/`clientMove` send
+  `localRotY` (not `cameraYaw`) as `rotY`. Idle keeps the last facing.
+- **Exception — aim-stance:** while a Seeker's `shootingUntil` is active, `targetRotY
+  = cameraYaw + Math.PI` (face the crosshair/target, also smoothed); retreating then
   back-walks (see ANIMATION_SYSTEM.md).
 
 ## Desktop input (`Mechanics.initInputs`)

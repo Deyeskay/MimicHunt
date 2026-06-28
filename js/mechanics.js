@@ -243,19 +243,31 @@ const Mechanics = {
             moveZ = fwd * (-Math.cos(cameraYaw)) + rgt * (-Math.sin(cameraYaw));
         }
 
+        // Target facing for this tick. Default: keep the current heading (so an
+        // idle player doesn't rotate). Moving → face the movement direction.
+        let targetRotY = localRotY;
         let length = Math.hypot(moveX, moveZ);
         if (length > 0) {
             moveX = (moveX / length) * moveSpeed;
             moveZ = (moveZ / length) * moveSpeed;
-            localRotY = Math.atan2(moveX, moveZ);   // MOVEMENT heading (PUBG default)
+            targetRotY = Math.atan2(moveX, moveZ);   // MOVEMENT heading (PUBG default)
         }
 
         // Aim-stance: while a seeker is in the post-shot window, face the
         // crosshair/target instead of the movement direction (same convention as
         // the W-forward heading). Retreating then plays the back-walk.
         if (pData.role === 'Seeker' && Network.now() < (pData.shootingUntil || 0)) {
-            localRotY = cameraYaw + Math.PI;
+            targetRotY = cameraYaw + Math.PI;
         }
+
+        // Smoothly turn toward the target heading (shortest angular path) instead
+        // of snapping — gives the character a natural pivot. Position movement
+        // above is unchanged (it follows the instant input direction).
+        const TURN_LERP = 0.2;   // per 60Hz tick; higher = snappier
+        let dRot = targetRotY - localRotY;
+        dRot = Math.atan2(Math.sin(dRot), Math.cos(dRot));   // wrap to [-PI, PI]
+        localRotY += dRot * TURN_LERP;
+        localRotY = Math.atan2(Math.sin(localRotY), Math.cos(localRotY));   // normalize
 
         let targetX = localPos.x + moveX;
         let targetZ = localPos.z + moveZ;
