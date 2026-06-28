@@ -5,6 +5,17 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
+- **Event toasts.** A new bottom-center toast (above the health/reload row,
+  `#toast-container` + `UI.toast`) announces when a player **left** (`👋`), was
+  **eliminated** (`💀`, with killer name), or **disconnected/crashed** (`⚠️`). Host
+  detects the event and calls `Network.notify(text)` → shows locally + broadcasts a
+  new `notice` message; clients render it via `case 'notice'`. Toasts auto-dismiss
+  (~4s), cap at 4, and a graceful `leave` sets `conn._dropped` to avoid a duplicate
+  disconnect toast. (Shown in-game only — the lobby already lists players.)
+- **Mobile fullscreen.** First tap on a touch device requests fullscreen
+  (`goFullscreen` in `app.js`) so the browser address bar collapses; body uses
+  `100dvh`, viewport meta gains `viewport-fit=cover`, and the canvas refits on
+  `visualViewport` resize + `orientationchange`.
 - **Menu/settings visual redesign (casual "wooden sign" theme).** Restyled the
   menu, settings, lobby and modals to match the `thumbnail.png` art style: a full
   scene background image (`assets/textures/background.png`, with a sky→grass gradient

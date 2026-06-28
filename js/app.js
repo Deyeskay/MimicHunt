@@ -116,6 +116,30 @@ function animate() {
 
 // --- INITIALIZE APPLICATION ---
 window.addEventListener('resize', () => Level.resize());
+// Mobile browser toolbars show/hide without firing 'resize' — refit on those too.
+if (window.visualViewport) window.visualViewport.addEventListener('resize', () => Level.resize());
+window.addEventListener('orientationchange', () => setTimeout(() => Level.resize(), 250));
+
+// On touch devices, go fullscreen on the first tap so the browser address bar
+// collapses and the game gets the whole screen. (Fullscreen must be triggered by a
+// user gesture, so we wait for the first touch/click.)
+function goFullscreen() {
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (req) { try { req.call(el); } catch (e) {} }
+    if (screen.orientation && screen.orientation.lock) {
+        try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
+    }
+}
+if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+    const onFirstTap = () => {
+        goFullscreen();
+        document.removeEventListener('touchend', onFirstTap);
+        document.removeEventListener('click', onFirstTap);
+    };
+    document.addEventListener('touchend', onFirstTap, { passive: true });
+    document.addEventListener('click', onFirstTap);
+}
 // Load all level files (registry.js → LEVEL_FILES) before init reads LEVELS.
 loadLevelScripts().then(() =>
 {

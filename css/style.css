@@ -18,7 +18,9 @@
 body {
     background: var(--bg-color); color: var(--text-main);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    overflow: hidden; position: fixed; width: 100%; height: 100%;
+    overflow: hidden; position: fixed; width: 100%;
+    height: 100vh; height: 100dvh;   /* dvh = visible area excl. mobile browser UI */
+    top: 0; left: 0;
 }
 
 /* Playful rounded display font for the themed menus. */
@@ -337,6 +339,23 @@ button.leave {
 /* Blink for the reload indicator. */
 .blink { animation: hud-blink 0.7s steps(1, end) infinite; }
 @keyframes hud-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+/* Event toasts — stacked bottom-center, just above the health/reload row. */
+#toast-container {
+    position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
+    z-index: 13; pointer-events: none;
+    display: flex; flex-direction: column-reverse; align-items: center; gap: 8px;
+}
+.toast {
+    max-width: 80vw; padding: 8px 16px; border-radius: 20px; white-space: nowrap;
+    font-weight: bold; font-size: 0.92rem; color: #fff;
+    background: rgba(20, 22, 30, 0.9); border: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+    animation: toast-in 0.25s ease, toast-out 0.4s ease forwards;
+    animation-delay: 0s, 3.6s;   /* visible ~3.6s, then fade out */
+}
+@keyframes toast-in  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
 
 /* Two-button modal action row (used by UI.showConfirm). */
 .modal-actions { display: flex; gap: 10px; justify-content: center; }

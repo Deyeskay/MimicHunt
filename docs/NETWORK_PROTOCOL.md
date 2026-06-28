@@ -40,6 +40,7 @@ state + events. All in `js/network.js`.
 | `shot` | a seeker fired (hit or miss) | see below | update health/score/reveal/lock/elim; spawn bolt+impact; sounds; hit-marker |
 | `jump` | a player jumped | `{id}` | stamp `players[id].jumpAt=now` (skip self) |
 | `caught` | (legacy) | `{id}` | set `isCaught` (superseded by `shot.eliminated`) |
+| `notice` | event toast | `{text}` | `UI.toast(text)` — player left/eliminated/disconnected (host also shows locally via `Network.notify`) |
 | `ping` | 1 Hz all phases | `{}` | resets client watchdog (`_lastHostMsgTime`) |
 | `gameOver` | win/timeout | `{title,message}` | `sessionEnding=true`; modal → cleanup |
 | `hidersWin` | 0-seeker migration result | `{title,message}` | informational modal |
