@@ -87,6 +87,18 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
   **purple** — `rebuildEditorColliders` colors `selectedObjects.includes(obj)`),
   per-object BoxHelpers + the primary's AxesHelper (detached during bounds reads so it
   doesn't inflate them).
+- **Inspector multi-edit (Unity-style):** with several objects selected the inspector
+  shows the **common** value per field; fields that differ go blank with a `—`
+  placeholder (numbers) or the indeterminate dash (checkboxes). Editing a field applies
+  to **all** selected objects in one undo step (`updateInspectorFields` +
+  `_commonNum`/`_commonBool`/`_setNumField`/`_setChkField`; `numChange`/`chkChange`).
+- **Delete** is via the **Delete key** only (the toolbar "Delete Selected" button was
+  removed); `deleteSelected()` still backs the shortcut.
+- **Hierarchy search:** a `#hierarchy-search` box filters the list by name
+  (case-insensitive substring). `refreshHierarchy` renders only matches into
+  `visibleHierarchy`; **Ctrl/Cmd-click toggle and Shift-click range-select operate over
+  the filtered list**, and arrow nav walks it too. Keydown handlers ignore W/E/R/Q/F/
+  Delete/nudge while a text field is focused (so you can type in the search).
 - **Hierarchy keyboard nav:** the `#hierarchy` panel is focusable (`tabindex`); while
   focused, **Up/Down arrows switch the selected object** (`navigateHierarchy`) instead
   of scrolling. In the viewport (panel not focused) arrows still nudge the object(s).

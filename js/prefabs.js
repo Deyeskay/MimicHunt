@@ -42,7 +42,7 @@ const PrefabLibrary = {
                  { radius: 0.95, yMin: 0.50, yMax: 1.00 }    // canopy (floating)
              ] },
     rock:  { collision: true,  climbable: true, hideSpot: true,  canDisguise: true  },
-    bush:  { collision: false, climbable: true, hideSpot: true,  canDisguise: true  },
+    bush:  { collision: true, climbable: true, hideSpot: true,  canDisguise: true  },
     // Wall uses a BOX collider (oriented by rotation.y) instead of a cylinder —
     // a long thin wall should block as a rectangle, not a fat round column.
     wall:  { collision: true,  climbable: true,  hideSpot: false, canDisguise: false,

@@ -128,7 +128,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -148,7 +147,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -168,7 +166,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -188,7 +185,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -281,7 +277,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -301,7 +296,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1120,7 +1114,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1215,7 +1208,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1235,7 +1227,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1310,7 +1301,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1330,7 +1320,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1350,7 +1339,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1370,7 +1358,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1390,7 +1377,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1410,7 +1396,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1430,7 +1415,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1468,7 +1452,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1488,7 +1471,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1527,7 +1509,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1547,7 +1528,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1567,7 +1547,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1720,7 +1699,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1740,7 +1718,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1760,7 +1737,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1913,7 +1889,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -1990,7 +1965,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -2010,7 +1984,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -2030,7 +2003,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -2069,7 +2041,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {
@@ -2089,7 +2060,6 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         },
-        "collision": true,
         "hideSpot": false
     },
     {

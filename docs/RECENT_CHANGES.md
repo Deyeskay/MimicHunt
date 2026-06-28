@@ -5,6 +5,33 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Editor: hierarchy search/filter.** A `#hierarchy-search` box filters the list by
+  name (case-insensitive); `refreshHierarchy` renders matches into `visibleHierarchy`,
+  and **Ctrl/Cmd-toggle, Shift-range, and arrow nav operate over the filtered list**.
+  Two fixes made shift-range reliable: the window placement `mousedown` now ignores
+  clicks inside `#right-panel` (it was raycasting the scene and corrupting the range
+  anchor), and `.hierarchy-item` is `user-select:none` (shift-click selected text
+  before). Keydown shortcuts (W/E/R/Q/F/Delete/nudge) are suppressed while a text
+  field is focused. editor.html only.
+- **Disguised hiders are solid (collide + standable).** Players never collided with
+  each other, so seekers walked through disguised hiders. Now a disguised hider acts as
+  a **dynamic pseudo-prop** that mimics the prop it's disguised as: `Mechanics.getDynamicProps()`
+  builds prop-like colliders (via `PropLevel.resolveColliders`) from each disguised
+  player's `disguiseType`/`propRadius`/`propHeight`/`propRotation` (excluding self +
+  caught), refreshed once per movement tick into `this._dynamicProps`. Movement
+  (`blockedAt` → new `_propBlocks` helper) and the climb floor model (new `_climbFloor`
+  helper) now test level props **and** these dynamic props — so seekers are blocked by a
+  disguised hider and can jump on / stand on it exactly like the real prop. Client-side
+  movement only (positions already replicate); no netcode change.
+- **Floating name tags (through walls, role-colored).** A name label hovers above each
+  player's head, drawn through walls (`depthTest:false`, `renderOrder 1000`) at a
+  constant on-screen size (`sizeAttenuation:false`). Visibility (never your own tag,
+  in-game only): **Seeker tags are RED and seen by everyone** (hiders + other seekers);
+  **Hider tags are GREEN and seen only by other hiders** (teammate awareness — the seeker
+  still has to find hiders). `THREE.Sprite` + `CanvasTexture` (`Level.makeNameSprite(text,
+  color)`), managed per-frame by `Level.applyNameLabel(mesh,p,id)` (called after
+  `applyRevealBlink` in the render loop) which creates/recolors/renames/removes it.
+  Client-render only — no netcode.
 - **Disguised players use the prop's compound collider.** When a hider disguises as a
   prop, it now adopts that prop's compound colliders (e.g. tree = slim trunk + wide
   canopy) instead of one fat cylinder: `Mechanics.applyDisguiseFromProp` computes

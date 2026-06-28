@@ -104,17 +104,26 @@ body{
     border-bottom:1px solid var(--border);
     border-radius:var(--radius) var(--radius) 0 0;
 }
+#hierarchy-search{
+    margin:6px; padding:7px 10px; font-size:12.5px;
+    background:#1b1b22; color:var(--text); border:1px solid var(--border);
+    border-radius:6px; outline:none;
+}
+#hierarchy-search:focus{ border-color:var(--accent); }
 #hierarchyList{
     flex:1;
     overflow-y:auto;
     padding:4px;
 }
+.hierarchy-empty{ padding:10px; color:var(--muted); font-size:12.5px; }
 .hierarchy-item{
     padding:8px 10px;
     cursor:pointer;
     border-radius:6px;
     font-size:12.5px;
     color:var(--muted);
+    user-select:none;            /* shift-click selects rows, not text */
+    -webkit-user-select:none;
 }
 .hierarchy-item:hover{ background:#2c2c37; color:var(--text); }
 .hierarchy-item.active{ background:var(--accent); color:#fff; font-weight:600; }
@@ -369,8 +378,7 @@ button{
 
     <div class="section">
         <div class="section-label">Object</div>
-        <button class="btn btn-danger" onclick="deleteSelected()">🗑 Delete Selected</button>
-        <button id="toggleCollidersBtn" class="btn" style="margin-top:8px;" onclick="toggleEditorColliders(this)">🟡 Show Colliders</button>
+        <button id="toggleCollidersBtn" class="btn" onclick="toggleEditorColliders(this)">🟡 Show Colliders</button>
     </div>
 
     <div class="section">
@@ -388,6 +396,7 @@ button{
 
     <div id="hierarchy" class="panel" tabindex="0">
         <div class="hierarchy-header">Hierarchy</div>
+        <input id="hierarchy-search" type="text" placeholder="Search objects…" autocomplete="off">
         <div id="hierarchyList"></div>
     </div>
 
@@ -585,6 +594,10 @@ let transformPivot = null;          // gizmo attaches here (group); see position
 
 let placedObjects = [];
 let objectId = 1;
+
+// --- Hierarchy search/filter ---
+let hierarchyFilter = '';       // current search text (lowercased on use)
+let visibleHierarchy = [];      // placedObjects currently shown (filtered, in order)
 
 // --- Undo / redo (full-scene snapshots) ---
 let undoStack = [];
@@ -1138,44 +1151,38 @@ function attachInspectorInputListeners() {
     const scaleY = document.getElementById('scaleY');
     const scaleZ = document.getElementById('scaleZ');
 
-    const afterEdit = () => { collidersDirty = true; };
-    posX.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.position.x = parseFloat(posX.value); afterEdit(); });
-    posY.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.position.y = parseFloat(posY.value); afterEdit(); });
-    posZ.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.position.z = parseFloat(posZ.value); afterEdit(); });
-    rotY.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.rotation.y = THREE.MathUtils.degToRad(parseFloat(rotY.value)); afterEdit(); });
-    scaleX.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.scale.x = parseFloat(scaleX.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.x, selectedObject.scale.x, selectedObject.scale.x); updateInspectorFields(); } afterEdit(); });
-    scaleY.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.scale.y = parseFloat(scaleY.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.y, selectedObject.scale.y, selectedObject.scale.y); updateInspectorFields(); } afterEdit(); });
-    scaleZ.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.scale.z = parseFloat(scaleZ.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.z, selectedObject.scale.z, selectedObject.scale.z); updateInspectorFields(); } afterEdit(); });
-
-    document.getElementById("chkCollision").addEventListener("change",e=>
-    {
-        if(selectedObject) { pushUndo(); selectedObject.userData.data.collision = e.target.checked; afterEdit(); }
+    // Apply a numeric field to ALL selected objects (one undo step). Blank/mixed
+    // ("—") fields parse to NaN and are ignored until the user types a value.
+    const numChange = (input, apply) => input.addEventListener('change', () => {
+        const v = parseFloat(input.value);
+        if (isNaN(v) || !selectedObjects.length) return;
+        pushUndo();
+        selectedObjects.forEach(o => apply(o, v));
+        collidersDirty = true;
+        updateInspectorFields();
     });
+    numChange(posX, (o, v) => o.position.x = v);
+    numChange(posY, (o, v) => o.position.y = v);
+    numChange(posZ, (o, v) => o.position.z = v);
+    numChange(rotY, (o, v) => o.rotation.y = THREE.MathUtils.degToRad(v));
+    numChange(scaleX, (o, v) => { if (uniformCheckbox.checked) o.scale.set(v, v, v); else o.scale.x = v; });
+    numChange(scaleY, (o, v) => { if (uniformCheckbox.checked) o.scale.set(v, v, v); else o.scale.y = v; });
+    numChange(scaleZ, (o, v) => { if (uniformCheckbox.checked) o.scale.set(v, v, v); else o.scale.z = v; });
 
-    document.getElementById("chkClimbable").addEventListener("change",e=>
-    {
-        if(selectedObject) { pushUndo(); selectedObject.userData.data.climbable = e.target.checked; afterEdit(); }
+    // Apply a gameplay flag to ALL selected objects (Unity-style multi-edit).
+    const chkChange = (id, key) => document.getElementById(id).addEventListener("change", e => {
+        if (!selectedObjects.length) return;
+        pushUndo();
+        selectedObjects.forEach(o => { o.userData.data[key] = e.target.checked; });
+        collidersDirty = true;
+        updateInspectorFields();
     });
-
-    document.getElementById("chkHideSpot").addEventListener("change",e=>
-    {
-        if(selectedObject) { pushUndo(); selectedObject.userData.data.hideSpot = e.target.checked; afterEdit(); }
-    });
-
-    document.getElementById("chkSpawnPoint").addEventListener("change",e=>
-    {
-        if(selectedObject) { pushUndo(); selectedObject.userData.data.spawnPoint = e.target.checked; }
-    });
-
-    document.getElementById("chkSeekerSpawn").addEventListener("change",e=>
-    {
-        if(selectedObject) { pushUndo(); selectedObject.userData.data.seekerSpawn = e.target.checked; }
-    });
-
-    document.getElementById("chkHiderSpawn").addEventListener("change",e=>
-    {
-        if(selectedObject) { pushUndo(); selectedObject.userData.data.hiderSpawn = e.target.checked; }
-    });
+    chkChange("chkCollision",  "collision");
+    chkChange("chkClimbable",  "climbable");
+    chkChange("chkHideSpot",   "hideSpot");
+    chkChange("chkSpawnPoint", "spawnPoint");
+    chkChange("chkSeekerSpawn","seekerSpawn");
+    chkChange("chkHiderSpawn", "hiderSpawn");
 }
 
 // Attach the inspector input listeners once the DOM is ready
@@ -1188,20 +1195,13 @@ if (document.readyState !== 'loading') {
 // Clear inspector fields
 function clearInspector() {
     document.getElementById('objName').innerText = 'None';
-    document.getElementById('posX').value = '';
-    document.getElementById('posY').value = '';
-    document.getElementById('posZ').value = '';
-    document.getElementById('rotY').value = '';
-    document.getElementById('scaleX').value = '';
-    document.getElementById('scaleY').value = '';
-    document.getElementById('scaleZ').value = '';
+    ['posX','posY','posZ','rotY','scaleX','scaleY','scaleZ'].forEach(id => {
+        const el = document.getElementById(id); el.value = ''; el.placeholder = '';
+    });
     uniformCheckbox.checked = false;
-    document.getElementById("chkCollision").checked = false;
-    document.getElementById("chkClimbable").checked = false;
-    document.getElementById("chkHideSpot").checked = false;
-    document.getElementById("chkSpawnPoint").checked = false;
-    document.getElementById("chkSeekerSpawn").checked = false;
-    document.getElementById("chkHiderSpawn").checked = false;
+    ['chkCollision','chkClimbable','chkHideSpot','chkSpawnPoint','chkSeekerSpawn','chkHiderSpawn'].forEach(id => {
+        const el = document.getElementById(id); el.checked = false; el.indeterminate = false;
+    });
 }
 
 let isTransforming = false;
@@ -1484,12 +1484,21 @@ window.addEventListener(
 
         const helpModal = document.getElementById("helpModal");
 
-        if(toolbar.contains(e.target))    
+        const rightPanel = document.getElementById("right-panel");
+
+        if(toolbar.contains(e.target))
         {
             return;
         }
 
         if(helpModal.contains(e.target))
+        {
+            return;
+        }
+
+        // Clicks inside the right panel (hierarchy + search + inspector) are UI —
+        // never raycast/select/place into the scene (this corrupted shift-range).
+        if(rightPanel && rightPanel.contains(e.target))
         {
             return;
         }
@@ -1621,6 +1630,11 @@ window.addEventListener(
             return;
         }
 
+        // While typing in a text field (e.g. the hierarchy search), don't nudge
+        // objects / deselect — let the input handle the keystroke.
+        const ae = document.activeElement;
+        if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+
         // Arrow / PageUp/Down nudge — moves ALL selected objects.
         if(selectedObjects.length)
         {
@@ -1678,7 +1692,24 @@ function refreshHierarchy()
 
     list.innerHTML = "";
 
-    placedObjects.forEach(obj=>
+    // Filter by the search box (case-insensitive substring). visibleHierarchy is the
+    // displayed subset, in order — used by shift-range + arrow nav so selection works
+    // on the filtered list.
+    const f = hierarchyFilter.trim().toLowerCase();
+    visibleHierarchy = f
+        ? placedObjects.filter(o => (o.userData.data.name || '').toLowerCase().includes(f))
+        : placedObjects.slice();
+
+    if (!visibleHierarchy.length)
+    {
+        const empty = document.createElement("div");
+        empty.className = "hierarchy-empty";
+        empty.textContent = f ? "No matches" : "No objects";
+        list.appendChild(empty);
+        return;
+    }
+
+    visibleHierarchy.forEach(obj=>
     {
         const item =
             document.createElement("div");
@@ -1693,13 +1724,14 @@ function refreshHierarchy()
 
         item.addEventListener("click", e =>
         {
-            if (e.shiftKey && selectedObject)
+            const anchor = visibleHierarchy.indexOf(selectedObject);
+            if (e.shiftKey && anchor !== -1)
             {
-                // Range select from the primary to the clicked item.
-                const a = placedObjects.indexOf(selectedObject);
-                const b = placedObjects.indexOf(obj);
-                const lo = Math.min(a, b), hi = Math.max(a, b);
-                setSelection(placedObjects.slice(lo, hi + 1));
+                // Range select from the primary to the clicked item, WITHIN the
+                // currently visible (filtered) list.
+                const b = visibleHierarchy.indexOf(obj);
+                const lo = Math.min(anchor, b), hi = Math.max(anchor, b);
+                setSelection(visibleHierarchy.slice(lo, hi + 1));
             }
             else
             {
@@ -1798,11 +1830,12 @@ function selectObject(obj, additive) {
 // Move the hierarchy selection by dir (-1 up, +1 down) and scroll it into view.
 // Used by the keydown handler when the hierarchy panel is focused.
 function navigateHierarchy(dir) {
-    if (!placedObjects.length) return;
-    let idx = placedObjects.indexOf(selectedObject);
+    const listArr = (visibleHierarchy && visibleHierarchy.length) ? visibleHierarchy : placedObjects;
+    if (!listArr.length) return;
+    let idx = listArr.indexOf(selectedObject);
     if (idx === -1) idx = (dir > 0 ? -1 : 0);   // nothing selected → first/last
-    const next = Math.max(0, Math.min(placedObjects.length - 1, idx + dir));
-    selectObject(placedObjects[next]);          // rebuilds the list
+    const next = Math.max(0, Math.min(listArr.length - 1, idx + dir));
+    selectObject(listArr[next]);                // rebuilds the list
 
     const list = document.getElementById("hierarchyList");
     const active = list && list.querySelector(".hierarchy-item.active");
@@ -1810,25 +1843,59 @@ function navigateHierarchy(dir) {
     document.getElementById("hierarchy").focus();   // keep focus for continued nav
 }
 
+// Common numeric value (as a fixed string) across all selected objects, or null if
+// they differ ("mixed").
+function _commonNum(getter, digits) {
+    const objs = selectedObjects;
+    if (!objs.length) return null;
+    const first = getter(objs[0]).toFixed(digits);
+    for (let i = 1; i < objs.length; i++) if (getter(objs[i]).toFixed(digits) !== first) return null;
+    return first;
+}
+// Common boolean gameplay flag across selection, or null if mixed.
+function _commonBool(key) {
+    const objs = selectedObjects;
+    if (!objs.length) return null;
+    const first = !!objs[0].userData.data[key];
+    for (let i = 1; i < objs.length; i++) if (!!objs[i].userData.data[key] !== first) return null;
+    return first;
+}
+// A number input shows the value, or blank with a "—" placeholder when mixed.
+function _setNumField(id, str) {
+    const el = document.getElementById(id);
+    if (str === null) { el.value = ''; el.placeholder = '—'; }
+    else { el.value = str; el.placeholder = ''; }
+}
+// A checkbox shows the value, or the indeterminate (dash) state when mixed.
+function _setChkField(id, val) {
+    const el = document.getElementById(id);
+    el.indeterminate = (val === null);
+    el.checked = (val === true);
+}
+
+// Reflect the current selection in the inspector. With multiple objects it shows the
+// COMMON value per field (mixed fields go blank / indeterminate, Unity-style).
 function updateInspectorFields() {
-    if (!selectedObject) return;
-    document.getElementById('objName').innerText = selectedObject.userData.data.name;
-    document.getElementById('posX').value = selectedObject.position.x.toFixed(2);
-    document.getElementById('posY').value = selectedObject.position.y.toFixed(2);
-    document.getElementById('posZ').value = selectedObject.position.z.toFixed(2);
-    document.getElementById('rotY').value = THREE.MathUtils.radToDeg(selectedObject.rotation.y).toFixed(1);
-    document.getElementById('scaleX').value = selectedObject.scale.x.toFixed(2);
-    document.getElementById('scaleY').value = selectedObject.scale.y.toFixed(2);
-    document.getElementById('scaleZ').value = selectedObject.scale.z.toFixed(2);
+    const objs = selectedObjects;
+    if (!objs.length) return;
 
-    //game params
-    document.getElementById("chkCollision").checked = selectedObject.userData.data.collision;
-    document.getElementById("chkClimbable").checked = selectedObject.userData.data.climbable;
-    document.getElementById("chkHideSpot").checked = selectedObject.userData.data.hideSpot;
-    document.getElementById("chkSpawnPoint").checked = selectedObject.userData.data.spawnPoint;
-    document.getElementById("chkSeekerSpawn").checked = selectedObject.userData.data.seekerSpawn;
-    document.getElementById("chkHiderSpawn").checked = selectedObject.userData.data.hiderSpawn;
+    document.getElementById('objName').innerText =
+        objs.length === 1 ? objs[0].userData.data.name : (objs.length + ' objects');
 
+    _setNumField('posX', _commonNum(o => o.position.x, 2));
+    _setNumField('posY', _commonNum(o => o.position.y, 2));
+    _setNumField('posZ', _commonNum(o => o.position.z, 2));
+    _setNumField('rotY', _commonNum(o => THREE.MathUtils.radToDeg(o.rotation.y), 1));
+    _setNumField('scaleX', _commonNum(o => o.scale.x, 2));
+    _setNumField('scaleY', _commonNum(o => o.scale.y, 2));
+    _setNumField('scaleZ', _commonNum(o => o.scale.z, 2));
+
+    _setChkField('chkCollision',  _commonBool('collision'));
+    _setChkField('chkClimbable',  _commonBool('climbable'));
+    _setChkField('chkHideSpot',   _commonBool('hideSpot'));
+    _setChkField('chkSpawnPoint', _commonBool('spawnPoint'));
+    _setChkField('chkSeekerSpawn',_commonBool('seekerSpawn'));
+    _setChkField('chkHiderSpawn', _commonBool('hiderSpawn'));
 }
 
 
@@ -1978,15 +2045,20 @@ window.addEventListener(
     "keydown",
     e =>
     {
+        // Don't fire W/E/R/Q/F/Delete/Ctrl+D while typing in a text field
+        // (e.g. the hierarchy search box).
+        const ae = document.activeElement;
+        if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+
         if(!selectedObject)
             return;
 
-        
+
         if(e.key === "Delete")
         {
             deleteSelected();
             return;
-        }    
+        }
 
         if(e.ctrlKey && e.key.toLowerCase()=="d")
         {
@@ -2447,6 +2519,12 @@ animate();
 document.querySelectorAll('#viewGizmo .vg-axis, #viewGizmo .vg-hub').forEach(el =>
     el.addEventListener('click', () => snapView(el.dataset.view)));
 document.getElementById('vgPersp').addEventListener('click', toggleProjection);
+
+// Wire the hierarchy search box → filter the list live.
+(function () {
+    const hs = document.getElementById('hierarchy-search');
+    if (hs) hs.addEventListener('input', () => { hierarchyFilter = hs.value; refreshHierarchy(); });
+})();
 
 
 //help button script

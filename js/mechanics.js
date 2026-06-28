@@ -261,6 +261,9 @@ const Mechanics = {
         if (!pData || pData.isCaught) return;
         if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
 
+        // Disguised hiders act as solid props this tick (collide + stand on them).
+        this._dynamicProps = this.getDynamicProps();
+
         const moveSpeed = 0.15;   // units per 60Hz tick (~9 u/s). Tune for feel.
         let moveX = 0;
         let moveZ = 0;
@@ -331,32 +334,15 @@ const Mechanics = {
         // over (and currently on/above), else the world ground. Gravity lands the
         // player on this floor — so you can jump onto rocks/bushes and stand —
         // and walking off the edge drops the floor so you fall again.
+        // Floor = highest climbable surface under the player (level props AND
+        // disguised hiders, which act like the prop they mimic).
         let floorY = baseHeight;
-        for (let prop of mapProps3D) {
-            if (!PropLevel.isClimbable(prop)) continue;
-            const surf = PropLevel.getPropTop(prop) + baseHeight;
-            // Only a surface the player is on/above counts (small tolerance), so
-            // you can't pop up through a prop walked into from the side — you must
-            // jump onto it.
-            if (!(localPos.y >= surf - 0.3 && surf > floorY)) continue;
-
-            // Is the player over this prop's footprint? Test each collider piece in
-            // its own shape (oriented box for walls, circle otherwise) so you stand
-            // on the actual top surface — not a fat circle around a thin wall.
-            let over = false;
-            const pieces = PropLevel.getColliders(prop);
-            for (let i = 0; i < pieces.length; i++) {
-                const c = pieces[i];
-                if (c.shape === 'box') {
-                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-                    const px = localPos.x - c.x, pz = localPos.z - c.z;
-                    const lx = px * cs + pz * sn, lz = -px * sn + pz * cs;
-                    if (Math.abs(lx) <= c.halfX + myRadius && Math.abs(lz) <= c.halfZ + myRadius) { over = true; break; }
-                } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
-                    over = true; break;
-                }
-            }
-            if (over) floorY = surf;
+        for (let i = 0; i < mapProps3D.length; i++) {
+            floorY = this._climbFloor(mapProps3D[i], baseHeight, myRadius, floorY);
+        }
+        const dyn = this._dynamicProps;
+        if (dyn) for (let i = 0; i < dyn.length; i++) {
+            floorY = this._climbFloor(dyn[i], baseHeight, myRadius, floorY);
         }
 
         velocityY += GRAVITY;
@@ -410,6 +396,7 @@ const Mechanics = {
         // hider was touching that prop it now overlaps it (and maybe others).
         // Push the player to the nearest clear spot so it never spawns wedged
         // inside a collider — and never into a different one.
+        this._dynamicProps = this.getDynamicProps();   // also avoid other disguised hiders
         this.resolveOverlap();
 
         // Disguise changes rarely, so replicate it as a discrete event rather
@@ -431,35 +418,89 @@ const Mechanics = {
         const pBottom = localPos.y - half;
         const pTop = localPos.y + half;
 
-        for (let prop of mapProps3D) {
-            if (!PropLevel.hasCollision(prop)) continue;
-            const pieces = PropLevel.getColliders(prop);
-            for (let i = 0; i < pieces.length; i++) {
-                const c = pieces[i];
-                if (!(pBottom < c.yMax && pTop > c.yMin)) continue;   // vertical band
-
-                if (c.shape === 'box') {
-                    // Circle (player) vs oriented box: transform the point into the
-                    // box's local frame, clamp to the box, compare the distance to
-                    // the nearest edge against myRadius.
-                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-                    const px = x - c.x, pz = z - c.z;
-                    const lx = px * cs + pz * sn;        // local frame (-rot)
-                    const lz = -px * sn + pz * cs;
-                    const dxBox = Math.abs(lx) - c.halfX;
-                    const dzBox = Math.abs(lz) - c.halfZ;
-                    if (dxBox <= 0 && dzBox <= 0) return true;   // center inside box
-                    const ex = Math.max(dxBox, 0), ez = Math.max(dzBox, 0);
-                    if (ex * ex + ez * ez < myRadius * myRadius) return true;
-                    continue;
-                }
-
-                if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)) {
-                    return true;
-                }
-            }
+        for (let i = 0; i < mapProps3D.length; i++) {
+            if (this._propBlocks(mapProps3D[i], x, z, myRadius, pBottom, pTop)) return true;
+        }
+        const dyn = this._dynamicProps;
+        if (dyn) for (let i = 0; i < dyn.length; i++) {
+            if (this._propBlocks(dyn[i], x, z, myRadius, pBottom, pTop)) return true;
         }
         return false;
+    },
+
+    // True if a player circle (myRadius) at (x,z) overlaps any of `prop`'s collider
+    // pieces within the player's vertical band. Shared by level props + disguised
+    // hiders (dynamic pseudo-props).
+    _propBlocks: function(prop, x, z, myRadius, pBottom, pTop) {
+        if (!PropLevel.hasCollision(prop)) return false;
+        const pieces = PropLevel.getColliders(prop);
+        for (let i = 0; i < pieces.length; i++) {
+            const c = pieces[i];
+            if (!(pBottom < c.yMax && pTop > c.yMin)) continue;   // vertical band
+            if (c.shape === 'box') {
+                const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                const px = x - c.x, pz = z - c.z;
+                const lx = px * cs + pz * sn;        // box-local frame
+                const lz = -px * sn + pz * cs;
+                const dxBox = Math.abs(lx) - c.halfX;
+                const dzBox = Math.abs(lz) - c.halfZ;
+                if (dxBox <= 0 && dzBox <= 0) return true;   // centre inside box
+                const ex = Math.max(dxBox, 0), ez = Math.max(dzBox, 0);
+                if (ex * ex + ez * ez < myRadius * myRadius) return true;
+                continue;
+            }
+            if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)) return true;
+        }
+        return false;
+    },
+
+    // If the player is standing on/above `prop`'s top and over its footprint, return
+    // that surface height (vs the current best). Shared by level props + disguised
+    // hiders. Mirrors the climb test footprint logic.
+    _climbFloor: function(prop, baseHeight, myRadius, best) {
+        if (!PropLevel.isClimbable(prop)) return best;
+        const surf = PropLevel.getPropTop(prop) + baseHeight;
+        // Only a surface the player is on/above counts (you must jump onto it).
+        if (!(localPos.y >= surf - 0.3 && surf > best)) return best;
+        const pieces = PropLevel.getColliders(prop);
+        for (let i = 0; i < pieces.length; i++) {
+            const c = pieces[i];
+            if (c.shape === 'box') {
+                const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                const px = localPos.x - c.x, pz = localPos.z - c.z;
+                const lx = px * cs + pz * sn, lz = -px * sn + pz * cs;
+                if (Math.abs(lx) <= c.halfX + myRadius && Math.abs(lz) <= c.halfZ + myRadius) return surf;
+            } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
+                return surf;
+            }
+        }
+        return best;
+    },
+
+    // Disguised hiders, as solid "pseudo-props" the local player can collide with and
+    // stand on (they behave like the prop they're mimicking). Excludes self + caught.
+    // Rebuilt each movement tick into this._dynamicProps.
+    getDynamicProps: function() {
+        const out = [];
+        if (typeof gameState === 'undefined' || !gameState.players) return out;
+        for (const id in gameState.players) {
+            if (id === myId) continue;
+            const p = gameState.players[id];
+            if (!p || p.isCaught) continue;
+            if (!p.disguiseType || p.disguiseType === 'player') continue;
+            const def = PropLevel.getPrefab(p.disguiseType);
+            const R = p.propRadius || (p.disguiseSize ? p.disguiseSize / 2 : 1);
+            const H = p.propHeight || 2;
+            const bounds = { radius: R, height: H, bottomY: 0, topY: H,
+                centerX: p.x, centerZ: p.z, localX: R * 2, localZ: R * 2 };
+            const pieces = PropLevel.resolveColliders({ rotation: p.propRotation || { y: 0 } }, bounds, def);
+            out.push({
+                model: p.disguiseType, x: p.x, z: p.z, centerX: p.x, centerZ: p.z,
+                radius: R, height: H, bottomY: 0, topY: H, colliders: pieces,
+                collision: def.collision, climbable: def.climbable
+            });
+        }
+        return out;
     },
 
     // Move the local player out of any collider it currently overlaps to the
