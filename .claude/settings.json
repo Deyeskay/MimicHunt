@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(node --check js/mechanics.js)",
-      "Bash(node --check js/props.js)"
+      "Bash(node --check js/props.js)",
+      "Bash(git remote *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Bash(node --check js/network.js)"
     ]
   }
 }

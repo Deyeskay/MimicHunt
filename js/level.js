@@ -668,15 +668,37 @@ const Level = {
         }
 
         if (gameState.players[myId]) {
-            const camDistance = 15;
-            let hDist = camDistance * Math.cos(cameraPitch);
-            let vDist = camDistance * Math.sin(cameraPitch);
             const p = gameState.players[myId];
+            const groundY = p.y - PropLevel.PLAYER_BASE_HEIGHT;   // player's feet
 
-            camera.position.x = p.x + hDist * Math.sin(cameraYaw);
-            camera.position.z = p.z + hDist * Math.cos(cameraYaw);
-            camera.position.y = p.y + vDist + 2;
-            camera.lookAt(p.x, p.y + 1.5, p.z);
+            // --- Over-the-shoulder (PUBG/Free Fire style) rig. Tunables: ---
+            //  CAM_BACK   distance behind the player (smaller = bigger character)
+            //  CAM_RIGHT  right-shoulder offset → player sits left-of-centre
+            //  CAM_EYE    camera height above the player's feet
+            //  (default downward tilt comes from cameraPitch ≈ 0.2 rad ≈ 11°)
+            const CAM_BACK = 5.0;
+            const CAM_RIGHT = 1.7;
+            const CAM_EYE = 2.6;
+
+            // Horizontal forward (into the screen) + screen-right vectors.
+            const fX = -Math.sin(cameraYaw), fZ = -Math.cos(cameraYaw);
+            const rX = -fZ, rZ = fX;
+            // Full look direction includes pitch (pitch>0 looks down).
+            const cp = Math.cos(cameraPitch), sp = Math.sin(cameraPitch);
+            const dX = fX * cp, dY = -sp, dZ = fZ * cp;
+
+            camera.position.set(
+                p.x - fX * CAM_BACK + rX * CAM_RIGHT,
+                groundY + CAM_EYE,
+                p.z - fZ * CAM_BACK + rZ * CAM_RIGHT
+            );
+            // Aim straight along the look direction so the centred crosshair = the
+            // shot direction; the right offset keeps the body left-of-centre.
+            camera.lookAt(
+                camera.position.x + dX,
+                camera.position.y + dY,
+                camera.position.z + dZ
+            );
         }
 
         renderer.render(scene, camera);
