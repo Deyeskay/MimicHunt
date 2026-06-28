@@ -192,6 +192,17 @@ const Mechanics = {
         localDisguise.propRadius = prop.radius;
         localDisguise.propRotation = prop.rotation || null;
 
+        // Adopt the disguised prop's COMPOUND collider shape (e.g. tree = slim
+        // trunk + wide canopy), in local coords with feet at y=0. Used by the dev
+        // gizmo and by ground-level movement collision (groundRadius), so a
+        // disguised tree behaves/looks like a real tree, not one fat cylinder.
+        const def = PropLevel.getPrefab(prop.model);
+        const H = prop.height || 2, R = prop.radius || 1;
+        const bounds = { radius: R, height: H, bottomY: 0, topY: H,
+            centerX: 0, centerZ: 0, localX: R * 2, localZ: R * 2 };
+        localDisguise.colliders = PropLevel.resolveColliders({ rotation: prop.rotation || { y: 0 } }, bounds, def);
+        localDisguise.groundRadius = this._groundColliderRadius(localDisguise.colliders, R);
+
         const player = gameState.players[myId];
         player.disguiseType = localDisguise.type;
         player.disguiseSize = localDisguise.size;
@@ -201,6 +212,19 @@ const Mechanics = {
         player.propRotation = localDisguise.propRotation;
     },
 
+    // Radius of the collider piece(s) that sit at ground level (yMin≈0) — the part
+    // that actually blocks horizontal movement (a tree's trunk, a rock's body).
+    _groundColliderRadius: function(pieces, fallback) {
+        let r = 0;
+        (pieces || []).forEach(c => {
+            if (c.yMin <= 0.2) {
+                const pr = c.shape === 'box' ? Math.max(c.halfX, c.halfZ) : c.radius;
+                if (pr > r) r = pr;
+            }
+        });
+        return r || fallback;
+    },
+
     clearDisguise: function() {
         localDisguise.type = 'player';
         localDisguise.size = 2;
@@ -208,6 +232,8 @@ const Mechanics = {
         localDisguise.propHeight = 2;
         localDisguise.propRadius = 1;
         localDisguise.propRotation = null;
+        localDisguise.colliders = null;
+        localDisguise.groundRadius = null;
 
         const player = gameState.players[myId];
         player.disguiseType = 'player';
@@ -216,6 +242,13 @@ const Mechanics = {
         player.propHeight = 2;
         player.propRadius = 1;
         player.propRotation = null;
+    },
+
+    // Effective movement-collision radius: 1 as a player, else the disguised prop's
+    // ground-level radius (slim trunk for a tree), not the full canopy.
+    myColliderRadius: function() {
+        if (localDisguise.type === 'player') return 1;
+        return localDisguise.groundRadius || (localDisguise.size / 2);
     },
 
     handleLocalMovement: function() {
@@ -278,7 +311,7 @@ const Mechanics = {
         if (targetZ < -100) targetZ = -100;
         if (targetZ > 100) targetZ = 100;
 
-        let myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
+        let myRadius = this.myColliderRadius();
 
         // Per-axis resolution gives wall-sliding: instead of cancelling the whole
         // move when the combined target is blocked, try each axis on its own so
@@ -337,33 +370,40 @@ const Mechanics = {
         }
     },
 
+    // The nearest disguisable prop within reach of the local player, or null.
+    // Used both to perform the swap and to label the disguise button.
+    findNearestDisguiseProp: function() {
+        let nearest = null, nearestDist = Infinity;
+        for (let prop of mapProps3D) {
+            if (!PropLevel.canDisguiseAs(prop)) continue;
+            const center = PropLevel.getPropCenter(prop);
+            const dist = Math.hypot(localPos.x - center.x, localPos.z - center.z);
+            const reach = prop.radius * 2 + 2;
+            if (dist < reach && dist < nearestDist) { nearest = prop; nearestDist = dist; }
+        }
+        return nearest;
+    },
+
+    // True if the local hider is currently disguised as a prop (not its own form).
+    isDisguised: function() {
+        return localDisguise.type !== 'player';
+    },
+
     handleDisguiseSwap: function() {
         let pData = gameState.players[myId];
         if (!pData || pData.role !== 'Hider' || pData.isCaught) return;
 
-        let nearest = null;
-        let nearestDist = Infinity;
-
-        for (let prop of mapProps3D) {
-            if (!PropLevel.canDisguiseAs(prop)) continue;
-
-            const center = PropLevel.getPropCenter(prop);
-            let dist = Math.hypot(localPos.x - center.x, localPos.z - center.z);
-            let reach = prop.radius * 2 + 2;
-
-            if (dist < reach && dist < nearestDist) {
-                nearest = prop;
-                nearestDist = dist;
-            }
-        }
-
-        if (nearest) {
+        if (this.isDisguised()) {
+            // Already disguised → Reset back to the default form.
+            this.clearDisguise();
+        } else {
+            // Not disguised → disguise as the nearest prop (if any & not locked).
+            const nearest = this.findNearestDisguiseProp();
+            if (!nearest) return;   // not near a prop → button is disabled, no-op
             // Disguise is locked for a few seconds after being hit (so a revealed
-            // hider can't instantly become another rock). Un-disguising is allowed.
+            // hider can't instantly become another prop).
             if (pData.disguiseLockUntil && Network.now() < pData.disguiseLockUntil) return;
             this.applyDisguiseFromProp(nearest);
-        } else {
-            this.clearDisguise();
         }
 
         // Disguising grows the player's collider to the prop's size, so if the
@@ -427,7 +467,7 @@ const Mechanics = {
     // EVERY prop's collider pieces, the chosen spot is clear of all of them, so
     // the player is never pushed from one collider into another. No-op if clear.
     resolveOverlap: function() {
-        const myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
+        const myRadius = this.myColliderRadius();
         if (!this.blockedAt(localPos.x, localPos.z, myRadius)) return;
 
         const SAMPLES = 24;          // directions tested per ring

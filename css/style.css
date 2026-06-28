@@ -397,6 +397,11 @@ button.leave {
 }
 #blind-overlay h2 { color: var(--accent-red); font-size: 2.5rem; animation: pulse 1s infinite alternate; }
 @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
+#blind-countdown-label { color: var(--text-muted); font-size: 0.95rem; letter-spacing: 1px; margin-bottom: 0; }
+#blind-countdown {
+    font-size: 4.5rem; font-weight: bold; line-height: 1; color: #fff;
+    font-variant-numeric: tabular-nums; text-shadow: 0 3px 14px rgba(255,71,87,0.5);
+}
 
 #gameCanvas { 
     position: absolute; top: 0; left: 0; 
@@ -420,8 +425,10 @@ button.leave {
 #action-pad { display: flex; flex-direction: column; gap: 15px; }
 .action-btn {
     width: 70px; height: 70px; border-radius: 50%; background: rgba(30, 144, 255, 0.6);
-    border: 2px solid var(--accent-blue); color: white; font-weight: bold; font-size: 0.9rem;
+    border: 2px solid var(--accent-blue); color: white; font-weight: bold; font-size: 0.82rem;
+    line-height: 1.1; padding: 4px;
 }
+.action-btn:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: default; }
 
 .hide-mobile-controls .mobile-controls {
     display: none !important;

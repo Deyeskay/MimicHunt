@@ -720,28 +720,58 @@ const Level = {
         // disguiseSize/2 when disguised) plus each prop radius is the no-go gap.
         if (developer && gameState.players[myId]) {
             const p = gameState.players[myId];
-            const myRadius = localDisguise.type === 'player' ? 1 : (localDisguise.size / 2);
-            // When disguised, the player takes the target prop's footprint AND
-            // its height (propHeight), so the cyan gizmo matches the yellow prop
-            // collider it's imitating instead of a constant 3-tall cylinder.
-            const myHeight = localDisguise.type === 'player' ? 3 : (localDisguise.propHeight || 3);
-            if (!this.playerColliderHelper ||
-                this.playerColliderHelper.userData.r !== myRadius ||
-                this.playerColliderHelper.userData.h !== myHeight) {
+            // When disguised, mirror the disguised prop's COMPOUND colliders (e.g.
+            // tree = slim trunk + wide canopy) instead of one fat cylinder, so the
+            // cyan player gizmo matches the yellow prop collider it's imitating.
+            const dz = localDisguise.colliders;
+            const disguised = localDisguise.type !== 'player' && dz && dz.length;
+            const key = disguised
+                ? 'd:' + localDisguise.type + ':' + (localDisguise.propRadius || 0) + ':' + (localDisguise.propHeight || 0)
+                : 'player';
+            if (!this.playerColliderHelper || this.playerColliderHelper.userData.key !== key) {
                 if (this.playerColliderHelper) scene.remove(this.playerColliderHelper);
-                const geo = new THREE.CylinderGeometry(myRadius, myRadius, myHeight, 24);
+                const group = new THREE.Group();
                 const mat = new THREE.LineBasicMaterial({ color: 0x00e5ff });
                 mat.depthTest = false;
-                this.playerColliderHelper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-                this.playerColliderHelper.renderOrder = 999;
-                this.playerColliderHelper.userData.r = myRadius;
-                this.playerColliderHelper.userData.h = myHeight;
+                const addCyl = (radius, h, cy, cx, cz, rot) => {
+                    const geo = new THREE.CylinderGeometry(radius, radius, h, 24);
+                    const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                    seg.position.set(cx || 0, cy, cz || 0);
+                    if (rot) seg.rotation.y = rot;
+                    seg.renderOrder = 999;
+                    group.add(seg);
+                    geo.dispose();
+                };
+                const addBox = (hx, hz, h, cy, cx, cz, rot) => {
+                    const geo = new THREE.BoxGeometry(hx * 2, h, hz * 2);
+                    const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                    seg.position.set(cx || 0, cy, cz || 0);
+                    if (rot) seg.rotation.y = rot;
+                    seg.renderOrder = 999;
+                    group.add(seg);
+                    geo.dispose();
+                };
+                if (disguised) {
+                    // pieces are local with feet at y=0 → place relative to feet.
+                    dz.forEach(c => {
+                        const h = Math.max(c.yMax - c.yMin, 0.1);
+                        const cy = (c.yMin + c.yMax) / 2;
+                        if (c.shape === 'box') addBox(c.halfX, c.halfZ, h, cy, c.x, c.z, c.rot || 0);
+                        else addCyl(c.radius, h, cy, c.x, c.z, 0);
+                    });
+                } else {
+                    addCyl(1, 3, PropLevel.PLAYER_BASE_HEIGHT, 0, 0, 0);   // player body
+                }
+                this.playerColliderHelper = group;
+                this.playerColliderHelper.userData.key = key;
                 scene.add(this.playerColliderHelper);
-                geo.dispose();
             }
-            // Follow the player's body (incl. jumping) — centered on p.y, not a
-            // fixed ground height — so the gizmo rises with the character.
-            this.playerColliderHelper.position.set(p.x, p.y, p.z);
+            // Group origin = player's FEET (so the local-coord pieces sit on the
+            // ground), and it rises with the character while jumping. A disguised
+            // player's logical centre is at size/2 above its feet, a normal player
+            // at PLAYER_BASE_HEIGHT.
+            const feetDrop = disguised ? (localDisguise.size / 2) : PropLevel.PLAYER_BASE_HEIGHT;
+            this.playerColliderHelper.position.set(p.x, p.y - feetDrop, p.z);
         } else if (!developer && this.playerColliderHelper) {
             scene.remove(this.playerColliderHelper);
             this.playerColliderHelper = null;

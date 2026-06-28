@@ -3,6 +3,25 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-06-29
+
+- **Disguised players use the prop's compound collider.** When a hider disguises as a
+  prop, it now adopts that prop's compound colliders (e.g. tree = slim trunk + wide
+  canopy) instead of one fat cylinder: `Mechanics.applyDisguiseFromProp` computes
+  `localDisguise.colliders` (via `PropLevel.resolveColliders`) + a `groundRadius`
+  (the ground-level piece — trunk for a tree), `myColliderRadius()` drives movement
+  collision off it, and the dev player gizmo (`Level.render`) draws the full compound
+  shape. Rock/bush (single cylinder) are unchanged.
+- **Seeker hiding countdown.** The seeker's "YOU ARE BLINDED" overlay now shows a big
+  live countdown ("Hunt begins in {timer}s") from `gameState.timer`, updated in
+  `UI.updateHUD` (`#blind-countdown`).
+- **Smarter disguise button.** The hider's PROP button is now context-aware
+  (`UI.updateHUD` + `Mechanics.findNearestDisguiseProp`/`isDisguised`): `🔄` disabled
+  when not near a prop, `🔄 {PROPNAME}` (enabled) when near a disguisable prop, and
+  `🔄 Reset` when already disguised. `handleDisguiseSwap` now **resets to default if
+  disguised**, else disguises as the nearest prop (no-op if none). Reset returns the
+  hider to its own form (button goes back to disabled `🔄` unless still near a prop).
+
 ## 2026-06-28 (later)
 
 - **Event toasts.** A new bottom-center toast (above the health/reload row,
