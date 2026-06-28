@@ -5,12 +5,15 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-28 (later)
 
-- **Ground + wall textures (procedural).** The ground plane now uses a generated
-  grass `CanvasTexture` (`Level.makeGroundTexture`, repeat 40×40) and walls a
-  generated stone-brick `CanvasTexture` (`PropLevel.getWallTexture`, cached/shared,
-  repeat 2×2). No image files — drawn on a `<canvas>` in code; both fall back to the
-  old flat color if canvas is unavailable. Swap in real images by setting `map` to a
-  `TextureLoader().load(...)` instead.
+- **Ground + wall textures.** The ground uses the real image
+  `assets/textures/grass.png` (loaded async via `Level.loadGroundImage`, repeat 24×24)
+  with a generated grass `CanvasTexture` (`Level.makeGroundTexture`, repeat 40×40) as
+  an instant fallback shown until the image loads / if it's missing. Walls use a
+  real image `assets/textures/wall.png` (loaded async via `PropLevel._loadWallImage`,
+  repeat 2×2) over a generated stone-brick `CanvasTexture` fallback
+  (`PropLevel.getWallTexture`). Walls keep per-instance materials (so a
+  disguised-as-wall hider's reveal blink doesn't tint every wall) sharing one map
+  texture; the image is swapped onto all wall materials when it loads.
 - **Walls are climbable.** `wall` prefab `climbable: true`, so you can jump onto and
   stand/walk/run on walls like rocks/bushes. The floor-model climb check in
   `Mechanics.handleLocalMovement` is now **footprint-aware** (per collider piece:

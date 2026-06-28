@@ -38,6 +38,10 @@ const Level = {
         ground.receiveShadow = true;
         scene.add(ground);
 
+        // Prefer the real image texture if present; the procedural one above shows
+        // instantly and is kept as the fallback if the image is missing/fails.
+        this.loadGroundImage(groundMat);
+
         // Load the first registered level as the default. Levels come from the
         // js/levels/ folder via the registry (LEVELS); the lobby lets the host
         // pick which one, and loadLevel() swaps it in at game start.
@@ -66,6 +70,25 @@ const Level = {
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
         tex.repeat.set(40, 40);    // ~5 world units per tile across the 200×200 plane
         return tex;
+    },
+
+    // Asynchronously swap the ground to the real grass image when it loads. Keeps
+    // the procedural texture if the file is missing or fails to load.
+    loadGroundImage: function(mat) {
+        if (typeof THREE === 'undefined' || !THREE.TextureLoader) return;
+        new THREE.TextureLoader().load(
+            'assets/textures/grass.png',
+            (tex) => {
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(24, 24);   // ~8 world units per tile (tune to taste)
+                const old = mat.map;
+                mat.map = tex;
+                mat.needsUpdate = true;
+                if (old) old.dispose();
+            },
+            undefined,
+            () => { /* missing/failed → keep the procedural fallback */ }
+        );
     },
 
     // Swap the active level: remove the previous level's prop meshes and spawn

@@ -3,20 +3,23 @@ const PropLevel = {
     PLAYER_BASE_HEIGHT: 1.5,
 
     createWallMesh: function() {
+        // Per-wall material (so a disguised-as-wall hider's reveal blink doesn't
+        // tint every wall), all sharing the same map texture object.
         const tex = this.getWallTexture();
         const mat = tex
             ? new THREE.MeshLambertMaterial({ map: tex })
             : new THREE.MeshLambertMaterial({ color: this.WALL_COLOR });
+        if (tex) (this._wallMats = this._wallMats || []).push(mat);   // for image swap
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.scale.set(4, 3, 0.3);
         return mesh;
     },
 
-    // Procedural stone-brick texture (no asset files), cached + shared by all walls.
-    // Sandstone courses with mortar lines + per-brick shading. Returns null if a
-    // canvas isn't available (falls back to a flat color).
+    // The current best wall map: the real image once loaded, else the procedural
+    // brick texture (which also kicks off the async image load on first use).
     getWallTexture: function() {
-        if (this._wallTex) return this._wallTex;
+        if (this._wallImageTex) return this._wallImageTex;
+        if (this._wallTex) { this._loadWallImage(); return this._wallTex; }
         if (typeof document === 'undefined' || typeof THREE === 'undefined') return null;
         const W = 256, H = 256, rows = 6, cols = 4;
         const c = document.createElement('canvas');
@@ -39,7 +42,27 @@ const PropLevel = {
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
         tex.repeat.set(2, 2);
         this._wallTex = tex;
+        this._loadWallImage();
         return tex;
+    },
+
+    // Load assets/textures/wall.jpg once; when ready, swap it onto every wall
+    // material (procedural brick stays as the fallback if it's missing/fails).
+    _loadWallImage: function() {
+        if (this._wallImageRequested) return;
+        this._wallImageRequested = true;
+        if (typeof THREE === 'undefined' || !THREE.TextureLoader) return;
+        new THREE.TextureLoader().load(
+            'assets/textures/wall.png',
+            (tex) => {
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(2, 2);   // tune to taste
+                this._wallImageTex = tex;
+                (this._wallMats || []).forEach(m => { m.map = tex; m.needsUpdate = true; });
+            },
+            undefined,
+            () => { /* missing/failed → keep the procedural fallback */ }
+        );
     },
 
     applyScale: function(mesh, scale) {
