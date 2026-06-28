@@ -32,8 +32,10 @@ Check **[docs/TODO.md](docs/TODO.md)** for known issues / prioritized next work.
 - **Verification is manual** — `node --check js/<file>.js` for syntax only; real
   testing = a static server + 2 browser windows (host + client). No automated tests.
 - **Do NOT git push/commit unless the user explicitly asks** (standing instruction as
-  of 2026-06-28). Repo: `https://github.com/Deyeskay/MimicHunt` (`main` and `version1`
-  are identical and complete).
+  of 2026-06-28). Repo: `https://github.com/Deyeskay/MimicHunt`.
+- **Work on `main` directly from now on** (as of 2026-06-29). `main` and `version1`
+  were synced and the user dropped the dual-branch workflow — commit/push to `main`.
+  Keep `.claude/settings.json` out of commits (it has an intentional local-only change).
 - **Keep the docs current** — when code changes, update
   [docs/RECENT_CHANGES.md](docs/RECENT_CHANGES.md) and the affected per-system doc.
 - **Windows / PowerShell** dev environment (a Bash tool is also available).

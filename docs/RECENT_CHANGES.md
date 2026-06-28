@@ -5,6 +5,11 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Google Analytics (GA4) added.** Standard `gtag.js` snippet in `index.html` `<head>`
+  for the GA4 property **huntnhide** (Measurement ID `G-BNV1CHY5CV`, web data stream
+  → `https://deyeskay.github.io/MimicHunt/`). Enhanced measurement is on (page views,
+  scrolls, outbound clicks, etc.). Note: data only flows from a secure context (the
+  live GitHub Pages URL or `localhost`), and GA can take up to 48h to show first data.
 - **PWA + Screen Wake Lock.** The game is now an installable, offline-capable PWA and
   keeps the phone awake during a match.
   - *Wake Lock* (`WakeLock` in `js/app.js`): `navigator.wakeLock.request('screen')`
