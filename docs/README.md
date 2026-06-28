@@ -1,113 +1,42 @@
-# 3D P2P Hide & Hunt
+# MimicHunt — Developer Documentation Index
 
-A browser multiplayer hide-and-seek game. Players join a room, pick **Hider** or
-**Seeker**, and hiders disguise as props in a 3D level while seekers hunt them
-down before the timer runs out. Fully **peer-to-peer** (WebRTC via PeerJS) — no
-game server to run.
+A browser, peer-to-peer 3D hide-and-seek shooter. Hiders disguise as level props;
+seekers hunt them with energy-pulse shots. Three.js (r128) + PeerJS (WebRTC),
+authoritative-host star topology, no backend.
 
-This is the **start-here** doc. For depth:
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — how it's built (layers, data flow, protocol, lifecycle).
-- **[DECISIONS.md](DECISIONS.md)** — *why* the major trade-offs were made.
+**Read the docs you need for the task — they're deliberately split.**
 
----
+| Doc | What it covers |
+|-----|----------------|
+| [RECENT_CHANGES.md](RECENT_CHANGES.md) | Newest-first changelog. **Read this first when resuming.** |
+| [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md) | What the game is, stack, how to run, repo/deploy. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime layers, load order, the two clocks, big picture. |
+| [FILE_REFERENCE.md](FILE_REFERENCE.md) | Every file → responsibility → key functions/lines. |
+| [NETWORK_PROTOCOL.md](NETWORK_PROTOCOL.md) | All PeerJS messages, packet formats, ownership, migration. |
+| [PLAYER_STATE.md](PLAYER_STATE.md) | The player record: every field, who writes it, how it syncs. |
+| [GAMEPLAY.md](GAMEPLAY.md) | Rules, phases, combat (shooting/health/reveal), win conditions. |
+| [ANIMATION_SYSTEM.md](ANIMATION_SYSTEM.md) | Clip loading, lower/upper masked layers, jump, shoot, back-walk. |
+| [CAMERA_AND_CONTROLS.md](CAMERA_AND_CONTROLS.md) | Over-the-shoulder rig, desktop+mobile input, landscape. |
+| [LEVEL_SYSTEM.md](LEVEL_SYSTEM.md) | Registry, level files, dynamic load, spawns. |
+| [PROP_SYSTEM.md](PROP_SYSTEM.md) | Prefabs, compound colliders, disguise, ray occlusion, climbing. |
+| [UI_FLOW.md](UI_FLOW.md) | Screen flow, HUD, responsive/landscape CSS, the editor. |
+| [PERFORMANCE_NOTES.md](PERFORMANCE_NOTES.md) | Frame budget, interpolation, GC, known costs. |
+| [DECISIONS.md](DECISIONS.md) | Major design decisions and the *why*. |
+| [TODO.md](TODO.md) | Known bugs, limitations, prioritized next work. |
 
-## Quick start (hands-on in ~2 minutes)
-
-The app is **static files** — it just needs a web server (not `file://`, because
-ES modules / WebRTC need an http origin).
-
-```bash
-cd game
-python -m http.server 8000      # or:  npx serve .   |   npx http-server -p 8000
-```
-
-Then open **two or more browser windows** at `http://localhost:8000/`:
-
-1. **Window 1 (host):** type a name → **Host New Session**. A 4-digit room code
-   appears.
-2. **Window 2+ (clients):** type a name → enter the code → **Join Room**.
-3. In the **lobby**: the host picks a level from the carousel; each player picks
-   **Hider/Seeker** and clicks **Ready**. Start unlocks when there's **≥1 Hider,
-   ≥1 Seeker, and everyone's ready**.
-4. **Play:** Seekers are blinded during HIDING; Hiders move and press the disguise
-   key to become a prop. In HUNTING, seekers catch hiders on contact.
-
-> **Multiplayer needs ≥2 windows/devices.** A single window can't demonstrate
-> netcode, migration, or win conditions.
-
-### Level editor
-Open `http://localhost:8000/editor.html`. Place/transform props, set gameplay
-flags and spawns, then **Export** — it produces a `registerLevel("Name", [...])`
-snippet. Save it as `game/js/levels/<name>.js` and add `'<name>.js'` to
-`LEVEL_FILES` in `js/levels/registry.js` → it appears in the lobby carousel.
-
----
-
-## Controls
-
-| Action | Desktop | Mobile |
-|---|---|---|
-| Move | WASD | left joystick |
-| Look | mouse (click to lock, ESC to unlock) | drag |
-| Jump | Space | JUMP button |
-| Disguise / swap prop | F | PROP (F) button |
-
-Settings (mouse sensitivity, invert-Y, hide/hunt times, mobile UI) are on the
-menu's **⚙ Settings** screen and persist in `localStorage`.
-
----
-
-## Project layout
-
-```
-HIdeNHunt/
-├─ game/
-│  ├─ index.html            # the game page (loads all js/ in order)
-│  ├─ editor.html           # standalone level editor
-│  ├─ css/style.css
-│  └─ js/
-│     ├─ globals.js         # shared state + tuning constants
-│     ├─ prefabs.js         # prop-type defaults
-│     ├─ props.js           # prefab/instance resolution + export
-│     ├─ ui.js              # screens, HUD, lobby, modals
-│     ├─ levels/
-│     │  ├─ registry.js     # LEVELS, registerLevel, LEVEL_FILES, loader
-│     │  ├─ forest.js       # default level (LEVELS[0])
-│     │  └─ arena.js        # additional level
-│     ├─ level.js           # Three.js scene + render/interpolation
-│     ├─ mechanics.js       # input, movement, collisions, win check
-│     ├─ network.js         # authority, snapshots, migration (largest)
-│     └─ app.js             # boot: wiring, settings, startup sequence
-└─ docs/                    # README / ARCHITECTURE / DECISIONS (this folder)
-```
-
----
-
-## What makes this non-trivial (the interesting parts)
-
-- **Authoritative-host star netcode** with **client-side prediction** (local
-  player never overwritten) and **entity interpolation** (remote players rendered
-  100ms behind, smoothly). Simulation runs 60 FPS; transmission only 20 Hz.
-- **Robust disconnect handling:** a heartbeat/watchdog scheme detects drops even
-  on abrupt tab close (where WebRTC's `close` event doesn't fire), in both
-  directions.
-- **Automatic host migration:** if the host crashes, survivors deterministically
-  elect a successor and reconnect — the session continues instead of dying.
-- **Folder-driven levels** + a **Unity-style prefab system** (type defaults +
-  per-instance overrides) + an in-browser **level editor**.
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) §3–§7 for how each works.
-
----
-
-## Tech & conventions
-
-- **Stack:** Three.js r128, GLTFLoader, PeerJS 1.5.4. Plain browser scripts, no
-  bundler; cross-file globals defined in `globals.js`.
-- **Editing:** bump the `?v=N` query on changed `<script>`/`<link>` tags in
-  `index.html` / `editor.html` and **hard-refresh** — stale cache is the #1
-  "my change didn't apply" cause.
-- **Verification is manual.** There are no automated tests; `node --check
-  js/<file>.js` validates syntax only. Real testing = a static server + 2+ windows
-  (see the verification checklists in the planning notes / DECISIONS).
-- **Platform:** developed on Windows / PowerShell.
+## Cardinal facts (so you don't re-derive them)
+- **No build step.** Plain ES5/ES6 scripts loaded in order by `index.html`. Edit a
+  `.js`/`.css` and **hard-refresh** (Ctrl+Shift+R) to validate — the `?v=N` cache
+  query is **no longer bumped per change** (the user hard-reloads manually). Only bump
+  it if you must bust a *deployed* cache. `index.html` currently sits at `v=24`.
+- **Edit text files only with the Edit/Write tools** (they preserve UTF-8, no BOM).
+  Never use PowerShell `Set-Content`/`Out-File` on source files — it re-encodes
+  multi-byte chars (em-dashes, emoji) into mojibake.
+- **Cross-file globals.** Everything shares globals declared in `js/globals.js`
+  (`gameState`, `localPos`, `cameraYaw`, combat consts, etc.). No modules.
+- **Verification is manual** — `node --check js/<file>.js` for syntax only; real
+  testing = a static server + 2 browser windows (host + client). No automated tests.
+- **Do NOT git push unless the user explicitly asks** (standing instruction as of
+  2026-06-28). Repo: `https://github.com/Deyeskay/MimicHunt` (branches `main` and
+  `version1` are identical and complete; GitHub Pages serves `main`).
+- **Windows / PowerShell** dev environment; a Bash tool is also available.

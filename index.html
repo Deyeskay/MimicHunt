@@ -4,15 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>3D P2P Hide & Hunt</title>
-    <link rel="stylesheet" href="css/style.css?v=3">
+    <link rel="stylesheet" href="css/style.css?v=24">
 </head>
 <body>
+
+    <!-- Shown only in portrait — the game is landscape-only. -->
+    <div id="rotate-overlay">
+        <div class="rotate-icon">⟳</div>
+        <h2>Rotate your device</h2>
+        <p>Hide &amp; Hunt is best played in landscape.</p>
+    </div>
 
     <div id="custom-modal" class="modal-overlay">
         <div class="modal-card">
             <h2 id="modal-title">Title</h2>
             <p id="modal-msg">Message</p>
-            <button id="modal-btn" class="success">OK</button>
+            <div class="modal-actions">
+                <button id="modal-cancel-btn" class="secondary" style="display:none;">Cancel</button>
+                <button id="modal-btn" class="success">OK</button>
+            </div>
         </div>
     </div>
 
@@ -25,13 +35,16 @@
         <div class="hud-header">
             <div class="hud-card"><span id="role-badge">Spectator</span></div>
             <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
-            <div class="hud-card" style="border-color: var(--accent-blue);">👥 <span id="player-count">1</span></div>
             <div class="hud-card" id="combat-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
-            <div class="hud-card" id="health-hud" style="border-color: var(--accent-green); display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
+            <div class="hud-card" id="player-count-card" style="border-color: var(--accent-blue); margin-left:auto;">👥 <span id="player-count">1</span></div>
             <button id="btn-leave" class="interactive leave">Exit Match</button>
         </div>
 
         <div id="crosshair"></div>
+
+        <!-- Bottom-center HUD: hider health bar / seeker reload indicator. -->
+        <div id="health-hud" class="bottom-center-hud" style="display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
+        <div id="reload-indicator" class="bottom-center-hud" style="display:none;">RELOADING…</div>
 
         <div id="mouse-hint" style="position:absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none;">
             Click screen to Lock Mouse. Press ESC to unlock.
@@ -65,24 +78,42 @@
 
     <div id="settings-screen" class="menu-screen" style="display:none;"> 
         <div class="menu-card"> 
-            <h2>Settings</h2> 
-            <div class="form-group"> 
-                <label>Hiding Time (sec)</label>
-                <input id="setting-hide-time" type="number" value="20"> 
-                <label>Hunting Time (sec)</label>
-                <input id="setting-hunt-time" type="number" value="90"> 
-                <label>Mouse Sensitivity</label>
-                <input id="setting-sensitivity" type="number" step="0.001" value="0.002"> 
-                <label>
-                    <input id="setting-invert-y" type="checkbox">
-                    Invert Camera
-                </label> 
-                <label>
-                    <input id="setting-mobile-ui" type="checkbox" checked>
-                    Show Mobile Controls
-                </label> 
-                <button id="btn-save-settings" class="success"> Save </button> 
-                <button id="btn-back-menu" class="secondary"> Back </button> 
+            <h2>Settings</h2>
+            <div class="form-group">
+                <div class="settings-list">
+                    <div class="setting-row">
+                        <label for="setting-hide-time">Hiding Time <span class="setting-unit">sec</span></label>
+                        <input id="setting-hide-time" type="number" value="20">
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-hunt-time">Hunting Time <span class="setting-unit">sec</span></label>
+                        <input id="setting-hunt-time" type="number" value="90">
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-sensitivity">Mouse Sensitivity</label>
+                        <div class="setting-control">
+                            <input id="setting-sensitivity" type="range" min="0.0005" max="0.01" step="0.0005" value="0.002">
+                            <span id="val-sensitivity" class="setting-value">0.0020</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-fov">Camera FOV</label>
+                        <div class="setting-control">
+                            <input id="setting-fov" type="range" min="45" max="90" step="1" value="60">
+                            <span id="val-fov" class="setting-value">60</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-invert-y">Invert Camera</label>
+                        <input id="setting-invert-y" type="checkbox">
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-mobile-ui">Show Mobile Controls</label>
+                        <input id="setting-mobile-ui" type="checkbox" checked>
+                    </div>
+                </div>
+                <button id="btn-save-settings" class="success" style="margin-top:14px;"> Save </button>
+                <button id="btn-back-menu" class="secondary"> Back </button>
             </div>
         </div>
     </div>
@@ -108,15 +139,15 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 
-    <script src="js/globals.js?v=23"></script>
-    <script src="js/prefabs.js?v=23"></script>
-    <script src="js/props.js?v=23"></script>
-    <script src="js/ui.js?v=23"></script>
-    <script src="js/levels/registry.js?v=23"></script>
+    <script src="js/globals.js?v=24"></script>
+    <script src="js/prefabs.js?v=24"></script>
+    <script src="js/props.js?v=24"></script>
+    <script src="js/ui.js?v=24"></script>
+    <script src="js/levels/registry.js?v=24"></script>
     <!-- Level files are loaded dynamically from registry.js (LEVEL_FILES). -->
-    <script src="js/level.js?v=23"></script>
-    <script src="js/mechanics.js?v=23"></script>
-    <script src="js/network.js?v=23"></script>
-    <script src="js/app.js?v=23"></script>
+    <script src="js/level.js?v=24"></script>
+    <script src="js/mechanics.js?v=24"></script>
+    <script src="js/network.js?v=24"></script>
+    <script src="js/app.js?v=24"></script>
 </body>
 </html>

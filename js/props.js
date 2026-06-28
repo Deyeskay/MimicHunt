@@ -3,12 +3,66 @@ const PropLevel = {
     PLAYER_BASE_HEIGHT: 1.5,
 
     createWallMesh: function() {
-        const mesh = new THREE.Mesh(
-            new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshLambertMaterial({ color: this.WALL_COLOR })
-        );
+        // Per-wall material (so a disguised-as-wall hider's reveal blink doesn't
+        // tint every wall), all sharing the same map texture object.
+        const tex = this.getWallTexture();
+        const mat = tex
+            ? new THREE.MeshLambertMaterial({ map: tex })
+            : new THREE.MeshLambertMaterial({ color: this.WALL_COLOR });
+        if (tex) (this._wallMats = this._wallMats || []).push(mat);   // for image swap
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.scale.set(4, 3, 0.3);
         return mesh;
+    },
+
+    // The current best wall map: the real image once loaded, else the procedural
+    // brick texture (which also kicks off the async image load on first use).
+    getWallTexture: function() {
+        if (this._wallImageTex) return this._wallImageTex;
+        if (this._wallTex) { this._loadWallImage(); return this._wallTex; }
+        if (typeof document === 'undefined' || typeof THREE === 'undefined') return null;
+        const W = 256, H = 256, rows = 6, cols = 4;
+        const c = document.createElement('canvas');
+        c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#5a5048';           // mortar
+        ctx.fillRect(0, 0, W, H);
+        const bh = H / rows, bw = W / cols, gap = 3;
+        for (let r = 0; r < rows; r++) {
+            const off = (r % 2) ? bw / 2 : 0;   // running-bond offset
+            for (let i = -1; i < cols; i++) {
+                const x = i * bw + off + gap, y = r * bh + gap;
+                const w = bw - gap * 2, h = bh - gap * 2;
+                const shade = 150 + (Math.random() * 50 | 0);
+                ctx.fillStyle = 'rgb(' + shade + ',' + (shade - 22) + ',' + (shade - 55) + ')';
+                ctx.fillRect(x, y, w, h);
+            }
+        }
+        const tex = new THREE.CanvasTexture(c);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(2, 2);
+        this._wallTex = tex;
+        this._loadWallImage();
+        return tex;
+    },
+
+    // Load assets/textures/wall.jpg once; when ready, swap it onto every wall
+    // material (procedural brick stays as the fallback if it's missing/fails).
+    _loadWallImage: function() {
+        if (this._wallImageRequested) return;
+        this._wallImageRequested = true;
+        if (typeof THREE === 'undefined' || !THREE.TextureLoader) return;
+        new THREE.TextureLoader().load(
+            'assets/textures/wall.png',
+            (tex) => {
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(2, 2);   // tune to taste
+                this._wallImageTex = tex;
+                (this._wallMats || []).forEach(m => { m.map = tex; m.needsUpdate = true; });
+            },
+            undefined,
+            () => { /* missing/failed → keep the procedural fallback */ }
+        );
     },
 
     applyScale: function(mesh, scale) {
@@ -96,13 +150,33 @@ const PropLevel = {
         const size = new THREE.Vector3();
         box.getSize(size);
 
+        // Local (rotation-removed) horizontal extents — used by BOX colliders on
+        // rotated props (walls), where the world AABB is much larger than the
+        // actual box footprint. Computed by momentarily zeroing the rotation.
+        let localX = size.x, localZ = size.z;
+        const rot = object.rotation;
+        if (object.quaternion && (rot.x || rot.y || rot.z)) {
+            const q = object.quaternion.clone();
+            object.quaternion.identity();
+            object.updateMatrixWorld(true);
+            const lbox = new THREE.Box3().setFromObject(object);
+            const lsize = new THREE.Vector3();
+            lbox.getSize(lsize);
+            localX = lsize.x;
+            localZ = lsize.z;
+            object.quaternion.copy(q);
+            object.updateMatrixWorld(true);
+        }
+
         return {
             radius: Math.max(size.x, size.z) * 0.5,
             height: size.y,
             topY: box.max.y,
             bottomY: box.min.y,
             centerX: (box.min.x + box.max.x) * 0.5,
-            centerZ: (box.min.z + box.max.z) * 0.5
+            centerZ: (box.min.z + box.max.z) * 0.5,
+            localX: localX,
+            localZ: localZ
         };
     },
 
@@ -157,10 +231,26 @@ const PropLevel = {
         const R = bounds.radius;
         const H = bounds.height;
         const base = bounds.bottomY;
+
+        // Box-shaped prop (walls): a single oriented box matching the prop's local
+        // footprint, rotated by rotation.y. halfX/halfZ are LOCAL half-extents so
+        // a rotated wall blocks as a thin rectangle, not a fat cylinder.
+        if (def && def.colliderShape === 'box') {
+            const ry = THREE.MathUtils.degToRad((prop.rotation && prop.rotation.y) || 0);
+            const lx = (bounds.localX != null ? bounds.localX : R * 2);
+            const lz = (bounds.localZ != null ? bounds.localZ : R * 2);
+            return [{
+                shape: 'box',
+                x: bounds.centerX, z: bounds.centerZ,
+                halfX: lx * 0.5, halfZ: lz * 0.5, rot: ry,
+                yMin: base, yMax: bounds.topY
+            }];
+        }
+
         const tmpl = (def && def.colliders && def.colliders.length) ? def.colliders : null;
 
         if (!tmpl) {
-            return [{ x: bounds.centerX, z: bounds.centerZ, radius: R, yMin: base, yMax: bounds.topY }];
+            return [{ shape: 'cylinder', x: bounds.centerX, z: bounds.centerZ, radius: R, yMin: base, yMax: bounds.topY }];
         }
 
         const ry = THREE.MathUtils.degToRad((prop.rotation && prop.rotation.y) || 0);
@@ -170,6 +260,7 @@ const PropLevel = {
             const ox = (c.offsetX || 0) * R;
             const oz = (c.offsetZ || 0) * R;
             return {
+                shape: 'cylinder',
                 x: bounds.centerX + ox * cos - oz * sin,
                 z: bounds.centerZ + ox * sin + oz * cos,
                 radius: (c.radius != null ? c.radius : 1) * R,
@@ -186,6 +277,7 @@ const PropLevel = {
         const cx = prop.centerX != null ? prop.centerX : prop.x;
         const cz = prop.centerZ != null ? prop.centerZ : prop.z;
         return [{
+            shape: 'cylinder',
             x: cx, z: cz,
             radius: prop.radius || 0.5,
             yMin: prop.bottomY != null ? prop.bottomY : 0,
@@ -212,6 +304,38 @@ const PropLevel = {
             const pieces = this.getColliders(prop);
             for (let j = 0; j < pieces.length; j++) {
                 const c = pieces[j];
+
+                // Oriented-box piece (walls): ray-vs-rectangle in the box's local
+                // XZ frame (2D slab test), then the same vertical-band check.
+                if (c.shape === 'box') {
+                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                    const px = ox - c.x, pz = oz - c.z;
+                    const lx = px * cs + pz * sn;      // into box-local frame (-rot)
+                    const lz = -px * sn + pz * cs;
+                    const ldx = dx * cs + dz * sn;
+                    const ldz = -dx * sn + dz * cs;
+                    let tmin = -Infinity, tmax = Infinity, skip = false;
+                    // X slab
+                    if (Math.abs(ldx) < 1e-6) { if (lx < -c.halfX || lx > c.halfX) skip = true; }
+                    else { let t1 = (-c.halfX - lx) / ldx, t2 = (c.halfX - lx) / ldx;
+                           if (t1 > t2) { const tt = t1; t1 = t2; t2 = tt; }
+                           tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2); }
+                    // Z slab
+                    if (!skip) {
+                        if (Math.abs(ldz) < 1e-6) { if (lz < -c.halfZ || lz > c.halfZ) skip = true; }
+                        else { let t1 = (-c.halfZ - lz) / ldz, t2 = (c.halfZ - lz) / ldz;
+                               if (t1 > t2) { const tt = t1; t1 = t2; t2 = tt; }
+                               tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2); }
+                    }
+                    if (skip || tmax < Math.max(tmin, 0)) continue;
+                    let tb = tmin > 0 ? tmin : tmax;
+                    if (tb < 0 || tb > range || tb >= best) continue;
+                    const yb = oy + dy * tb;
+                    if (yb < c.yMin || yb > c.yMax) continue;
+                    best = tb;
+                    continue;
+                }
+
                 const ex = ox - c.x, ez = oz - c.z;
                 const a = dx * dx + dz * dz;
                 if (a < 1e-6) continue;                 // near-vertical ray: no column hit

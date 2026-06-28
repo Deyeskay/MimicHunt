@@ -173,6 +173,7 @@ const Mechanics = {
         if (reloading) return;
         reloading = true;
         reloadUntil = Network.now() + RELOAD_MS;
+        Sound.reload();
     },
 
     // Finish a reload once its timer elapses (called every frame on host + client).
@@ -227,7 +228,7 @@ const Mechanics = {
         if (!pData || pData.isCaught) return;
         if (gameState.phase === 'HIDING' && pData.role === 'Seeker') return;
 
-        const moveSpeed = 0.3;
+        const moveSpeed = 0.15;   // units per 60Hz tick (~9 u/s). Tune for feel.
         let moveX = 0;
         let moveZ = 0;
 
@@ -243,19 +244,31 @@ const Mechanics = {
             moveZ = fwd * (-Math.cos(cameraYaw)) + rgt * (-Math.sin(cameraYaw));
         }
 
+        // Target facing for this tick. Default: keep the current heading (so an
+        // idle player doesn't rotate). Moving → face the movement direction.
+        let targetRotY = localRotY;
         let length = Math.hypot(moveX, moveZ);
         if (length > 0) {
             moveX = (moveX / length) * moveSpeed;
             moveZ = (moveZ / length) * moveSpeed;
-            localRotY = Math.atan2(moveX, moveZ);   // MOVEMENT heading (PUBG default)
+            targetRotY = Math.atan2(moveX, moveZ);   // MOVEMENT heading (PUBG default)
         }
 
         // Aim-stance: while a seeker is in the post-shot window, face the
         // crosshair/target instead of the movement direction (same convention as
         // the W-forward heading). Retreating then plays the back-walk.
         if (pData.role === 'Seeker' && Network.now() < (pData.shootingUntil || 0)) {
-            localRotY = cameraYaw + Math.PI;
+            targetRotY = cameraYaw + Math.PI;
         }
+
+        // Smoothly turn toward the target heading (shortest angular path) instead
+        // of snapping — gives the character a natural pivot. Position movement
+        // above is unchanged (it follows the instant input direction).
+        const TURN_LERP = 0.2;   // per 60Hz tick; higher = snappier
+        let dRot = targetRotY - localRotY;
+        dRot = Math.atan2(Math.sin(dRot), Math.cos(dRot));   // wrap to [-PI, PI]
+        localRotY += dRot * TURN_LERP;
+        localRotY = Math.atan2(Math.sin(localRotY), Math.cos(localRotY));   // normalize
 
         let targetX = localPos.x + moveX;
         let targetZ = localPos.z + moveZ;
@@ -288,14 +301,29 @@ const Mechanics = {
         let floorY = baseHeight;
         for (let prop of mapProps3D) {
             if (!PropLevel.isClimbable(prop)) continue;
-            const center = PropLevel.getPropCenter(prop);
-            const distXZ = Math.hypot(localPos.x - center.x, localPos.z - center.z);
-            if (distXZ >= prop.radius + myRadius) continue;
             const surf = PropLevel.getPropTop(prop) + baseHeight;
             // Only a surface the player is on/above counts (small tolerance), so
             // you can't pop up through a prop walked into from the side — you must
             // jump onto it.
-            if (localPos.y >= surf - 0.3 && surf > floorY) floorY = surf;
+            if (!(localPos.y >= surf - 0.3 && surf > floorY)) continue;
+
+            // Is the player over this prop's footprint? Test each collider piece in
+            // its own shape (oriented box for walls, circle otherwise) so you stand
+            // on the actual top surface — not a fat circle around a thin wall.
+            let over = false;
+            const pieces = PropLevel.getColliders(prop);
+            for (let i = 0; i < pieces.length; i++) {
+                const c = pieces[i];
+                if (c.shape === 'box') {
+                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                    const px = localPos.x - c.x, pz = localPos.z - c.z;
+                    const lx = px * cs + pz * sn, lz = -px * sn + pz * cs;
+                    if (Math.abs(lx) <= c.halfX + myRadius && Math.abs(lz) <= c.halfZ + myRadius) { over = true; break; }
+                } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
+                    over = true; break;
+                }
+            }
+            if (over) floorY = surf;
         }
 
         velocityY += GRAVITY;
@@ -368,8 +396,25 @@ const Mechanics = {
             const pieces = PropLevel.getColliders(prop);
             for (let i = 0; i < pieces.length; i++) {
                 const c = pieces[i];
-                if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)
-                    && pBottom < c.yMax && pTop > c.yMin) {
+                if (!(pBottom < c.yMax && pTop > c.yMin)) continue;   // vertical band
+
+                if (c.shape === 'box') {
+                    // Circle (player) vs oriented box: transform the point into the
+                    // box's local frame, clamp to the box, compare the distance to
+                    // the nearest edge against myRadius.
+                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
+                    const px = x - c.x, pz = z - c.z;
+                    const lx = px * cs + pz * sn;        // local frame (-rot)
+                    const lz = -px * sn + pz * cs;
+                    const dxBox = Math.abs(lx) - c.halfX;
+                    const dzBox = Math.abs(lz) - c.halfZ;
+                    if (dxBox <= 0 && dzBox <= 0) return true;   // center inside box
+                    const ex = Math.max(dxBox, 0), ez = Math.max(dzBox, 0);
+                    if (ex * ex + ez * ez < myRadius * myRadius) return true;
+                    continue;
+                }
+
+                if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)) {
                     return true;
                 }
             }

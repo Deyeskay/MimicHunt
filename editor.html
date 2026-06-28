@@ -94,6 +94,8 @@ body{
     max-height:42vh;
     overflow:hidden;
 }
+/* When focused, arrow Up/Down navigate the list (see keydown handler). */
+#hierarchy:focus{ outline:none; box-shadow:0 0 0 2px var(--accent); }
 .hierarchy-header{
     background:var(--header);
     padding:11px 14px;
@@ -314,6 +316,29 @@ button{
 .pf-del:hover{ color:#fca5a5; background:rgba(239,68,68,.15); }
 .pf-empty{ color:var(--muted); font-size:12.5px; padding:6px 0; }
 
+/* ---------- View gizmo (Unity-style axis snap + Persp/Iso toggle) ---------- */
+#viewGizmo{ position:fixed; top:18px; right:320px; width:104px; height:104px; z-index:120; user-select:none; }
+#viewGizmo .vg-disc{ position:absolute; inset:0; border-radius:50%; background:rgba(20,22,28,0.5); border:1px solid rgba(255,255,255,0.08); }
+#viewGizmo .vg-line{ position:absolute; left:52px; top:52px; height:2px; width:38px; transform-origin:0 50%; background:rgba(255,255,255,0.22); }
+.vg-line.vg-lx{ transform:translateY(-1px) rotate(0deg); }
+.vg-line.vg-ly{ transform:translateY(-1px) rotate(-90deg); }
+.vg-line.vg-lz{ width:34px; transform:translateY(-1px) rotate(135deg); }
+#viewGizmo .vg-axis{ position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font:bold 11px/1 system-ui,sans-serif; color:#fff;
+    cursor:pointer; border:1.5px solid transparent; transition:transform .08s; }
+#viewGizmo .vg-axis:hover{ transform:scale(1.18); }
+#viewGizmo .vg-axis.vg-neg{ width:13px; height:13px; margin:-6.5px 0 0 -6.5px; background:transparent !important; }
+.vg-x{ background:#e5484d; }  .vg-xn{ border-color:#e5484d; }
+.vg-y{ background:#3fb950; }  .vg-yn{ border-color:#3fb950; }
+.vg-z{ background:#4493f8; }  .vg-zn{ border-color:#4493f8; }
+#viewGizmo .vg-hub{ position:absolute; left:52px; top:52px; width:14px; height:14px; margin:-7px 0 0 -7px;
+    border-radius:50%; background:rgba(255,255,255,0.85); cursor:pointer; }
+#viewGizmo .vg-hub:hover{ background:#fff; }
+#vgPersp{ position:absolute; left:50%; bottom:-22px; transform:translateX(-50%); font:bold 11px/1 system-ui,sans-serif;
+    color:#cfd3dc; cursor:pointer; background:rgba(20,22,28,0.7); padding:5px 11px; border-radius:11px;
+    border:1px solid rgba(255,255,255,0.1); white-space:nowrap; }
+#vgPersp:hover{ color:#fff; border-color:rgba(255,255,255,0.25); }
+
 /* ---------- Responsive ---------- */
 @media (max-width:760px){
     #toolbar{ left:8px; top:8px; width:46vw; padding:11px; max-height:calc(100vh - 16px); }
@@ -361,7 +386,7 @@ button{
 
 <div id="right-panel">
 
-    <div id="hierarchy" class="panel">
+    <div id="hierarchy" class="panel" tabindex="0">
         <div class="hierarchy-header">Hierarchy</div>
         <div id="hierarchyList"></div>
     </div>
@@ -465,7 +490,10 @@ button{
     <div class="help-card">
         <h2>Load Level</h2>
         <div id="loadLevelList" class="modal-list"></div>
+        <div class="modal-label" style="margin-top:10px;">Or upload a level file (e.g. <code>forest.js</code>):</div>
+        <input type="file" id="levelFileInput" accept=".js,.json,.txt" style="display:none" onchange="uploadLevelFile(this)">
         <div class="modal-actions">
+            <button class="btn btn-primary" onclick="document.getElementById('levelFileInput').click()">⬆ Upload .js File</button>
             <button class="btn" onclick="closeModal('loadModal')">Close</button>
         </div>
     </div>
@@ -511,6 +539,22 @@ button{
     </div>
 </div>
 
+<!-- Unity-style view gizmo: click an axis to snap to that view; Persp toggles Ortho. -->
+<div id="viewGizmo" title="Click an axis to snap the view">
+    <div class="vg-disc"></div>
+    <div class="vg-line vg-lx"></div>
+    <div class="vg-line vg-ly"></div>
+    <div class="vg-line vg-lz"></div>
+    <div class="vg-axis vg-zn vg-neg" data-view="-z" style="left:76px;top:30px" title="Back (-Z)"></div>
+    <div class="vg-axis vg-xn vg-neg" data-view="-x" style="left:14px;top:52px" title="Left (-X)"></div>
+    <div class="vg-axis vg-yn vg-neg" data-view="-y" style="left:52px;top:90px" title="Bottom (-Y)"></div>
+    <div class="vg-hub" data-view="iso" title="Isometric / default angle"></div>
+    <div class="vg-axis vg-z" data-view="z" style="left:28px;top:74px" title="Front (+Z)">Z</div>
+    <div class="vg-axis vg-x" data-view="x" style="left:90px;top:52px" title="Right (+X)">X</div>
+    <div class="vg-axis vg-y" data-view="y" style="left:52px;top:14px" title="Top (+Y)">Y</div>
+    <div id="vgPersp" title="Toggle Perspective / Orthographic">Persp</div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
@@ -532,12 +576,20 @@ let ground;
 
 let selectedModel = null;
 
-let selectedObject = null;
+let selectedObject = null;          // PRIMARY selected object (inspector target)
+let selectedObjects = [];           // all selected objects (multi-select)
 let selectionBox = null;
-let selectionHelper = null;
+let selectionHelper = null;         // (legacy single helper — kept null now)
+let selectionHelpers = [];          // one BoxHelper per selected object
+let transformPivot = null;          // gizmo attaches here (group); see positionPivot()
 
 let placedObjects = [];
 let objectId = 1;
+
+// --- Undo / redo (full-scene snapshots) ---
+let undoStack = [];
+let redoStack = [];
+const UNDO_LIMIT = 60;
 
 // --- Collider visualization (read-only) ---
 // Mirrors the in-game dev gizmos: draws yellow outlines for each prop's
@@ -627,6 +679,51 @@ camera = new THREE.PerspectiveCamera(
 camera.position.set(0,20,30);
 camera.lookAt(0,0,0);
 
+// --- Dual projection (Perspective <-> Orthographic/Iso) for the view gizmo ---
+const PERSP_FOV = 75;
+let perspCamera = camera;                 // the camera created above
+let orthoCamera = new THREE.OrthographicCamera(-50, 50, 50, -50, 0.1, 5000);
+orthoCamera.up.copy(camera.up);
+let isOrtho = false;
+
+// Snap the orbit camera to a standard axis view (or the default iso angle).
+// The animate() loop rebuilds camera.position from orbitYaw/orbitPitch, so just
+// setting these snaps the view next frame. Pitch ~±1.5607 (not exactly ±π/2) so
+// the top/bottom views don't hit the lookAt up-vector singularity.
+function snapView(view)
+{
+    const P = {
+        'x':  [ Math.PI/2,  0       ],   // +X → right side
+        '-x': [ -Math.PI/2, 0       ],   // -X → left side
+        'y':  [ 0,          1.5607  ],   // +Y → top-down
+        '-y': [ 0,         -1.5607  ],   // -Y → bottom-up
+        'z':  [ 0,          0       ],   // +Z → front
+        '-z': [ Math.PI,    0       ],   // -Z → back
+        'iso':[ Math.PI/4,  0.6     ]    // default angled view
+    }[view];
+    if (!P) return;
+    orbitYaw = P[0];
+    orbitPitch = P[1];
+}
+
+// Swap the active camera between perspective and orthographic, preserving the
+// current pose. Orthographic gives the flat Unity "Iso" look (no perspective
+// foreshortening). transformControls + the selection raycaster read the global
+// `camera`, so reassigning it is enough.
+function setProjection(ortho)
+{
+    if (ortho === isOrtho) return;
+    isOrtho = ortho;
+    const next = ortho ? orthoCamera : perspCamera;
+    next.position.copy(camera.position);
+    next.quaternion.copy(camera.quaternion);
+    camera = next;
+    if (transformControls) transformControls.camera = camera;
+    const label = document.getElementById('vgPersp');
+    if (label) label.textContent = ortho ? 'Iso' : 'Persp';
+}
+function toggleProjection() { setProjection(!isOrtho); }
+
 renderer = new THREE.WebGLRenderer({
     antialias:true
 });
@@ -659,15 +756,14 @@ uniformCheckbox.addEventListener('change', () => {
     }
 });
 
-// Keep scaling uniform during transform if checkbox is checked
+// While dragging the gizmo, the selected objects are parented under transformPivot,
+// so we manipulate the pivot. Keep scaling uniform (on the pivot) if requested.
+// Bounds/inspector/colliders are refreshed on drag end (see dragging-changed).
 transformControls.addEventListener('objectChange', () => {
-    if (selectedObject && uniformCheckbox.checked) {
-        const s = selectedObject.scale.x;
-        selectedObject.scale.set(s, s, s);
+    if (transformPivot && uniformCheckbox.checked && transformControls.mode === 'scale') {
+        const s = transformPivot.scale.x;
+        transformPivot.scale.set(s, s, s);
     }
-    if (selectedObject) PropLevel.syncBoundsToData(selectedObject);
-    updateInspectorFields();
-    collidersDirty = true;
 });
 
 // --- Collider visualization helpers ---
@@ -709,13 +805,19 @@ function rebuildEditorColliders() {
         const propLike = { rotation: { y: THREE.MathUtils.radToDeg(obj.rotation.y) } };
         const pieces = PropLevel.resolveColliders(propLike, bounds, def);
 
+        // Selected objects' colliders are drawn purple; everything else yellow.
+        const colliderColor = selectedObjects.includes(obj) ? 0xb14eff : 0xffff00;
+
         pieces.forEach(c => {
             const h = Math.max(c.yMax - c.yMin, 0.1);
-            const geo = new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
-            const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
+            const geo = (c.shape === 'box')
+                ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
+                : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+            const mat = new THREE.LineBasicMaterial({ color: colliderColor });
             mat.depthTest = false;
             const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
             helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+            if (c.shape === 'box') helper.rotation.y = c.rot || 0;
             helper.renderOrder = 999;
             scene.add(helper);
             editorColliderHelpers.push(helper);
@@ -982,11 +1084,14 @@ function buildPrefabPreviewContent() {
 
     PropLevel.resolveColliders(propLike, bounds, def).forEach(c => {
         const hh = Math.max(c.yMax - c.yMin, 0.1);
-        const geo = new THREE.CylinderGeometry(c.radius, c.radius, hh, 24);
+        const geo = (c.shape === 'box')
+            ? new THREE.BoxGeometry(c.halfX * 2, hh, c.halfZ * 2)
+            : new THREE.CylinderGeometry(c.radius, c.radius, hh, 24);
         const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
         mat.depthTest = false;
         const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
         helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
+        if (c.shape === 'box') helper.rotation.y = c.rot || 0;
         helper.renderOrder = 999;
         pfScene.add(helper);
         pfGizmos.push(helper);
@@ -1033,48 +1138,43 @@ function attachInspectorInputListeners() {
     const scaleY = document.getElementById('scaleY');
     const scaleZ = document.getElementById('scaleZ');
 
-    posX.addEventListener('change', () => { if(selectedObject) selectedObject.position.x = parseFloat(posX.value); });
-    posY.addEventListener('change', () => { if(selectedObject) selectedObject.position.y = parseFloat(posY.value); });
-    posZ.addEventListener('change', () => { if(selectedObject) selectedObject.position.z = parseFloat(posZ.value); });
-    rotY.addEventListener('change', () => { if(selectedObject) selectedObject.rotation.y = THREE.MathUtils.degToRad(parseFloat(rotY.value)); });
-    scaleX.addEventListener('change', () => { if(selectedObject) selectedObject.scale.x = parseFloat(scaleX.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.x, selectedObject.scale.x, selectedObject.scale.x); updateInspectorFields(); } });
-    scaleY.addEventListener('change', () => { if(selectedObject) selectedObject.scale.y = parseFloat(scaleY.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.y, selectedObject.scale.y, selectedObject.scale.y); updateInspectorFields(); } });
-    scaleZ.addEventListener('change', () => { if(selectedObject) selectedObject.scale.z = parseFloat(scaleZ.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.z, selectedObject.scale.z, selectedObject.scale.z); updateInspectorFields(); } });
+    const afterEdit = () => { collidersDirty = true; };
+    posX.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.position.x = parseFloat(posX.value); afterEdit(); });
+    posY.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.position.y = parseFloat(posY.value); afterEdit(); });
+    posZ.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.position.z = parseFloat(posZ.value); afterEdit(); });
+    rotY.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.rotation.y = THREE.MathUtils.degToRad(parseFloat(rotY.value)); afterEdit(); });
+    scaleX.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.scale.x = parseFloat(scaleX.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.x, selectedObject.scale.x, selectedObject.scale.x); updateInspectorFields(); } afterEdit(); });
+    scaleY.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.scale.y = parseFloat(scaleY.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.y, selectedObject.scale.y, selectedObject.scale.y); updateInspectorFields(); } afterEdit(); });
+    scaleZ.addEventListener('change', () => { if(!selectedObject) return; pushUndo(); selectedObject.scale.z = parseFloat(scaleZ.value); if(uniformCheckbox.checked) { selectedObject.scale.set(selectedObject.scale.z, selectedObject.scale.z, selectedObject.scale.z); updateInspectorFields(); } afterEdit(); });
 
     document.getElementById("chkCollision").addEventListener("change",e=>
     {
-        if(selectedObject)
-            selectedObject.userData.data.collision = e.target.checked;
+        if(selectedObject) { pushUndo(); selectedObject.userData.data.collision = e.target.checked; afterEdit(); }
     });
 
     document.getElementById("chkClimbable").addEventListener("change",e=>
     {
-        if(selectedObject)
-            selectedObject.userData.data.climbable = e.target.checked;
+        if(selectedObject) { pushUndo(); selectedObject.userData.data.climbable = e.target.checked; afterEdit(); }
     });
 
     document.getElementById("chkHideSpot").addEventListener("change",e=>
     {
-        if(selectedObject)
-            selectedObject.userData.data.hideSpot = e.target.checked;
+        if(selectedObject) { pushUndo(); selectedObject.userData.data.hideSpot = e.target.checked; afterEdit(); }
     });
 
     document.getElementById("chkSpawnPoint").addEventListener("change",e=>
     {
-        if(selectedObject)
-            selectedObject.userData.data.spawnPoint = e.target.checked;
+        if(selectedObject) { pushUndo(); selectedObject.userData.data.spawnPoint = e.target.checked; }
     });
 
     document.getElementById("chkSeekerSpawn").addEventListener("change",e=>
     {
-        if(selectedObject)
-            selectedObject.userData.data.seekerSpawn = e.target.checked;
+        if(selectedObject) { pushUndo(); selectedObject.userData.data.seekerSpawn = e.target.checked; }
     });
 
     document.getElementById("chkHiderSpawn").addEventListener("change",e=>
     {
-        if(selectedObject)
-            selectedObject.userData.data.hiderSpawn = e.target.checked;
+        if(selectedObject) { pushUndo(); selectedObject.userData.data.hiderSpawn = e.target.checked; }
     });
 }
 
@@ -1111,10 +1211,38 @@ transformControls.addEventListener(
     e =>
     {
         isTransforming = e.value;
+        if (!transformPivot || !selectedObjects.length) return;
+
+        if (e.value)
+        {
+            // Drag start: snapshot for undo, then parent every selected object
+            // under the pivot (preserving world transform) so they move together.
+            pushUndo();
+            selectedObjects.forEach(o => transformPivot.attach(o));
+        }
+        else
+        {
+            // Drag end: bake world transforms back onto the objects (re-parent to
+            // the scene), refresh their data/bounds, inspector and colliders.
+            selectedObjects.forEach(o => { scene.attach(o); PropLevel.syncBoundsToData(o); });
+            updateInspectorFields();
+            collidersDirty = true;
+        }
     }
 );
 
 scene.add(transformControls);
+
+// The gizmo always manipulates this pivot (never the mesh directly). For a single
+// selection the pivot takes the object's rotation, so the Move/Scale gizmo is
+// aligned to the object's own axes even when it's rotated AND non-uniformly scaled
+// (attaching the gizmo to a scaled mesh shears its axes). For a multi-selection the
+// pivot sits at the centroid with world axes and every selected object is parented
+// under it during a drag, so they move/rotate/scale together.
+transformPivot = new THREE.Group();
+transformPivot.name = '__transformPivot__';
+scene.add(transformPivot);
+
 renderer.domElement.addEventListener(
     "mousedown",
     e => e.preventDefault()
@@ -1400,7 +1528,7 @@ window.addEventListener(
                     obj = obj.parent;
                 }
 
-                selectObject(obj);
+                selectObject(obj, e.ctrlKey || e.metaKey || e.shiftKey);
 
                 return;
             }
@@ -1420,6 +1548,8 @@ window.addEventListener(
 
         if(!clone)
             return;
+
+        pushUndo();   // record state before adding the new object
 
         if(selectedModel !== "wall" && selectedModel !== "spawn")
             clone.scale.setScalar(1);
@@ -1479,70 +1609,42 @@ window.addEventListener(
     "keydown",
     e =>
     {
-
-        if(selectedObject)
+        // If the Hierarchy panel is focused, Up/Down switch the selected object
+        // (and we suppress the default list scroll + the object-nudge below).
+        const inHierarchy = document.activeElement &&
+            document.activeElement.closest &&
+            document.activeElement.closest('#hierarchy');
+        if (inHierarchy && (e.key === "ArrowUp" || e.key === "ArrowDown"))
         {
-            if(e.key==="ArrowUp")
+            e.preventDefault();
+            navigateHierarchy(e.key === "ArrowDown" ? 1 : -1);
+            return;
+        }
+
+        // Arrow / PageUp/Down nudge — moves ALL selected objects.
+        if(selectedObjects.length)
+        {
+            let dx = 0, dy = 0, dz = 0;
+            if(e.key==="ArrowUp")    dz -= moveSpeed;
+            if(e.key==="ArrowDown")  dz += moveSpeed;
+            if(e.key==="ArrowLeft")  dx -= moveSpeed;
+            if(e.key==="ArrowRight") dx += moveSpeed;
+            if(e.key==="PageUp")     dy += 0.5;
+            if(e.key==="PageDown")   dy -= 0.5;
+            if(dx || dy || dz)
             {
-                selectedObject.position.z -= moveSpeed;
+                selectedObjects.forEach(o => o.position.set(o.position.x+dx, o.position.y+dy, o.position.z+dz));
                 updateInspectorFields();
-            } 
-            if(e.key==="ArrowDown")
-            {
-                selectedObject.position.z += moveSpeed;
-                updateInspectorFields();
-            } 
-            if(e.key==="ArrowLeft")
-            {
-                selectedObject.position.x -= moveSpeed;
-                updateInspectorFields();
-            } 
-            if(e.key==="ArrowRight")
-            {
-                selectedObject.position.x += moveSpeed;
-                updateInspectorFields();
-            } 
-            if(e.key==="PageUp")
-            {
-                selectedObject.position.y += 0.5; 
-                updateInspectorFields();
-            }  
-            if(e.key==="PageDown")
-            {
-                selectedObject.position.y -= 0.5; 
-                updateInspectorFields();
-            } 
+                collidersDirty = true;
+            }
         }
         if(e.key === "Escape")
         {
-            if(selectedObject?.userData?.axesHelper)
-            {
-                selectedObject.remove(
-                    selectedObject.userData.axesHelper
-                );
-            }
-
-            transformControls.detach(); 
-            // Clear any active gizmo state
-            transformControls.axis = null; 
-            selectedObject = null;
-            // Exit placement mode
+            setSelection([]);
             selectedModel = null;
-
-            refreshHierarchy();
-
-            // Remove active state from all prop buttons
             document.querySelectorAll(".propBtn").forEach(btn => btn.classList.remove("active"));
-            // Clear inspector fields on deselect
-            clearInspector();
-
-            if(selectionHelper)
-            {
-                scene.remove(selectionHelper);
-                selectionHelper = null;
-            }
         }
-        
+
     }
 );
 
@@ -1551,35 +1653,9 @@ window.addEventListener(
 /////////////////////////////////////////////////////
 function selectModel(model, button)
 {
-    // Enter Placement Mode
+    // Exit selection mode (clears gizmo/helpers), then enter placement mode.
+    setSelection([]);
     selectedModel = model;
-
-    // Exit Selection Mode
-    if(selectedObject)
-    {
-        // Remove transform gizmo
-        transformControls.detach();
-
-        // Remove yellow selection box
-        if(selectionHelper)
-        {
-            scene.remove(selectionHelper);
-            selectionHelper = null;
-        }
-
-        // Remove axes helper
-        if(selectedObject.userData.axesHelper)
-        {
-            selectedObject.remove(selectedObject.userData.axesHelper);
-            delete selectedObject.userData.axesHelper;
-        }
-
-        selectedObject = null;
-
-        refreshHierarchy();
-
-        clearInspector();
-    }
 
     // Update toolbar buttons
     document
@@ -1612,13 +1688,26 @@ function refreshHierarchy()
         item.innerText =
             obj.userData.data.name;
 
-        if(obj===selectedObject)
+        if(selectedObjects.includes(obj))
             item.classList.add("active");
 
-        item.onclick=()=>
+        item.addEventListener("click", e =>
         {
-            selectObject(obj);
-        };
+            if (e.shiftKey && selectedObject)
+            {
+                // Range select from the primary to the clicked item.
+                const a = placedObjects.indexOf(selectedObject);
+                const b = placedObjects.indexOf(obj);
+                const lo = Math.min(a, b), hi = Math.max(a, b);
+                setSelection(placedObjects.slice(lo, hi + 1));
+            }
+            else
+            {
+                selectObject(obj, e.ctrlKey || e.metaKey);   // Ctrl/Cmd toggles
+            }
+            // Focus the panel so Up/Down arrows navigate the list afterwards.
+            document.getElementById("hierarchy").focus();
+        });
 
         list.appendChild(item);
     });
@@ -1626,27 +1715,99 @@ function refreshHierarchy()
 /////////////////////////////////////////////////////
 // Select Object
 /////////////////////////////////////////////////////
-function selectObject(obj) {
-    if (selectionHelper) {
-        scene.remove(selectionHelper);
+// Remove the per-object selection box helpers + the primary's axes helper.
+function clearSelectionHelpers() {
+    selectionHelpers.forEach(h => scene.remove(h));
+    selectionHelpers = [];
+    selectedObjects.forEach(o => {
+        if (o.userData && o.userData.axesHelper) {
+            o.remove(o.userData.axesHelper);
+            o.userData.axesHelper = null;
+        }
+    });
+}
+
+// Move the gizmo pivot to the selection centroid. Single selection → pivot takes
+// the object's world rotation (gizmo aligned to the object's own axes). Multi →
+// world axes. Called every frame while not dragging (see animate) so the gizmo
+// tracks the objects after inspector edits / arrow nudges.
+function positionPivot() {
+    if (!transformPivot || !selectedObjects.length) return;
+    const c = new THREE.Vector3();
+    const tmp = new THREE.Vector3();
+    selectedObjects.forEach(o => c.add(o.getWorldPosition(tmp)));
+    c.multiplyScalar(1 / selectedObjects.length);
+    transformPivot.position.copy(c);
+    if (selectedObjects.length === 1) {
+        selectedObjects[0].getWorldQuaternion(transformPivot.quaternion);
+    } else {
+        transformPivot.quaternion.identity();
     }
-    if (selectedObject?.userData?.axesHelper) {
-        selectedObject.remove(selectedObject.userData.axesHelper);
-    }
-    selectedObject = obj;
+    transformPivot.scale.set(1, 1, 1);
+    transformPivot.updateMatrixWorld(true);
+}
+
+// Core: make `objs` the current selection.
+function setSelection(objs) {
+    clearSelectionHelpers();
+    selectedObjects = objs.slice();
+    selectedObject = selectedObjects[selectedObjects.length - 1] || null;
     selectedModel = null;
     document.querySelectorAll('.propBtn').forEach(btn => btn.classList.remove('active'));
-    transformControls.attach(selectedObject);
 
-    selectionHelper = new THREE.BoxHelper(obj, 0xffff00);
-    scene.add(selectionHelper);
-    
+    if (!selectedObjects.length) {
+        transformControls.detach();
+        transformControls.axis = null;
+        clearInspector();
+        refreshHierarchy();
+        collidersDirty = true;
+        return;
+    }
+
+    // A yellow box per selected object.
+    selectedObjects.forEach(o => {
+        const bh = new THREE.BoxHelper(o, 0xffff00);
+        scene.add(bh);
+        selectionHelpers.push(bh);
+    });
+    // Axes helper on the primary only.
     const axes = new THREE.AxesHelper(5);
     selectedObject.add(axes);
     selectedObject.userData.axesHelper = axes;
-    // Populate inspector fields
+
+    positionPivot();
+    transformControls.attach(transformPivot);
+
     updateInspectorFields();
     refreshHierarchy();
+    collidersDirty = true;
+}
+
+// Click selection. additive=true (Ctrl/Cmd) toggles the object in/out of the set.
+function selectObject(obj, additive) {
+    if (additive && selectedObjects.length) {
+        const i = selectedObjects.indexOf(obj);
+        const next = selectedObjects.slice();
+        if (i >= 0) next.splice(i, 1); else next.push(obj);
+        setSelection(next);
+    } else {
+        setSelection([obj]);
+    }
+}
+
+// Move the hierarchy selection by dir (-1 up, +1 down) and scroll it into view.
+// Used by the keydown handler when the hierarchy panel is focused.
+function navigateHierarchy(dir) {
+    if (!placedObjects.length) return;
+    let idx = placedObjects.indexOf(selectedObject);
+    if (idx === -1) idx = (dir > 0 ? -1 : 0);   // nothing selected → first/last
+    const next = Math.max(0, Math.min(placedObjects.length - 1, idx + dir));
+    selectObject(placedObjects[next]);          // rebuilds the list
+
+    const list = document.getElementById("hierarchyList");
+    const active = list && list.querySelector(".hierarchy-item.active");
+    if (active) active.scrollIntoView({ block: "nearest" });
+    document.getElementById("hierarchy").focus();   // keep focus for continued nav
 }
 
 function updateInspectorFields() {
@@ -1676,54 +1837,53 @@ function updateInspectorFields() {
 //////////////////////////////////////////////////////
 function duplicateSelected()
 {
-    if (!selectedObject)
+    if (!selectedObjects.length)
         return;
 
-    const model = selectedObject.userData.data.model;
+    pushUndo();
 
-    const clone = createEditorMesh(model);
+    const sources = selectedObjects.slice();
+    const clones = [];
 
-    if(!clone)
-        return;
-
-    clone.position.copy(selectedObject.position);
-    clone.rotation.copy(selectedObject.rotation);
-    clone.scale.copy(selectedObject.scale);
-    clone.position.x += 2;
-    clone.position.z += 2;
-
-    const source = selectedObject.userData.data;
-    clone.userData =
+    sources.forEach(src =>
     {
-        editorObject:true,
+        const model = src.userData.data.model;
+        const clone = createEditorMesh(model);
+        if(!clone) return;
 
-        data:
+        clone.position.copy(src.position);
+        clone.rotation.copy(src.rotation);
+        clone.scale.copy(src.scale);
+        clone.position.x += 2;
+        clone.position.z += 2;
+
+        const source = src.userData.data;
+        clone.userData =
         {
-            name:model + "_" + objectId++,
-            model:model,
-            collision:source.collision,
-            climbable:source.climbable,
-            hideSpot:source.hideSpot,
-            spawnPoint:source.spawnPoint,
-            seekerSpawn:source.seekerSpawn,
-            hiderSpawn:source.hiderSpawn
-        }
-    };
+            editorObject:true,
+            data:
+            {
+                name:model + "_" + objectId++,
+                model:model,
+                collision:source.collision,
+                climbable:source.climbable,
+                hideSpot:source.hideSpot,
+                spawnPoint:source.spawnPoint,
+                seekerSpawn:source.seekerSpawn,
+                hiderSpawn:source.hiderSpawn
+            }
+        };
 
-    PropLevel.syncBoundsToData(clone);
+        PropLevel.syncBoundsToData(clone);
+        clone.traverse(child => { child.userData.editorObject = true; });
 
-    clone.traverse(child=>
-    {
-        child.userData.editorObject = true;
+        scene.add(clone);
+        placedObjects.push(clone);
+        clones.push(clone);
     });
 
-    scene.add(clone);
-
-    placedObjects.push(clone);
-
-    selectObject(clone);
-
     refreshHierarchy();
+    if (clones.length) setSelection(clones);   // select the new copies
 }
 //////////////////////////////////////////////////////
 // Delete
@@ -1731,33 +1891,85 @@ function duplicateSelected()
 
 function deleteSelected()
 {
-    if(!selectedObject)
+    if(!selectedObjects.length)
         return;
 
-    if(selectionHelper)
-    {
-        scene.remove(selectionHelper);
-        selectionHelper = null;
-    }
+    pushUndo();
 
-    if(selectedObject.userData.axesHelper)
-    {
-        selectedObject.remove(
-            selectedObject.userData.axesHelper
-        );
-    }
-
-    scene.remove(selectedObject);
-
-    placedObjects = placedObjects.filter(x => x !== selectedObject);
-    refreshHierarchy();
-
+    const victims = selectedObjects.slice();
+    clearSelectionHelpers();          // remove boxes + the primary's axes child
     transformControls.detach();
+    transformControls.axis = null;
+
+    victims.forEach(o => scene.remove(o));
+    placedObjects = placedObjects.filter(x => !victims.includes(x));
+
+    selectedObjects = [];
     selectedObject = null;
 
-        // Clear inspector fields instead of overwriting the panel
-        clearInspector();
+    refreshHierarchy();
+    clearInspector();
 }
+
+//////////////////////////////////////////////////////
+// Undo / Redo (full-scene snapshots)
+//////////////////////////////////////////////////////
+function snapshotObject(o) {
+    const d = o.userData.data;
+    return {
+        id: d.name, model: d.model,
+        x: o.position.x, y: o.position.y, z: o.position.z,
+        rotation: {
+            x: THREE.MathUtils.radToDeg(o.rotation.x),
+            y: THREE.MathUtils.radToDeg(o.rotation.y),
+            z: THREE.MathUtils.radToDeg(o.rotation.z)
+        },
+        scale: { x: o.scale.x, y: o.scale.y, z: o.scale.z },
+        collision: d.collision, climbable: d.climbable, hideSpot: d.hideSpot,
+        spawnPoint: d.spawnPoint, seekerSpawn: d.seekerSpawn, hiderSpawn: d.hiderSpawn
+    };
+}
+function snapshotScene() { return placedObjects.map(snapshotObject); }
+
+function applySnapshot(list) {
+    clearAllObjects();
+    let maxId = 0;
+    list.forEach(p => {
+        buildEditorObject(p);
+        const m = /_(\d+)$/.exec(p.id || '');
+        if (m) maxId = Math.max(maxId, +m[1]);
+    });
+    objectId = Math.max(objectId, maxId + 1);
+    refreshHierarchy();
+    collidersDirty = true;
+}
+
+// Call BEFORE a mutating action to record the pre-change state.
+function pushUndo() {
+    undoStack.push(snapshotScene());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack = [];
+}
+function undo() {
+    if (!undoStack.length) return;
+    redoStack.push(snapshotScene());
+    applySnapshot(undoStack.pop());
+}
+function redo() {
+    if (!redoStack.length) return;
+    undoStack.push(snapshotScene());
+    applySnapshot(redoStack.pop());
+}
+
+// Undo/redo keys — work regardless of selection. Ctrl+Z undo; Ctrl+Y or Ctrl+R
+// redo (Ctrl+R is intercepted so it redoes instead of reloading the page);
+// Ctrl+Shift+Z also redoes.
+window.addEventListener("keydown", e => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    const k = e.key.toLowerCase();
+    if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if (k === 'y' || k === 'r' || (k === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
+});
 
 //////////////////////////////////////////////////////
 // keydown - shoertcuts
@@ -1783,7 +1995,11 @@ window.addEventListener(
             duplicateSelected();
 
             return;
-        }    
+        }
+
+        // Don't let single-letter shortcuts fire on Ctrl/Cmd combos (Ctrl+Z/Y/R
+        // are undo/redo, handled separately).
+        if (e.ctrlKey || e.metaKey) return;
 
         switch(e.key.toLowerCase())
         {
@@ -2008,16 +2224,10 @@ function buildEditorObject(prop)
 // Remove every placed object and reset selection/inspector state.
 function clearAllObjects()
 {
-    if(selectionHelper)
-    {
-        scene.remove(selectionHelper);
-        selectionHelper = null;
-    }
-
-    if(selectedObject?.userData?.axesHelper)
-        selectedObject.remove(selectedObject.userData.axesHelper);
-
+    clearSelectionHelpers();
     transformControls.detach();
+    transformControls.axis = null;
+    selectedObjects = [];
     selectedObject = null;
 
     placedObjects.forEach(o => scene.remove(o));
@@ -2054,6 +2264,7 @@ function applyLevelData(raw)
                 " object(s) with this level?"))
         return false;
 
+    pushUndo();        // loading replaces the scene — make it undoable
     clearAllObjects();
 
     let loaded = 0;
@@ -2121,6 +2332,32 @@ function loadLevelByName(name)
     }
 }
 
+// Upload a level file from disk (registerLevel("x", [...]) / forestLevel = [...]
+// / raw array) and load it into the editor scene. Reuses applyLevelData.
+function uploadLevelFile(input)
+{
+    const file = input.files && input.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e)
+    {
+        const text = e.target.result;
+        if(applyLevelData(text))
+        {
+            // Prefer the registerLevel("name", ...) name; else the filename stem.
+            const m = text.match(/registerLevel\(\s*['"]([^'"]+)['"]/);
+            currentLevelName = m ? m[1] : file.name.replace(/\.[^.]+$/, "");
+            const nameInput = document.getElementById("exportLevelName");
+            if(nameInput) nameInput.value = currentLevelName;
+            closeModal("loadModal");
+        }
+        input.value = "";   // allow re-selecting the same file
+    };
+    reader.onerror = function(){ alert("Couldn't read the file."); input.value = ""; };
+    reader.readAsText(file);
+}
+
 function deleteLevelByName(name)
 {
     if(!confirm('Delete level "' + name + '"?')) return;
@@ -2138,18 +2375,22 @@ function deleteLevelByName(name)
 
 function animate()
 {
-    if(selectionHelper)
+    if(selectionHelpers.length)
     {
-        // BoxHelper.update() re-measures the object each frame; detach the
-        // AxesHelper(5) child first so the box fits the prop instead of being
-        // inflated/offset by the helper's rays.
+        // BoxHelper.update() re-measures the object each frame; detach the primary's
+        // AxesHelper(5) child first so its box fits the prop (not the helper rays).
         const axes = selectedObject && selectedObject.userData && selectedObject.userData.axesHelper;
         if (axes) selectedObject.remove(axes);
-        selectionHelper.update();
+        selectionHelpers.forEach(h => h.update());
         if (axes) selectedObject.add(axes);
     }
 
-    if (showColliders && collidersDirty)
+    // Keep the gizmo pivot tracking the selection centroid/orientation while not
+    // dragging (so it follows inspector edits / arrow nudges). During a drag the
+    // objects are parented to the pivot and the gizmo drives it.
+    if (!isTransforming && selectedObjects.length) positionPivot();
+
+    if (showColliders && collidersDirty && !isTransforming)
     {
         rebuildEditorColliders();
         collidersDirty = false;
@@ -2180,6 +2421,20 @@ function animate()
         orbitTarget
     );
 
+    // Keep the orthographic frustum framing the same world span the perspective
+    // camera would at this distance, so zoom (wheel → orbitDistance) still works
+    // and switching projection doesn't jump the framing.
+    if (camera.isOrthographicCamera)
+    {
+        const h = 2 * orbitDistance * Math.tan(THREE.MathUtils.degToRad(PERSP_FOV / 2));
+        const aspect = window.innerWidth / window.innerHeight;
+        camera.left = -h * aspect / 2;
+        camera.right = h * aspect / 2;
+        camera.top = h / 2;
+        camera.bottom = -h / 2;
+        camera.updateProjectionMatrix();
+    }
+
     renderer.render(
         scene,
         camera
@@ -2187,6 +2442,11 @@ function animate()
 }
 
 animate();
+
+// Wire the view gizmo (axis snap + projection toggle).
+document.querySelectorAll('#viewGizmo .vg-axis, #viewGizmo .vg-hub').forEach(el =>
+    el.addEventListener('click', () => snapView(el.dataset.view)));
+document.getElementById('vgPersp').addEventListener('click', toggleProjection);
 
 
 //help button script

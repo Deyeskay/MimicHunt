@@ -4,11 +4,36 @@ const UI = {
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-msg').innerText = message;
         document.getElementById('custom-modal').style.display = 'flex';
-        
-        document.getElementById('modal-btn').onclick = () => {
+
+        const cancel = document.getElementById('modal-cancel-btn');
+        if (cancel) cancel.style.display = 'none';   // single-button info modal
+        const ok = document.getElementById('modal-btn');
+        ok.innerText = 'OK';
+        ok.onclick = () => {
             document.getElementById('custom-modal').style.display = 'none';
             if (callback) callback();
         };
+    },
+
+    // Yes/Cancel confirmation. onConfirm runs only if the user confirms.
+    showConfirm: function(title, message, onConfirm, confirmLabel) {
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-msg').innerText = message;
+        document.getElementById('custom-modal').style.display = 'flex';
+
+        const ok = document.getElementById('modal-btn');
+        const cancel = document.getElementById('modal-cancel-btn');
+        ok.innerText = confirmLabel || 'Yes';
+        ok.onclick = () => {
+            document.getElementById('custom-modal').style.display = 'none';
+            if (onConfirm) onConfirm();
+        };
+        if (cancel) {
+            cancel.style.display = 'inline-block';
+            cancel.onclick = () => {
+                document.getElementById('custom-modal').style.display = 'none';
+            };
+        }
     },
 
     updateStatus: function(msg) {
@@ -210,6 +235,13 @@ const UI = {
                 if (ammoEl) ammoEl.innerText = reloading ? 'RELOAD' : `${ammo}/${MAG_SIZE}`;
                 if (scoreEl) scoreEl.innerText = me.score || 0;
             }
+        }
+        // Bottom-center blinking "RELOADING…" while a seeker reloads.
+        const reloadEl = document.getElementById('reload-indicator');
+        if (reloadEl) {
+            const showReload = combatActive && reloading;
+            reloadEl.style.display = showReload ? 'flex' : 'none';
+            reloadEl.classList.toggle('blink', showReload);
         }
         // Hider health bar (top HUD): visible for a hider in-game.
         const healthHud = document.getElementById('health-hud');
