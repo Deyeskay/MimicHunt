@@ -67,12 +67,25 @@ const Level = {
     // sharper grass + cloud sky; High = Medium + bloom. Applied at init and live
     // from the Settings screen.
     QUALITY: {
+        // grassTint multiplies ONLY the ground material. Low isn't colour-managed, so its
+        // grass reads dull/olive — this tint lifts it to the lush look the sRGB/ACES tiers
+        // get for free, without touching walls/props/anything else. Tune here if needed.
         low:    { pixelRatio: 1, srgb: false, toneMap: false, aniso: false, bloom: false, sky: 'flat',
-                  ambient: 0.9,  hemi: 0.6,  hemiGround: 0x4a6a3a, dir: 1.2, dirColor: 0xffffff },
+                  ambient: 0.9,  hemi: 0.6,  hemiGround: 0x4a6a3a, dir: 1.2, dirColor: 0xffffff,
+                  env: false, envIntensity: 0, exposure: 1.0, fogFar: 100, shadowRadius: 1,
+                  grassTint: [1.25, 1.45, 1.0] },
         medium: { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: false, sky: 'dome',
-                  ambient: 0.30, hemi: 0.85, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xfff3e0 },
+                  ambient: 0.30, hemi: 0.85, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xfff3e0,
+                  env: false, envIntensity: 0, exposure: 1.0, fogFar: 100, shadowRadius: 1,
+                  grassTint: [1, 1, 1] },
+        // High adds image-based lighting (env map → soft sky-lit props/characters), softer
+        // contact shadows, crisper fog and a more visible bloom. Exposure + fill are pulled
+        // down a touch so it isn't washed out (sun kept high so shine/bloom stay).
         high:   { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: true,  sky: 'dome',
-                  ambient: 0.30, hemi: 0.90, hemiGround: 0x6a8a4a, dir: 1.8, dirColor: 0xfff3e0 },
+                  ambient: 0.22, hemi: 0.70, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xffefd0,
+                  env: true,  envIntensity: 0.65, exposure: 0.85, fogFar: 180, shadowRadius: 4,
+                  grassTint: [1, 1, 1],
+                  bloomStrength: 0.55, bloomRadius: 0.4, bloomThreshold: 0.75 },
     },
 
     setGraphicsQuality: function(q) {
@@ -82,14 +95,31 @@ const Level = {
 
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, p.pixelRatio));
         renderer.toneMapping = p.toneMap ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
-        renderer.toneMappingExposure = 1.0;
+        renderer.toneMappingExposure = (p.exposure != null) ? p.exposure : 1.0;
         renderer.outputEncoding = p.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding;
 
         if (this._ambient) this._ambient.intensity = p.ambient;
         if (this._hemi) { this._hemi.intensity = p.hemi; this._hemi.groundColor.setHex(p.hemiGround); }
-        if (this._dir) { this._dir.intensity = p.dir; this._dir.color.setHex(p.dirColor); }
+        if (this._dir) { this._dir.intensity = p.dir; this._dir.shadow.radius = p.shadowRadius; }
+        if (this._dir) this._dir.color.setHex(p.dirColor);
 
-        this.refreshTextures(p.srgb, p.aniso);
+        // Crisper distance on High (push the fog back); keep depth haze on Low/Medium.
+        if (scene.fog) { scene.fog.near = 20; scene.fog.far = p.fogFar; }
+
+        // Grass-only colour lift (affects nothing else). Low gets boosted to match the
+        // lush look the colour-managed tiers produce; Medium/High stay [1,1,1].
+        if (this._groundMat && p.grassTint) {
+            this._groundMat.color.setRGB(p.grassTint[0], p.grassTint[1], p.grassTint[2]);
+            this._groundMat.needsUpdate = true;
+        }
+
+        // Image-based lighting (High): a sky-derived environment makes the GLB
+        // props/characters (MeshStandard) read soft and lit instead of flat.
+        this._wantEnv = !!p.env;
+        if (p.env) this.buildEnvironment();
+        scene.environment = (p.env && this._env) ? this._env : null;
+
+        this.refreshTextures(p.srgb, p.aniso, p.env ? p.envIntensity : 0);
 
         // Sky: cloud dome for Medium/High, flat colour for Low.
         if (this._skydome) this._skydome.visible = (p.sky === 'dome');
@@ -97,7 +127,7 @@ const Level = {
 
         // Bloom (High only).
         this._useComposer = !!p.bloom;
-        if (p.bloom) this.buildComposer();
+        if (p.bloom) this.buildComposer(p);
 
         this.resize();
     },
@@ -106,14 +136,17 @@ const Level = {
     // library and the character rigs (GLB clones share texture refs, so updating
     // the templates covers spawned props). Forces shader recompile so live
     // tone-mapping / encoding changes take effect.
-    refreshTextures: function(srgb, aniso) {
+    refreshTextures: function(srgb, aniso, envIntensity) {
         const enc = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding;
         const maxAniso = aniso ? renderer.capabilities.getMaxAnisotropy() : 1;
+        const ei = envIntensity || 0;
         const seen = new Set();
         const touchMat = (m) => {
             if (!m || seen.has(m)) return;
             seen.add(m);
             if (m.map) { m.map.encoding = enc; m.map.anisotropy = maxAniso; m.map.needsUpdate = true; }
+            // envMapIntensity affects MeshStandard/Physical only; 0 disables it on Low/Medium.
+            if ('envMapIntensity' in m) m.envMapIntensity = ei;
             m.needsUpdate = true;
         };
         const touchObj = (o) => {
@@ -153,14 +186,44 @@ const Level = {
         );
     },
 
+    // Image-based lighting: PMREM-process the sky image into an environment that
+    // lights all MeshStandard materials (props/characters). Built once, lazily.
+    buildEnvironment: function() {
+        if (this._env || this._envBuilding || typeof THREE.PMREMGenerator === 'undefined') return;
+        this._envBuilding = true;
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        pmrem.compileEquirectangularShader();
+        new THREE.TextureLoader().load(
+            'assets/textures/sky.png',
+            (tex) => {
+                tex.mapping = THREE.EquirectangularReflectionMapping;
+                this._env = pmrem.fromEquirectangular(tex).texture;
+                tex.dispose();
+                pmrem.dispose();
+                this._envBuilding = false;
+                // If High is still the active tier, apply it now.
+                if (this._wantEnv) { scene.environment = this._env; this.refreshTextures(true, true, true); }
+            },
+            undefined,
+            () => { this._envBuilding = false; }   // missing sky → no IBL, scene still renders
+        );
+    },
+
     // Build the bloom post-processing chain once (High quality). Requires the
     // EffectComposer/UnrealBloomPass example scripts loaded in index.html.
-    buildComposer: function() {
-        if (this._composer || typeof THREE.EffectComposer === 'undefined') return;
+    buildComposer: function(p) {
+        const s = (p && p.bloomStrength != null) ? p.bloomStrength : 0.6;
+        const r = (p && p.bloomRadius != null) ? p.bloomRadius : 0.4;
+        const t = (p && p.bloomThreshold != null) ? p.bloomThreshold : 0.7;
+        if (this._composer) {
+            if (this._bloomPass) { this._bloomPass.strength = s; this._bloomPass.radius = r; this._bloomPass.threshold = t; }
+            return;
+        }
+        if (typeof THREE.EffectComposer === 'undefined') return;
         const w = window.innerWidth, h = window.innerHeight;
         const composer = new THREE.EffectComposer(renderer);
         composer.addPass(new THREE.RenderPass(scene, camera));
-        const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.4, 0.85);
+        const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), s, r, t);
         composer.addPass(bloom);
         composer.setPixelRatio(renderer.getPixelRatio());
         composer.setSize(w, h);
@@ -322,6 +385,9 @@ const Level = {
 
         PropLevel.enrichProp(prop, mesh);
         mesh.userData.propData = prop;
+        // Props both cast and RECEIVE shadows so they're grounded with contact
+        // shadows on the grass (and on each other) instead of looking like they float.
+        mesh.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
         scene.add(mesh);
         (this.levelMeshes = this.levelMeshes || []).push(mesh);
     },
@@ -397,7 +463,7 @@ const Level = {
         c.shootUpper = this.splitClip(c.shoot, false);  // upper-only shoot override
         rig.clips = c;
 
-        rig.scene.traverse(o => { if (o.isMesh) o.castShadow = true; });
+        rig.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
         return rig;
     },
 
@@ -487,7 +553,7 @@ const Level = {
         // Pick the rig for this role (Seeker → hunter.glb, Hider → player.glb).
         const rig = this.rigForRole(p.role);
         const model = THREE.SkeletonUtils.clone(rig.scene);
-        model.traverse(o => { if (o.isMesh) o.castShadow = true; });
+        model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 
         // Scale to ~3 tall by measuring the actual clone (respects any intrinsic
         // scale in the GLB), then drop it so its feet sit at the group origin

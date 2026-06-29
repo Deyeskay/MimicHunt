@@ -5,6 +5,17 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **High-tier visual polish (IBL + contact shadows + crisper fog + tuned bloom).** Follow-up to
+  the graphics overhaul — High looked flat. In `js/level.js`:
+  - *Image-based lighting* (`buildEnvironment`): `sky.png` → PMREM → `scene.environment` on
+    **High only**, so GLB props/characters (MeshStandard) get soft sky-lit shading instead of
+    flat. `refreshTextures(..., env)` drives `envMapIntensity` (1 High / 0 otherwise).
+  - *Contact shadows* (all tiers): props (`spawnProp`) + characters now **receive** shadows,
+    not just cast — they no longer look like they float. High softens edges (`shadow.radius 4`).
+  - *Per-tier fog* (`scene.fog.far`): 180 on High (crisper) vs 100 on Low/Medium.
+  - *Bloom* retuned for High (strength 0.6 / threshold 0.7, was 0.5 / 0.85) so highlights glow.
+  - Medium/Low are unchanged. Honest note: low-poly models remain the ceiling vs the reference.
+    See [RENDERING.md](RENDERING.md).
 - **Graphics quality setting + lighting/grass/sky overhaul.** New `GAME_SETTINGS.graphicsQuality`
   (`low`/`medium`/`high`, default **medium**) via a Graphics dropdown on the Settings screen,
   applied live and at `Level.init`. Fixes the washed-out look:

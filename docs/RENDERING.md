@@ -44,11 +44,28 @@ Setting: `GAME_SETTINGS.graphicsQuality` (`'low' | 'medium' | 'high'`, default *
 edited via the **Graphics** dropdown on the Settings screen (`#setting-graphics`), applied
 **live** (`js/app.js` `change` handler) and at the end of `Level.init`.
 
-| Tier | pixelRatio | colour mgmt | grass aniso | sky | bloom | lights |
-|------|-----------|-------------|-------------|-----|-------|--------|
-| Low | 1 | off | off | flat | off | ambient .9 / hemi .6 / sun 1.2 |
-| Medium | ≤2 | sRGB + ACES | on | cloud dome | off | ambient .30 / hemi .85 / sun 1.7 warm |
-| High | ≤2 | sRGB + ACES | on | cloud dome | **on** | ambient .30 / hemi .90 / sun 1.8 warm |
+| Tier | pixelRatio | colour mgmt | grass aniso | sky | IBL (env) | fog far | shadow soft | bloom | lights |
+|------|-----------|-------------|-------------|-----|-----------|---------|-------------|-------|--------|
+| Low | 1 | off | off | flat | off | 100 | hard | off | ambient .9 / hemi .6 / sun 1.2 |
+| Medium | ≤2 | sRGB + ACES | on | cloud dome | off | 100 | hard | off | ambient .30 / hemi .85 / sun 1.7 warm |
+| High | ≤2 | sRGB + ACES | on | cloud dome | **on** | **180** | **radius 4** | **on** | ambient .30 / hemi .90 / sun 1.8 warm |
+
+### High-only: image-based lighting + contact shadows
+- **IBL** (`buildEnvironment`): `assets/textures/sky.png` is PMREM-processed into
+  `scene.environment`, so every `MeshStandardMaterial` (GLB props + characters) gets soft
+  sky-coloured ambient + subtle specular instead of looking flat. `refreshTextures(srgb,
+  aniso, env)` sets `material.envMapIntensity` (1 on High, 0 otherwise). Built once, lazily;
+  applied in the loader callback if High is active before it's ready. Ground/walls are Lambert
+  and ignore it by design (keeps Low/Medium identical).
+- **Contact shadows:** props (`spawnProp`) and characters (`buildRig`/`makeCharacterMesh`)
+  now `castShadow` **and** `receiveShadow`, so they're grounded on the grass and each other
+  (this part applies on every tier — shadows are always enabled). High also softens edges via
+  `dirLight.shadow.radius = 4`.
+- **Crisper distance:** fog far is per-tier (`scene.fog.far`), pushed to 180 on High so the
+  scene doesn't grey out; 100 on Low/Medium.
+- **Honest ceiling:** the low-poly faceted prop models + flat plank walls are the remaining
+  gap vs a concept-art reference — lighting can't add geometry. Matching it further needs
+  higher-detail GLB assets (separate art effort).
 
 `setGraphicsQuality(q)`: sets pixelRatio, tone mapping, output encoding, light
 intensities/colours, runs `refreshTextures(srgb, aniso)` (traverses `scene` +
@@ -64,7 +81,13 @@ tone-map double-apply). Requires the example scripts in `index.html` (load order
 `render` branches: `this._useComposer && this._composer ? composer.render() :
 renderer.render(...)`. `resize` keeps the composer size/pixelRatio in sync.
 
+## Grass colour (per-tier `grassTint`)
+Low isn't colour-managed, so the grass texture reads dull/olive while the sRGB+ACES tiers
+get a lush grass for free. `Level.QUALITY[*].grassTint` is an `[r,g,b]` multiplier applied
+**only** to `this._groundMat` in `setGraphicsQuality` — Low uses `[1.25,1.45,1.0]` to match
+the lush look without touching walls/props/anything else; Medium/High use `[1,1,1]`. Nudge
+the Low values if the green is too strong/weak.
+
 ## Tuning knobs
 Light intensities/colours and per-tier flags live in `Level.QUALITY`. Bloom params in
-`buildComposer`. Grass `repeat` in `loadGroundImage`. Optional grass saturation: tint
-`this._groundMat.color`.
+`buildComposer`. Grass `repeat` in `loadGroundImage`; grass colour via per-tier `grassTint`.
