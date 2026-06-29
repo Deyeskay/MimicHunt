@@ -7,8 +7,28 @@ function commitPlayerName() {
     localStorage.setItem('hidehunt_settings', JSON.stringify(GAME_SETTINGS));
 }
 
-document.getElementById('btn-host').addEventListener('click', () => { commitPlayerName(); Network.initHost(); });
-document.getElementById('btn-join').addEventListener('click', () => { commitPlayerName(); Network.initClient(); });
+// A display name is mandatory before hosting/joining — bail with an inline error
+// + red shake on the field if it's empty.
+function requireName() {
+    const input = document.getElementById('input-player-name');
+    const name = (input ? input.value : '').trim();
+    if (!name) {
+        UI.updateStatus('Please enter your name to continue.');
+        if (input) {
+            input.classList.remove('input-error');
+            void input.offsetWidth;            // restart the shake animation on repeat clicks
+            input.classList.add('input-error');
+            input.focus();
+        }
+        return false;
+    }
+    return true;
+}
+const nameField = document.getElementById('input-player-name');
+if (nameField) nameField.addEventListener('input', () => nameField.classList.remove('input-error'));
+
+document.getElementById('btn-host').addEventListener('click', () => { if (!requireName()) return; commitPlayerName(); Network.initHost(); });
+document.getElementById('btn-join').addEventListener('click', () => { if (!requireName()) return; commitPlayerName(); Network.initClient(); });
 // Hamburger (☰) now opens a small dropdown (Edit Layout / Exit Game) instead of
 // leaving the match directly.
 const gameMenu = document.getElementById('game-menu');
@@ -36,6 +56,74 @@ document.getElementById('btn-exit-game').addEventListener('click', () => {
     UI.showConfirm('Exit Game?', 'Are you sure you want to leave the match?',
         () => Network.leaveMatch(), 'Exit');
 });
+
+// In-game Controls panel (opened from the ☰ menu). Camera look sens, FOV and
+// invert mirror GAME_SETTINGS (same values as the Settings screen, kept in sync
+// both ways); shoot-drag sens is unique to the mobile fire button. Changes apply
+// live and persist when the panel is dismissed.
+const controlsPanel = document.getElementById('controls-panel');
+function syncControlsDisplays() {
+    setChip('ctl-val-sensitivity', Number(GAME_SETTINGS.mouseSensitivity).toFixed(4));
+    setChip('ctl-val-shoot-sens', Number(GAME_SETTINGS.shootDragSensitivity).toFixed(4));
+    setChip('ctl-val-fov', String(Math.round(GAME_SETTINGS.cameraFov)));
+}
+function openControlsPanel() {
+    document.getElementById('ctl-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
+    document.getElementById('ctl-shoot-sens').value = GAME_SETTINGS.shootDragSensitivity;
+    document.getElementById('ctl-fov').value = GAME_SETTINGS.cameraFov;
+    document.getElementById('ctl-invert-y').checked = GAME_SETTINGS.invertY;
+    syncControlsDisplays();
+    controlsPanel.style.display = 'flex';
+}
+function closeControlsPanel() {
+    controlsPanel.style.display = 'none';
+    localStorage.setItem('hidehunt_settings', JSON.stringify(GAME_SETTINGS));
+}
+document.getElementById('btn-controls').addEventListener('click', () => {
+    toggleGameMenu(false);
+    openControlsPanel();
+});
+document.getElementById('btn-controls-close').addEventListener('click', closeControlsPanel);
+document.getElementById('btn-controls-reset').addEventListener('click', () => {
+    // Defaults mirror GAME_SETTINGS in js/globals.js.
+    GAME_SETTINGS.mouseSensitivity = 0.002;
+    GAME_SETTINGS.shootDragSensitivity = 0.003;
+    GAME_SETTINGS.cameraFov = 60;
+    GAME_SETTINGS.invertY = false;
+    Level.setFov(GAME_SETTINGS.cameraFov);
+    openControlsPanel();   // repopulate this panel's inputs + chips
+    // Keep the Settings screen inputs in sync (they share these values).
+    const s = document.getElementById('setting-sensitivity'); if (s) s.value = GAME_SETTINGS.mouseSensitivity;
+    const f = document.getElementById('setting-fov'); if (f) f.value = GAME_SETTINGS.cameraFov;
+    const i = document.getElementById('setting-invert-y'); if (i) i.checked = GAME_SETTINGS.invertY;
+    syncSettingDisplays();
+});
+controlsPanel.addEventListener('click', (e) => { if (e.target === controlsPanel) closeControlsPanel(); });
+(function wireControlsPanel() {
+    const sens = document.getElementById('ctl-sensitivity');
+    const shoot = document.getElementById('ctl-shoot-sens');
+    const fov = document.getElementById('ctl-fov');
+    const inv = document.getElementById('ctl-invert-y');
+    sens.addEventListener('input', () => {
+        GAME_SETTINGS.mouseSensitivity = parseFloat(sens.value);
+        const s = document.getElementById('setting-sensitivity'); if (s) s.value = sens.value;
+        syncControlsDisplays(); syncSettingDisplays();
+    });
+    shoot.addEventListener('input', () => {
+        GAME_SETTINGS.shootDragSensitivity = parseFloat(shoot.value);
+        syncControlsDisplays();
+    });
+    fov.addEventListener('input', () => {
+        GAME_SETTINGS.cameraFov = Math.round(Number(fov.value));
+        Level.setFov(GAME_SETTINGS.cameraFov);
+        const f = document.getElementById('setting-fov'); if (f) f.value = fov.value;
+        syncControlsDisplays(); syncSettingDisplays();
+    });
+    inv.addEventListener('change', () => {
+        GAME_SETTINGS.invertY = inv.checked;
+        const i = document.getElementById('setting-invert-y'); if (i) i.checked = inv.checked;
+    });
+})();
 
 // Player count pill (👥) → open the in-game player roster modal.
 document.getElementById('player-count-card').addEventListener('click', () => UI.showPlayerList());

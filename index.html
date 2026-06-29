@@ -82,7 +82,48 @@
             <!-- Hamburger dropdown: opened by ☰ (btn-leave). -->
             <div id="game-menu" class="game-menu interactive" style="display:none;">
                 <button id="btn-edit-layout" class="game-menu-item">✥ Edit Layout</button>
+                <button id="btn-controls" class="game-menu-item">🎚 Controls</button>
                 <button id="btn-exit-game" class="game-menu-item danger">⏏ Exit Game</button>
+            </div>
+        </div>
+
+        <!-- In-game Controls panel: opened from the ☰ menu. Camera look sens,
+             FOV and invert mirror the same GAME_SETTINGS as the Settings screen;
+             shoot-drag sens is unique to the mobile fire button. -->
+        <div id="controls-panel" class="modal-overlay interactive">
+            <div class="menu-card settings-card">
+                <h2>🎚 Controls</h2>
+                <div class="settings-list">
+                    <div class="setting-row">
+                        <label for="ctl-sensitivity"><span class="set-icon ic-mouse">🎯</span> CAMERA LOOK SENS.</label>
+                        <div class="setting-control">
+                            <input id="ctl-sensitivity" type="range" min="0.0005" max="0.01" step="0.0005">
+                            <span id="ctl-val-sensitivity" class="setting-value">0.0020</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="ctl-shoot-sens"><span class="set-icon ic-shoot">🔫</span> SHOOT DRAG SENS.</label>
+                        <div class="setting-control">
+                            <input id="ctl-shoot-sens" type="range" min="0.0005" max="0.01" step="0.0005">
+                            <span id="ctl-val-shoot-sens" class="setting-value">0.0030</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="ctl-fov"><span class="set-icon ic-fov">📷</span> CAMERA FOV</label>
+                        <div class="setting-control">
+                            <input id="ctl-fov" type="range" min="45" max="90" step="1">
+                            <span id="ctl-val-fov" class="setting-value">60</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="ctl-invert-y"><span class="set-icon ic-invert">🔄</span> INVERT CAMERA</label>
+                        <input id="ctl-invert-y" type="checkbox">
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button id="btn-controls-reset" class="secondary">Reset</button>
+                    <button id="btn-controls-close" class="success">Done</button>
+                </div>
             </div>
         </div>
 
@@ -209,13 +250,17 @@
     <div id="lobby-screen" class="menu-screen" style="display: none;">
         <div class="menu-card">
             <h2 id="lobby-title" style="color: var(--accent-blue);">LOBBY ROOM</h2>
-            <p id="lobby-subtitle">Waiting for all players...</p>
+            <!-- One row: "Map: X" pinned left, status centered in the card. -->
+            <div class="lobby-meta">
+                <span id="lobby-map" class="lobby-level-status"></span>
+                <p id="lobby-subtitle">Waiting for all players...</p>
+            </div>
             <div id="lobby-level"></div>
             <div class="player-list" id="player-list-container"></div>
             <div id="lobby-warning" style="color: var(--accent-red); font-size: 0.85rem; min-height: 1.1em; margin: 6px 0;"></div>
-            <div class="form-group">
+            <div class="btn-row">
+                <button id="btn-lobby-leave" class="secondary">Leave Lobby</button>
                 <button id="btn-lobby-action" class="success">Mark Ready</button>
-                <button id="btn-lobby-leave" class="secondary" style="margin-top: 5px;">Leave Lobby</button>
             </div>
         </div>
     </div>

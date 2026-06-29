@@ -135,6 +135,9 @@ input {
 }
 input::placeholder { color: #b89a6e; }
 input:focus { border-color: var(--candy-blue-2); outline: none; }
+/* Required-field error (e.g. empty name on Host/Join): red ring + shake. */
+input.input-error { border-color: var(--accent-red); box-shadow: inset 0 4px 7px rgba(0,0,0,0.55), 0 0 0 3px rgba(255,71,87,0.30); animation: name-shake 0.32s; }
+@keyframes name-shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
 
 /* --- Settings rows: recessed wooden slots, icon badge + label + control --- */
 .settings-list { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
@@ -159,6 +162,7 @@ input:focus { border-color: var(--candy-blue-2); outline: none; }
 .ic-mouse  { background: var(--candy-red-2); }
 .ic-fov    { background: #36c2c2; }
 .ic-invert { background: #9b59ff; }
+.ic-shoot  { background: var(--accent-blue); }
 .ic-mobile { background: var(--candy-green-2); }
 .ic-gfx    { background: #e056a0; }
 .setting-unit { color: var(--cream-dim); font-size: 0.72rem; font-weight: 600; }
@@ -291,12 +295,12 @@ button.leave {
 }
 
 .player-list {
-    margin: 15px 0; text-align: left; border-radius: 12px;
+    margin: 10px 0; text-align: left; border-radius: 12px;
     background: linear-gradient(180deg, rgba(0,0,0,0.30), rgba(0,0,0,0.18));
-    padding: 10px; max-height: 180px; overflow-y: auto; border: 2px solid var(--wood-groove);
+    padding: 8px; max-height: 212px; overflow-y: auto; border: 2px solid var(--wood-groove);
     box-shadow: inset 0 3px 6px rgba(0,0,0,0.5); color: var(--cream);
 }
-.player-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid rgba(0,0,0,0.25); }
+.player-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 8px; border-bottom: 1px solid rgba(0,0,0,0.25); }
 .player-item:last-child { border-bottom: none; }
 .player-item > span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .status-ready { color: var(--accent-green); font-weight: bold;}
@@ -323,9 +327,26 @@ button.leave {
 .role-tag-hider  { color: var(--accent-green); background: rgba(46,213,115,0.15); }
 .role-tag-seeker { color: var(--accent-red);   background: rgba(255,71,87,0.15); }
 
+/* In-game PLAYERS roster: tidy columns — name flexes, role chip + status each
+   get a fixed width so they line up vertically across rows. Wider card so long
+   names ("p1 (You) (Host)") aren't truncated. Scoped to the modal so the lobby's
+   role toggle is untouched. */
+#players-modal .modal-card { max-width: 420px; }
+#players-modal-list .player-item { gap: 12px; }
+#players-modal-list .role-tag { width: 94px; box-sizing: border-box; text-align: center; flex: 0 0 auto; }
+#players-modal-list .status-ready,
+#players-modal-list .status-not { width: 84px; text-align: right; flex: 0 0 auto; }
+
 /* Lobby map picker (carousel of level cards) */
 .lobby-level-status { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
 .lobby-level-status b { color: var(--accent-blue); }
+/* Lobby meta row: "Map: X" pinned to the left, subtitle centered in the card. */
+.lobby-meta {
+    position: relative; display: flex; align-items: center; justify-content: center;
+    padding: 0 86px; min-height: 1.5em; margin: 4px 0 10px;
+}
+#lobby-map { position: absolute; left: 0; top: 50%; transform: translateY(-50%); margin: 0; white-space: nowrap; }
+#lobby-subtitle { margin: 0; font-size: 0.85rem; }
 .level-carousel { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: thin; }
 .level-carousel::-webkit-scrollbar { height: 6px; }
 .level-carousel::-webkit-scrollbar-thumb { background: #3a3a46; border-radius: 6px; }
@@ -483,6 +504,8 @@ button.leave {
     line-height: 1.1; padding: 4px;
 }
 .action-btn:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: default; }
+/* PUBG fire button held-down "selected" state (held = continuous fire + drag-look). */
+#btn-action-shoot.firing { background: rgba(30,144,255,0.95); box-shadow: 0 0 22px rgba(73,182,255,0.85), inset 0 0 18px rgba(255,255,255,0.35); transform: scale(0.96); }
 
 /* Premium circular disguise/switch button (mockup look): glowing ring, stacked
    swap-icon / prop-icon / label / key hint. State colour via .db-* classes. */
@@ -653,6 +676,11 @@ body.layout-editing #btn-action-shoot {
     .form-group { gap: 8px; margin-top: 8px; }
     input { padding: 9px; font-size: 0.95rem; }
     .menu-card button { padding: 10px; font-size: 0.9rem; }
-    .player-list { max-height: 96px; margin: 8px 0; }
+    .lobby-meta { padding: 0 70px; min-height: 1.3em; margin: 2px 0 8px; }
+    /* Keep ≥4 players visible without scrolling on short landscape screens. */
+    .player-list { max-height: 152px; margin: 6px 0; padding: 6px; }
+    .player-item { padding: 5px 6px; }
+    .role-toggle .role-btn { padding: 4px 8px; font-size: 0.66rem; }
+    .role-tag { padding: 3px 7px; font-size: 0.64rem; }
     .level-card { min-width: 76px; padding: 9px 11px; font-size: 0.8rem; }
 }

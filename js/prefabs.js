@@ -10,103 +10,121 @@
 =====================================================================*/
 
 const PrefabLibrary = {
-  "tree": {
-      "collision": true,
-      "climbable": true,
-      "hideSpot": false,
-      "canDisguise": true,
-      "colliders": [
-          {
-              "shape": "cylinder",
-              "position": {
-                  "x": 0,
-                  "y": 0.307,
-                  "z": 0
-              },
-              "rotation": {
-                  "y": 0
-              },
-              "scale": {
-                  "x": 0.18,
-                  "y": 0.838,
-                  "z": 0.18
-              }
-          },
-          {
-              "shape": "cylinder",
-              "position": {
-                  "x": 0,
-                  "y": 0.814,
-                  "z": 0
-              },
-              "rotation": {
-                  "y": 0
-              },
-              "scale": {
-                  "x": 0.95,
-                  "y": 0.223,
-                  "z": 0.95
-              }
-          }
-      ]
-  },
-  "rock": {
-      "collision": true,
-      "climbable": true,
-      "hideSpot": true,
-      "canDisguise": true,
-      "colliders": [
-          {
-              "shape": "box",
-              "position": {
-                  "x": 0.053,
-                  "y": 0.447,
-                  "z": -0.117
-              },
-              "rotation": {
-                  "y": 0
-              },
-              "scale": {
-                  "x": 0.607,
-                  "y": 0.776,
-                  "z": 0.639
-              }
-          }
-      ]
-  },
-  "bush": {
-      "collision": true,
-      "climbable": true,
-      "hideSpot": true,
-      "canDisguise": true
-  },
-  "wall": {
-      "collision": true,
-      "climbable": true,
-      "hideSpot": false,
-      "canDisguise": false,
-      "colliderShape": "box"
-  },
-  "spawn": {
-      "collision": false,
-      "climbable": false,
-      "hideSpot": false,
-      "canDisguise": false
-  }
+    "tree": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": false,
+        "canDisguise": true,
+        "colliders": [
+            {
+                "shape": "cylinder",
+                "position": {
+                    "x": 0,
+                    "y": 0.307,
+                    "z": 0
+                },
+                "rotation": {
+                    "y": 0
+                },
+                "scale": {
+                    "x": 0.18,
+                    "y": 0.838,
+                    "z": 0.18
+                }
+            },
+            {
+                "shape": "box",
+                "position": {
+                    "x": 0,
+                    "y": 0.81,
+                    "z": 0
+                },
+                "rotation": {
+                    "y": 0
+                },
+                "scale": {
+                    "x": 0.329,
+                    "y": 0.158,
+                    "z": 1.012
+                }
+            }
+        ]
+    },
+    "rock": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliders": [
+            {
+                "shape": "box",
+                "position": {
+                    "x": 0.053,
+                    "y": 0.447,
+                    "z": -0.117
+                },
+                "rotation": {
+                    "y": 0
+                },
+                "scale": {
+                    "x": 0.607,
+                    "y": 0.776,
+                    "z": 0.639
+                }
+            }
+        ]
+    },
+    "bush": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliders": [
+            {
+                "shape": "cylinder",
+                "position": {
+                    "x": 0,
+                    "y": 0.468,
+                    "z": 0
+                },
+                "rotation": {
+                    "y": 0
+                },
+                "scale": {
+                    "x": 0.765,
+                    "y": 0.808,
+                    "z": 1
+                }
+            }
+        ]
+    },
+    "wall": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": false,
+        "canDisguise": false,
+        "colliderShape": "box"
+    },
+    "spawn": {
+        "collision": false,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false
+    }
 };
 
 const PREFAB_DEFAULT = {
-  "collision": true,
-  "climbable": false,
-  "hideSpot": false,
-  "canDisguise": false
+    "collision": true,
+    "climbable": false,
+    "hideSpot": false,
+    "canDisguise": false
 };
 
 const PlayerCollider = {
-  "radius": 0.7,
-  "height": 1.5
+    "radius": 0.7,
+    "height": 1.5
 };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { PrefabLibrary, PREFAB_DEFAULT, PlayerCollider };
+    module.exports = { PrefabLibrary, PREFAB_DEFAULT, PlayerCollider };
 }

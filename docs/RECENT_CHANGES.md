@@ -3,7 +3,52 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-06-30
+
+- **In-game PLAYERS roster aligned into columns.** The 👥 roster modal
+  (`#players-modal`) now lays each row out as tidy columns — name flexes, the role
+  chip and ALIVE/ELIMINATED status get fixed widths so they line up vertically across
+  rows; the card is a bit wider so long names ("p1 (You) (Host)") aren't truncated.
+  CSS-only, scoped to `#players-modal` so the lobby's role toggle is untouched.
+
 ## 2026-06-29
+
+- **Menu/lobby polish: Controls Reset, mandatory name, decongested lobby.**
+  - **Controls panel** (☰ → 🎚) now has a **Reset** button beside **Done** (`index.html`
+    `.btn-row`, handler in `js/app.js`) that restores look-sens / shoot-drag-sens / FOV /
+    invert to their `GAME_SETTINGS` defaults (`0.002` / `0.003` / `60` / off), applies live,
+    syncs the Settings screen inputs, and persists on close.
+  - **Display name is now required** to Host or Join — `requireName()` (`js/app.js`) blocks
+    both with an inline status message + red **shake** on the name field (`.input-error`
+    in `css/style.css`); the error clears on the next keystroke.
+  - **Lobby card decongested:** Leave Lobby + Start/Ready are now a single `.btn-row`
+    (was stacked), player rows are tighter, and the list height was raised so **≥4 players
+    show without scrolling** on both desktop (`max-height` 212px) and short landscape
+    (152px, with compacted rows in the `@media (max-height:520px)` block).
+  - **Lobby header row aligned:** "Map: X" and the "Waiting for all players…" subtitle now
+    share one row (new `.lobby-meta` wrapper in `index.html`) — the map label is pinned to
+    the left and the subtitle is centered in the card. `renderLevelSelector`
+    (`js/ui.js`) writes the map name into `#lobby-map` (the carousel stays in `#lobby-level`).
+
+- **Mobile fire button is now PUBG-style: hold-to-fire + slide-to-look, plus an
+  in-game Controls panel.** The touch **shoot** button (`js/mechanics.js`) was a
+  single tap = one shot; it now:
+  - **Holds to fire** — `touchstart` starts a `setInterval` calling `fireShot()`
+    (self-gated by `FIRE_INTERVAL_MS`, so it auto-paces to the fire rate); released
+    on `touchend`/`touchcancel`.
+  - **Slides to look** — dragging the *same* finger off the button orbits the camera
+    using its own new `GAME_SETTINGS.shootDragSensitivity` (default `0.003`), tracked
+    by `shootTouchId` so it coexists with the joystick + right-half look. Camera stays
+    where dragged on release.
+  - **Selected state** — the button gets a `.firing` glow (`css/style.css`) while held.
+  - The right-half look handler now also skips touches starting on any `.action-btn`
+    **or `.modal-overlay`** (not just `.interactive`), so it can't hijack the shoot drag
+    — and so its `preventDefault()` no longer swallows a centered modal tap's synthesized
+    `click` (this was why **GAME OVER "OK" sometimes didn't respond on mobile**).
+  - **New ☰ → 🎚 Controls panel** (`#controls-panel` in `index.html`, wired in
+    `js/app.js`): **Camera look sens.**, **Shoot drag sens.**, **Camera FOV**,
+    **Invert camera**. Look-sens / FOV / invert mirror the same `GAME_SETTINGS` as the
+    Settings screen (kept in sync both ways, applied live, persisted on close).
 
 - **Player collider is now editable (prefab editor "Player" tab).** Added a `Player`
   pseudo-type to the Edit Prefabs type row that tunes the local player's own collider —

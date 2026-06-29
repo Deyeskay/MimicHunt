@@ -77,8 +77,46 @@ const Mechanics = {
 
         document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); this.handleDisguiseSwap(); });
         document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); if (isGrounded) this.jump(); });
+        // --- Shoot button (PUBG fire button): press-and-hold = fire continuously
+        // (fireShot self-gates to the fire rate); slide the SAME finger off the
+        // button to orbit the camera, using its own shootDragSensitivity. Bound to
+        // its own touch id so it coexists with the joystick + right-half look. ---
         const shootBtn = document.getElementById('btn-action-shoot');
-        if (shootBtn) shootBtn.addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); this.fireShot(); });
+        const shootDragSens = () => GAME_SETTINGS.shootDragSensitivity || GAME_SETTINGS.mouseSensitivity * 1.5;
+        if (shootBtn) {
+            shootBtn.addEventListener('touchstart', (e) => {
+                if (isEditingLayout) return;
+                if (shootTouchId !== null) return;
+                const t = e.changedTouches[0];
+                shootTouchId = t.identifier;
+                shootLastX = t.clientX;
+                shootLastY = t.clientY;
+                shootBtn.classList.add('firing');   // selected/active state while held
+                this.fireShot();
+                if (shootFireTimer === null) shootFireTimer = setInterval(() => this.fireShot(), 100);
+                e.preventDefault();
+            }, { passive: false });
+            document.addEventListener('touchmove', (e) => {
+                if (shootTouchId === null) return;
+                const t = this.findTouch(e.touches, shootTouchId);
+                if (!t) return;
+                cameraYaw -= (t.clientX - shootLastX) * shootDragSens();
+                cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * (t.clientY - shootLastY) * shootDragSens();
+                cameraPitch = Math.max(CAMERA_MAX_LOOK_DOWN, Math.min(CAMERA_MAX_LOOK_UP, cameraPitch));
+                shootLastX = t.clientX;
+                shootLastY = t.clientY;
+                e.preventDefault();
+            }, { passive: false });
+            const endShoot = (e) => {
+                if (shootTouchId === null) return;
+                if (this.findTouch(e.touches, shootTouchId)) return;   // our touch still down
+                shootTouchId = null;
+                shootBtn.classList.remove('firing');
+                if (shootFireTimer !== null) { clearInterval(shootFireTimer); shootFireTimer = null; }
+            };
+            document.addEventListener('touchend', endShoot);
+            document.addEventListener('touchcancel', endShoot);
+        }
 
         // --- Mobile camera look (PUBG): drag anywhere on the RIGHT half of the
         // screen (except on UI buttons) to orbit the camera. Tracked by its own
@@ -93,7 +131,10 @@ const Mechanics = {
                 const t = ts[i];
                 if (t.clientX <= window.innerWidth * 0.5) continue;      // right half only
                 const el = document.elementFromPoint(t.clientX, t.clientY);
-                if (el && el.closest && el.closest('.interactive')) continue;  // skip buttons
+                // Skip UI: buttons (incl. shoot, which has its own drag-look) and any
+                // open modal overlay — else preventDefault() here swallows the tap's
+                // synthesized click, so e.g. the GAME OVER "OK" wouldn't fire on mobile.
+                if (el && el.closest && el.closest('.interactive, .action-btn, .modal-overlay')) continue;
                 lookTouchId = t.identifier;
                 lastLookX = t.clientX;
                 lastLookY = t.clientY;

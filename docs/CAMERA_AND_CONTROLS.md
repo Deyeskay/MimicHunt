@@ -86,13 +86,22 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
   second finger can't hijack it; `handleJoystickTouch` sets `touchVector`, consumed
   in `handleLocalMovement`.
 - **Camera look**: document-level touch handlers claim the first touch on the
-  **right half** of the screen (`clientX > innerWidth/2`) that isn't on a `.interactive`
-  button (`elementFromPoint(...).closest('.interactive')`), tracked by `lookTouchId`;
-  drag adjusts `cameraYaw/cameraPitch` (`mouseSensitivity * 1.5`). Runs alongside the
-  joystick.
-- **Buttons** (`#action-pad`, bottom-right, all `.interactive`): JUMP always; PROP(F)
-  for hiders, SHOOT for seekers (toggled by role in `UI.updateHUD`). `touchstart` →
-  `jump`/`handleDisguiseSwap`/`fireShot`.
+  **right half** of the screen (`clientX > innerWidth/2`) that isn't on a `.interactive`,
+  `.action-btn`, or `.modal-overlay` element
+  (`elementFromPoint(...).closest('.interactive, .action-btn, .modal-overlay')`), tracked
+  by `lookTouchId`; drag adjusts `cameraYaw/cameraPitch` (`mouseSensitivity * 1.5`). Runs
+  alongside the joystick. **Skipping `.modal-overlay` matters:** otherwise the handler's
+  `preventDefault()` swallows a centered modal tap's synthesized `click` (e.g. GAME OVER
+  "OK" failing on mobile).
+- **Buttons** (`#action-pad`, bottom-right): JUMP always; PROP(F) for hiders, SHOOT for
+  seekers (toggled by role in `UI.updateHUD`). JUMP/PROP fire on `touchstart` →
+  `jump`/`handleDisguiseSwap`.
+- **Shoot button (PUBG fire button)**: `touchstart` claims its own `shootTouchId`, adds
+  the `.firing` glow, calls `fireShot()` and starts a 100 ms `setInterval` repeating it
+  — **hold = continuous fire** (`fireShot` self-gates to `FIRE_INTERVAL_MS`). Sliding the
+  same finger off the button **orbits the camera** using `GAME_SETTINGS.shootDragSensitivity`
+  (default `0.003`); camera stays where dragged on release. `touchend`/`touchcancel` clears
+  the id, the glow, and the interval.
 - **Edit Layout** (`js/layout.js`, `LayoutEditor`): hamburger ☰ → `#game-menu` →
   "Edit Layout" lets the player drag the joystick + jump/prop/shoot anywhere (pointer
   events), Save/Cancel/Reset via `#layout-editor`. Positions persist in
@@ -122,8 +131,15 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
   phones.
 
 ## Settings that affect controls (`GAME_SETTINGS`)
-`mouseSensitivity` (also scales touch look ×1.5), `cameraFov` (default 60; read in
+`mouseSensitivity` (also scales touch look ×1.5), `shootDragSensitivity` (default
+`0.003`; drives the shoot-button slide-to-look only), `cameraFov` (default 60; read in
 `Level.init`, changeable live via `Level.setFov` + the Settings FOV slider — clamped
 40–100), `invertY`, `showMobileControls` (toggles `.mobile-controls` via
 `body.hide-mobile-controls`). The Settings screen sliders for sensitivity and FOV
 apply live while dragging.
+
+**In-game Controls panel** (☰ → 🎚 Controls → `#controls-panel`, wired in `js/app.js`):
+Camera look sens / Shoot drag sens / Camera FOV / Invert camera. Look-sens, FOV and
+invert mirror the same `GAME_SETTINGS` as the Settings screen (the two screens' inputs
+are kept in sync both ways); all apply live and persist to `localStorage` on close.
+`shootDragSensitivity` is editable here only.

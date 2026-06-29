@@ -10,6 +10,10 @@ let GAME_SETTINGS = {
     hidingTime: 20,
     huntingTime: 300,   // seconds (5 min); settings slider edits this in minutes (5–20)
     mouseSensitivity: 0.002,
+    // Separate sensitivity for the PUBG-style "slide off the shoot button to
+    // look" gesture (see Mechanics shoot handler). Defaults to the same feel as
+    // the right-half look (mouseSensitivity * 1.5).
+    shootDragSensitivity: 0.003,
     cameraFov: 60,
     graphicsQuality: 'medium',   // 'low' | 'medium' | 'high' (see Level.setGraphicsQuality)
     invertY: false,
@@ -115,6 +119,13 @@ let joyTouchId = null;
 let lookTouchId = null;
 let lastLookX = 0;
 let lastLookY = 0;
+// Shoot button: its own touch id so holding it (continuous fire) and sliding off
+// it (camera look) coexist with the joystick / right-half look. shootFireTimer is
+// the setInterval handle that repeats fireShot while the button is held.
+let shootTouchId = null;
+let shootLastX = 0;
+let shootLastY = 0;
+let shootFireTimer = null;
 
 // --- COMBAT (seeker energy-pulse shooting) ---
 const MAG_SIZE = 4;            // shots before a reload

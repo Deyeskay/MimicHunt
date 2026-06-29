@@ -97,10 +97,9 @@ const UI = {
 
         wrap.innerHTML = '';
 
-        const status = document.createElement('div');
-        status.className = 'lobby-level-status';
-        status.innerHTML = 'Map: <b>' + (selected || '—') + '</b>';
-        wrap.appendChild(status);
+        // "Map: X" lives in the .lobby-meta row (next to the subtitle), not here.
+        const mapLabel = document.getElementById('lobby-map');
+        if (mapLabel) mapLabel.innerHTML = 'Map: <b>' + (selected || '—') + '</b>';
 
         const carousel = document.createElement('div');
         carousel.className = 'level-carousel';
