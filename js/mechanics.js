@@ -364,7 +364,10 @@ const Mechanics = {
             if (!PropLevel.canDisguiseAs(prop)) continue;
             const center = PropLevel.getPropCenter(prop);
             const dist = Math.hypot(localPos.x - center.x, localPos.z - center.z);
-            const reach = prop.radius * 2 + 2;
+            // Must be standing next to the prop: its surface (radius) + the player's
+            // own radius (1, undisguised here) + ~1 unit of grace. The old `radius*2+2`
+            // let you disguise from far away (≈ radius+2 beyond the surface).
+            const reach = prop.radius + 2;
             if (dist < reach && dist < nearestDist) { nearest = prop; nearestDist = dist; }
         }
         return nearest;

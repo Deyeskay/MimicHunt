@@ -55,6 +55,9 @@ Accuracy reward: +100 score per hit. Weapon = blue "energy pulse" (Pew!), red fl
 - Press F / PROP button near a disguisable prop (`canDisguiseAs`): become that prop
   (mesh + collider take the prop's footprint/height). Press again away from props to
   revert to the player model.
+- **Reach** (`findNearestDisguiseProp`): you must be standing next to the prop —
+  center-distance `< prop.radius + 2` (its surface + the player's radius of 1 + ~1 grace).
+  The button only enables / names a prop when in reach.
 - **Disguise lock**: for 5s after being hit you cannot re-disguise (so a revealed
   hider can't instantly become another rock). Un-disguising is always allowed.
 - After disguising, `resolveOverlap` pushes the (now larger) player out of any

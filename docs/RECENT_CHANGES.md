@@ -5,6 +5,10 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Disguise reach tightened (bug fix).** You could disguise from far away — the reach in
+  `findNearestDisguiseProp` (`js/mechanics.js`) was `prop.radius * 2 + 2` (≈ radius+2
+  *beyond* the surface, several units for wide props). Now `prop.radius + 2` (surface +
+  player radius 1 + ~1 grace), so you must stand next to the prop. See [GAMEPLAY.md](GAMEPLAY.md).
 - **Disguise-cooldown indicator (hider).** After a hider is hit, disguising is locked for
   `DISGUISE_LOCK_MS` (5s) — previously invisible to the player. Added a **top-center alert**
   `#disguise-cd` (red pill "🥸 DISGUISE LOCKED · N.Ns" + depleting bar) shown only for a
