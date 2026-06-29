@@ -5,6 +5,37 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Prefab colliders: per-piece shape + full transform (editor + format).** The
+  "Edit Prefabs" → Colliders section replaced the lone **➕ Add piece** button with a
+  **shape dropdown** (Cylinder / Square / Sphere) + Add, and each piece is now edited
+  as a **transform** — `position {x,y,z}`, `rotation {y}`, `scale {x,y,z}` — instead of
+  the old `radius / yMin / yMax / offX / offZ` fields. Values stay **fractions of the
+  placed prop's bounds** (x/z·R, y·H), so colliders still auto-scale per instance.
+  - **Unity-style label scrubbing.** Click+drag the axis labels (`x/y/z`) to push one
+    value, or the group label (POSITION/ROTATION/SCALE) to drag all axes together;
+    Shift = fine. Each move updates the data and the live preview (`attachScrub` in
+    `editor.html`, rotation scrubs coarser since it's in degrees).
+  - **Default values shown for auto-cylinder props.** Props with no explicit
+    `colliders` (rock, bush, …) now display the implicit full-bounds cylinder as a
+    dashed **"default" ghost card** (position 0/0.5/0, rotation 0, scale 1/1/1) instead
+    of just a "no pieces" message, so the values are visible and editable. Editing the
+    ghost materializes it into `def.colliders` (preserving the `empty = auto`
+    convention until you actually change something); ✕ reverts to auto. Non-blocking
+    props (spawn) and the wall's auto oriented box show an explanatory note instead.
+  - **Data format** (`js/prefabs.js`): a `colliders` entry is now
+    `{shape, position, rotation, scale}`; `tree` migrated to it. The legacy fraction
+    form is still accepted by the resolver, and the editor auto-normalizes old/saved
+    pieces to the new form on open (`normalizeColliderPiece`).
+  - **Resolver** (`PropLevel.resolveColliders`, `js/props.js`) parses the transform
+    (position.y = piece **center** from the bottom, scale.y = full height) and emits the
+    same runtime pieces as before plus a new **`sphere`** shape. New shared helper
+    `PropLevel.colliderGeometry(c)` builds the wireframe geometry for every debug/preview
+    outline (used by `js/level.js` static + dynamic + player gizmos and `editor.html`).
+  - **Sphere** collides as a circular footprint + band (the 2.5D solver, identical to a
+    cylinder) but **renders round**. Per the design decision, only `rotation.y` is
+    authored (the solver has no off-vertical tilt). Collision / climb / raycast were
+    unchanged — round shapes already take the circle path.
+
 - **Remote players' footsteps — heard client-side, no new packets.** Previously
   `Sound.step()` only played for the local player. Now each client emits footsteps for
   the OTHER players too, derived entirely from their already-synced rendered motion —

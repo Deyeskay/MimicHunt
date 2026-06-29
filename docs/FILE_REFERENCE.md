@@ -60,7 +60,9 @@ climbable. See PROP_SYSTEM.md.
 - `createPropMesh`, `createWallMesh`, `createDisguiseMesh`, `applyPropTransform`,
   `computeBounds`, `syncBoundsToData`.
 - `getPrefab`, `resolveGameplay` (instance-wins-else-prefab), `enrichProp`,
-  `resolveColliders`, `getColliders`, `hasCollision`, `isClimbable`, `canDisguiseAs`,
+  `resolveColliders` (shape + position/rotation/scale fractions → runtime pieces),
+  `colliderGeometry` (piece → wireframe geometry, shared by all debug/preview outlines),
+  `getColliders`, `hasCollision`, `isClimbable`, `canDisguiseAs`,
   `getPropCenter`, `getPropTop`.
 - `raycastProps(ox,oy,oz,dx,dy,dz,maxRange)` — ray vs vertical-cylinder colliders →
   nearest block distance (shot occlusion).

@@ -8,8 +8,10 @@ files; resolved + meshed by `js/props.js` (`PropLevel`).
 Each type has gameplay flags and an optional compound `colliders` template:
 ```js
 tree:  { collision:true,  climbable:true,  hideSpot:false, canDisguise:true,
-         colliders: [ {radius:0.18, yMin:0.00, yMax:0.55},   // slim trunk
-                      {radius:0.95, yMin:0.50, yMax:1.00} ]}, // floating canopy
+         colliders: [ // slim trunk (lower 55%)
+                      {shape:'cylinder', position:{x:0,y:0.275,z:0}, rotation:{y:0}, scale:{x:0.18,y:0.55,z:0.18}},
+                      // wide canopy floating in the upper half
+                      {shape:'cylinder', position:{x:0,y:0.75, z:0}, rotation:{y:0}, scale:{x:0.95,y:0.50,z:0.95}} ]},
 rock:  { collision:true,  climbable:true,  hideSpot:true,  canDisguise:true },
 bush:  { collision:false, climbable:true,  hideSpot:true,  canDisguise:true },
 wall:  { collision:true,  climbable:false, hideSpot:false, canDisguise:false },
@@ -20,25 +22,41 @@ spawn: { collision:false, climbable:false, hideSpot:false, canDisguise:false },
   can disguise as this type.
 - `PREFAB_DEFAULT` is the fallback for unknown models.
 
-## Collider model — compound vertical cylinders
-A `colliders` entry is in **fractions of the placed instance's bounds**:
-`radius` × R, `yMin/yMax` × H (from the prop's bottom), `offsetX/Z` × R (rotated by
-`rotation.y`). At load, `PropLevel.resolveColliders(prop, bounds, def)` turns the
-template into **world cylinders** `{x,z,radius,yMin,yMax}` stored on `prop.colliders`.
-No template → one full-height cylinder from the bounding box. `getColliders(prop)` is
-the safe accessor.
+## Collider model — compound transformed pieces
+Each `colliders` entry has a **shape** (`'cylinder' | 'box' | 'sphere'`) and a
+**transform in fractions of the placed instance's bounds**:
+- `position {x,y,z}` — x/z × R (rotated by the instance's `rotation.y`); y × H, the
+  piece **center** measured up from the prop's bottom.
+- `rotation {y}` — extra Y spin in **degrees**, added to the instance's (box only;
+  ignored by round shapes). Only `rotation.y` is authored — the 2.5D solver has no
+  tilt, so x/z rotation are intentionally not exposed.
+- `scale {x,y,z}` — x/z × R (cylinder/sphere radius, box half-extents); y × H (the
+  piece's full height).
+
+At load, `PropLevel.resolveColliders(prop, bounds, def)` turns the template into
+**runtime pieces** stored on `prop.colliders`: cylinder/sphere `{shape,x,z,radius,yMin,yMax}`,
+box `{shape:'box',x,z,halfX,halfZ,rot,yMin,yMax}`. No template → one full-height
+cylinder from the bounding box. `getColliders(prop)` is the safe accessor. The
+**legacy** entry form (`{radius,yMin,yMax,offsetX,offsetZ}`, cylinder-only) is still
+accepted by the resolver. `PropLevel.colliderGeometry(c)` builds the matching wireframe
+geometry for every debug/preview outline.
 
 This is why a tree has a **slim trunk you can walk up to** plus a **wide canopy
 floating overhead you can pass under** — instead of one fat cylinder.
 
+**Sphere** collides as a circular footprint + vertical band (identical to a cylinder
+in the 2.5D solver) but **renders round** (an ellipsoid squashed to the band). Use it
+for round rocks/bushes where the wireframe should read as a ball.
+
 **Box colliders.** A prefab with `colliderShape: 'box'` (e.g. `wall`) resolves to a
-single **oriented box** piece `{shape:'box', x,z, halfX, halfZ, rot, yMin, yMax}`
-instead of a cylinder — so a long thin wall blocks as a rectangle, not a fat round
-column. `halfX/halfZ` are the prop's **local** half-extents (from
-`computeBounds.localX/localZ`, measured with rotation removed) and `rot` is its
-`rotation.y`. All consumers branch on `c.shape`: `blockedAt` (circle-vs-oriented-box),
-`raycastProps` (ray-vs-oriented-box 2D slab), and the editor/game gizmos (a box
-wireframe). Cylinder pieces carry `shape:'cylinder'`.
+single **oriented box** piece `{shape:'box', x,z, halfX, halfZ, rot, yMin, yMax}` from
+the bounds — so a long thin wall blocks as a rectangle, not a fat round column.
+`halfX/halfZ` are the prop's **local** half-extents (from `computeBounds.localX/localZ`,
+measured with rotation removed) and `rot` is its `rotation.y`. Per-piece `shape:'box'`
+entries (added in the editor) likewise block as oriented rectangles. All consumers
+branch on `c.shape`: `blockedAt` (circle-vs-oriented-box), `raycastProps`
+(ray-vs-oriented-box 2D slab), and the editor/game gizmos. Round shapes use the circle
+path.
 
 `prop.radius`/`centerX/centerZ/topY/bottomY/height` (from `computeBounds`/`enrichProp`)
 are still used by disguise sizing, climbing, spawns, and the hit radius — only

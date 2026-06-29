@@ -17,16 +17,21 @@
                   the default cylinder shape (used with/without `colliders`)
     colliders   – OPTIONAL compound collider shape used for movement blocking
                   (PropLevel.resolveColliders). Omit for a single auto cylinder
-                  (the model's full bounding box). Each piece is in FRACTIONS of
+                  (the model's full bounding box). Each piece has a `shape`
+                  ('cylinder' | 'box' | 'sphere') and a TRANSFORM in FRACTIONS of
                   the placed instance's computed bounds, so it scales with any
                   instance:
-                    radius        fraction of bounds radius R   (default 1)
-                    yMin / yMax   fraction of bounds height H,   (default 0 / 1)
-                                  measured up from the prop's bottom
-                    offsetX/Z     fraction of R, rotated by the instance's
-                                  rotation.y                     (default 0)
-                  Only movement blocking uses these; prop.radius (disguise,
-                  climb, catch, spawn) is unaffected.
+                    position {x,y,z}  x/z fraction of bounds radius R (rotated by
+                                      the instance's rotation.y); y fraction of
+                                      height H — the piece CENTER from the bottom
+                    rotation {y}      extra Y spin in degrees (box only)
+                    scale {x,y,z}     x/z fraction of R (radius / box half-extent);
+                                      y fraction of H (the piece's full height)
+                  Sphere collides as a circular footprint+band (the 2.5D solver)
+                  but renders round. The legacy fraction format
+                  ({radius, yMin, yMax, offsetX, offsetZ}, cylinder-only) is still
+                  accepted by resolveColliders. Only movement blocking uses these;
+                  prop.radius (disguise, climb, catch, spawn) is unaffected.
 
   Per-instance flags that are NOT prefab-level (they describe a single
   placed object, not the type): spawnPoint, seekerSpawn, hiderSpawn.
@@ -38,8 +43,12 @@ const PrefabLibrary = {
     // of one fat cylinder covering the whole canopy footprint.
     tree:  { collision: true,  climbable: true,  hideSpot: false, canDisguise: true,
              colliders: [
-                 { radius: 0.18, yMin: 0.00, yMax: 0.55 },   // trunk
-                 { radius: 0.95, yMin: 0.50, yMax: 1.00 }    // canopy (floating)
+                 // trunk: slim cylinder, lower 55% of the tree
+                 { shape: 'cylinder', position: { x: 0, y: 0.275, z: 0 },
+                   rotation: { y: 0 }, scale: { x: 0.18, y: 0.55, z: 0.18 } },
+                 // canopy: wide cylinder floating in the upper half
+                 { shape: 'cylinder', position: { x: 0, y: 0.75, z: 0 },
+                   rotation: { y: 0 }, scale: { x: 0.95, y: 0.50, z: 0.95 } }
              ] },
     rock:  { collision: true,  climbable: true, hideSpot: true,  canDisguise: true  },
     bush:  { collision: true, climbable: true, hideSpot: true,  canDisguise: true  },

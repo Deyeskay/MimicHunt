@@ -343,10 +343,7 @@ const Level = {
             // One outline per collider piece (e.g. trunk + canopy for a tree, or
             // an oriented box for a wall).
             for (const c of PropLevel.getColliders(prop)) {
-                const h = Math.max(c.yMax - c.yMin, 0.1);
-                const geo = (c.shape === 'box')
-                    ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
-                    : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+                const geo = PropLevel.colliderGeometry(c);
                 const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
                 mat.depthTest = false;   // draw over geometry like editor gizmos
                 const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
@@ -377,10 +374,7 @@ const Level = {
         for (const prop of dyn) {
             if (!PropLevel.hasCollision(prop)) continue;
             for (const c of PropLevel.getColliders(prop)) {
-                const h = Math.max(c.yMax - c.yMin, 0.1);
-                const geo = (c.shape === 'box')
-                    ? new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2)
-                    : new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+                const geo = PropLevel.colliderGeometry(c);
                 const mat = new THREE.LineBasicMaterial({ color: 0xffaa00 });
                 mat.depthTest = false;
                 const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
@@ -1137,22 +1131,16 @@ const Level = {
                     group.add(seg);
                     geo.dispose();
                 };
-                const addBox = (hx, hz, h, cy, cx, cz, rot) => {
-                    const geo = new THREE.BoxGeometry(hx * 2, h, hz * 2);
-                    const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-                    seg.position.set(cx || 0, cy, cz || 0);
-                    if (rot) seg.rotation.y = rot;
-                    seg.renderOrder = 999;
-                    group.add(seg);
-                    geo.dispose();
-                };
                 if (disguised) {
                     // pieces are local with feet at y=0 → place relative to feet.
                     dz.forEach(c => {
-                        const h = Math.max(c.yMax - c.yMin, 0.1);
-                        const cy = (c.yMin + c.yMax) / 2;
-                        if (c.shape === 'box') addBox(c.halfX, c.halfZ, h, cy, c.x, c.z, c.rot || 0);
-                        else addCyl(c.radius, h, cy, c.x, c.z, 0);
+                        const geo = PropLevel.colliderGeometry(c);
+                        const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+                        seg.position.set(c.x || 0, (c.yMin + c.yMax) / 2, c.z || 0);
+                        if (c.shape === 'box') seg.rotation.y = c.rot || 0;
+                        seg.renderOrder = 999;
+                        group.add(seg);
+                        geo.dispose();
                     });
                 } else {
                     addCyl(1, 3, PropLevel.PLAYER_BASE_HEIGHT, 0, 0, 0);   // player body
