@@ -1,6 +1,10 @@
 const PropLevel = {
     WALL_COLOR: 0xc8b59a,
-    PLAYER_BASE_HEIGHT: 1.5,
+    // Player collider (eye/center height & horizontal radius). Seeded from
+    // PlayerCollider in prefabs.js so the editor can tune them; fall back to the
+    // historical literals if that config isn't present.
+    PLAYER_BASE_HEIGHT: (typeof PlayerCollider !== 'undefined' && PlayerCollider.height != null) ? PlayerCollider.height : 1.5,
+    PLAYER_COLLIDER_RADIUS: (typeof PlayerCollider !== 'undefined' && PlayerCollider.radius != null) ? PlayerCollider.radius : 1,
 
     createWallMesh: function() {
         // Per-wall material (so a disguised-as-wall hider's reveal blink doesn't

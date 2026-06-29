@@ -50,13 +50,17 @@ All cross-file globals. Key items:
 - Three refs: `scene`, `camera`, `renderer`, `playerMeshes{}`, `mapProps3D[]`,
   `modelLibrary{}`.
 
-## js/prefabs.js — `PrefabLibrary` + `PREFAB_DEFAULT`
+## js/prefabs.js — `PrefabLibrary` + `PREFAB_DEFAULT` + `PlayerCollider`
 Per prop TYPE: `collision`, `climbable`, `hideSpot`, `canDisguise`, optional
 `colliders` (compound template). `tree` has trunk+canopy colliders; rock/bush
-climbable. See PROP_SYSTEM.md.
+climbable. `PlayerCollider = {radius, height}` is the local player's own collider
+(absolute units; `height` = eye/center, full body = 2×) — read by `props.js` into
+`PLAYER_COLLIDER_RADIUS` / `PLAYER_BASE_HEIGHT`. See PROP_SYSTEM.md.
 
 ## js/props.js — `PropLevel`
-- `PLAYER_BASE_HEIGHT=1.5`, `WALL_COLOR`.
+- `PLAYER_BASE_HEIGHT` (eye/center height) & `PLAYER_COLLIDER_RADIUS` — seeded from
+  `PlayerCollider` in `prefabs.js` (editable via the prefab editor's **Player** tab).
+  `WALL_COLOR`.
 - `createPropMesh`, `createWallMesh`, `createDisguiseMesh`, `applyPropTransform`,
   `computeBounds`, `syncBoundsToData`.
 - `getPrefab`, `resolveGameplay` (instance-wins-else-prefab), `enrichProp`,

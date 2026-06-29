@@ -5,6 +5,21 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Player collider is now editable (prefab editor "Player" tab).** Added a `Player`
+  pseudo-type to the Edit Prefabs type row that tunes the local player's own collider —
+  **radius** and **height** (eye/center above feet; full body = 2×), in **absolute world
+  units**. New `PlayerCollider = {radius, height}` config in `js/prefabs.js` (exported);
+  `js/props.js` seeds `PLAYER_BASE_HEIGHT` + new `PLAYER_COLLIDER_RADIUS` from it (with
+  literal fallbacks). `Mechanics.myColliderRadius` (`js/mechanics.js`) and the cyan
+  player debug body (`js/level.js`) now read those constants instead of the old literals
+  `1` / `3`. The editor persists player edits to its own `localStorage` key
+  (`hnh_editor_player`), applies them live to `PropLevel`, includes `PlayerCollider` in
+  the exported `prefabs.js`, and reverts it on **Reset**. The player preview shows the
+  cyan player cylinder; the field labels support the same drag-to-scrub gesture.
+  - **Note:** `height` also drives camera/eye level, spawn Y, and climbing (it *is*
+    `PLAYER_BASE_HEIGHT`). A disguised hider still adopts its prop's collider, so this
+    only affects the undisguised player (seekers / hider in player form).
+
 - **Prefab colliders: per-piece shape + full transform (editor + format).** The
   "Edit Prefabs" → Colliders section replaced the lone **➕ Add piece** button with a
   **shape dropdown** (Cylinder / Square / Sphere) + Add, and each piece is now edited

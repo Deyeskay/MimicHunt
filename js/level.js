@@ -1143,7 +1143,9 @@ const Level = {
                         geo.dispose();
                     });
                 } else {
-                    addCyl(1, 3, PropLevel.PLAYER_BASE_HEIGHT, 0, 0, 0);   // player body
+                    // player body: radius = collider radius, full height = 2× base.
+                    addCyl(PropLevel.PLAYER_COLLIDER_RADIUS, PropLevel.PLAYER_BASE_HEIGHT * 2,
+                           PropLevel.PLAYER_BASE_HEIGHT, 0, 0, 0);
                 }
                 this.playerColliderHelper = group;
                 this.playerColliderHelper.userData.key = key;

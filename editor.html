@@ -594,14 +594,14 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
                 <label class="modal-label">Prop type</label>
                 <div id="prefabTypeRow" class="prop-grid"></div>
 
-                <label class="modal-label" style="margin-top:14px;">Gameplay</label>
+                <label id="prefabGameplayLabel" class="modal-label" style="margin-top:14px;">Gameplay</label>
                 <div id="prefabFlags" class="check-list"></div>
 
-                <label class="modal-label" style="margin-top:14px;">
+                <label id="prefabCollidersLabel" class="modal-label" style="margin-top:14px;">
                     Colliders <span class="modal-hint">transform in fractions of bounds — position/scale.xz·R, position.y/scale.y·H; empty = single auto cylinder</span>
                 </label>
                 <div id="prefabColliderRows"></div>
-                <div class="pf-add-row">
+                <div id="prefabAddRow" class="pf-add-row">
                     <select id="prefabShapeSelect" class="pf-shape-select">
                         <option value="cylinder">Cylinder</option>
                         <option value="box">Square</option>
@@ -719,6 +719,21 @@ const PREFAB_FLAGS = ['collision', 'climbable', 'hideSpot', 'canDisguise'];
 const PREFAB_DEFAULTS_ORIG = JSON.parse(JSON.stringify(PrefabLibrary));
 let activePrefab = 'tree';
 
+// Player collider tuning (a pseudo-type in the prefab editor; not a prop).
+const PLAYER_KEY = 'hnh_editor_player';
+const PLAYER_DEFAULTS_ORIG = (typeof PlayerCollider !== 'undefined')
+    ? JSON.parse(JSON.stringify(PlayerCollider)) : { radius: 1, height: 1.5 };
+function applyPlayerColliderToRuntime() {
+    if (typeof PlayerCollider === 'undefined') return;
+    PropLevel.PLAYER_BASE_HEIGHT = PlayerCollider.height;
+    PropLevel.PLAYER_COLLIDER_RADIUS = PlayerCollider.radius;
+}
+function persistPlayerCollider() {
+    if (typeof PlayerCollider === 'undefined') return;
+    localStorage.setItem(PLAYER_KEY, JSON.stringify(PlayerCollider));
+    applyPlayerColliderToRuntime();
+}
+
 function loadPrefabStore() {
     try { return JSON.parse(localStorage.getItem(PREFABS_KEY)) || {}; }
     catch (e) { return {}; }
@@ -757,6 +772,19 @@ function persistPrefabs() { savePrefabStore(prefabDiffFromDefaults()); }
             PrefabLibrary[type].colliders = JSON.parse(JSON.stringify(ov.colliders));
         }
     });
+})();
+
+// Deep-merge any saved player-collider override into the live config at startup.
+(function applySavedPlayerCollider() {
+    if (typeof PlayerCollider === 'undefined') return;
+    try {
+        const ov = JSON.parse(localStorage.getItem(PLAYER_KEY));
+        if (ov) {
+            if (ov.radius != null) PlayerCollider.radius = ov.radius;
+            if (ov.height != null) PlayerCollider.height = ov.height;
+        }
+    } catch (e) {}
+    applyPlayerColliderToRuntime();
 })();
 
 let modelLibrary = {};
@@ -963,7 +991,8 @@ function closePrefabModal() {
 function renderPrefabTypeRow() {
     const row = document.getElementById('prefabTypeRow');
     row.innerHTML = '';
-    PREFAB_TYPES.forEach(type => {
+    // 'player' is a pseudo-type (the local player's own collider, not a prop).
+    PREFAB_TYPES.concat('player').forEach(type => {
         const b = document.createElement('button');
         b.className = 'propBtn' + (type === activePrefab ? ' active' : '');
         b.textContent = type.charAt(0).toUpperCase() + type.slice(1);
@@ -972,9 +1001,71 @@ function renderPrefabTypeRow() {
     });
 }
 
+// Player pseudo-type: radius + height fields (absolute world units), no flags/
+// colliders. Reuses the label-scrub gesture; edits update PropLevel live.
+function renderPlayerColliderFields(container) {
+    container.innerHTML = '';
+    const note = document.createElement('div');
+    note.className = 'pf-empty';
+    note.textContent = 'Absolute world units. Height = eye/center above feet (full body = 2×); it also sets camera height & climbing. Disguised hiders use their prop collider instead.';
+    container.appendChild(note);
+
+    const card = document.createElement('div');
+    card.className = 'pf-piece';
+    const mkField = (labelText, key, step) => {
+        const grp = document.createElement('div');
+        grp.className = 'pf-vec';
+        const lbl = document.createElement('span');
+        lbl.className = 'pf-vec-label';
+        lbl.textContent = labelText;
+        lbl.title = 'drag to scrub (Shift = fine)';
+        grp.appendChild(lbl);
+        const span = document.createElement('span');
+        span.className = 'pf-vec-field';
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.step = String(step);
+        inp.value = PlayerCollider[key];
+        inp.onchange = () => {
+            const num = parseFloat(inp.value);
+            PlayerCollider[key] = isNaN(num) ? 0.01 : Math.max(0.01, num);
+            inp.value = PlayerCollider[key];
+            persistPlayerCollider();
+            collidersDirty = true;
+            refreshPrefabPreview();
+        };
+        span.appendChild(inp);
+        grp.appendChild(span);
+        attachLabelScrub(lbl, [inp], step);
+        card.appendChild(grp);
+    };
+    mkField('radius', 'radius', 0.05);
+    mkField('height', 'height', 0.05);
+    container.appendChild(card);
+}
+
 function renderPrefabEditor() {
-    const def = PrefabLibrary[activePrefab] || (PrefabLibrary[activePrefab] = {});
     const flags = document.getElementById('prefabFlags');
+    const gLabel = document.getElementById('prefabGameplayLabel');
+    const cLabel = document.getElementById('prefabCollidersLabel');
+    const addRow = document.getElementById('prefabAddRow');
+
+    // Player pseudo-type: swap the prop UI for radius/height fields.
+    if (activePrefab === 'player') {
+        gLabel.textContent = 'Player collider';
+        cLabel.style.display = 'none';
+        addRow.style.display = 'none';
+        document.getElementById('prefabColliderRows').innerHTML = '';
+        renderPlayerColliderFields(flags);
+        refreshPrefabPreview();
+        return;
+    }
+    // Restore prop-mode UI (in case we came from the player tab).
+    gLabel.textContent = 'Gameplay';
+    cLabel.style.display = '';
+    addRow.style.display = '';
+
+    const def = PrefabLibrary[activePrefab] || (PrefabLibrary[activePrefab] = {});
     flags.innerHTML = '';
     PREFAB_FLAGS.forEach(f => {
         const label = document.createElement('label');
@@ -1039,6 +1130,39 @@ function defaultColliderPiece() {
              rotation: { y: 0 }, scale: { x: 1, y: 1, z: 1 } };
 }
 
+// Unity-style "scrub" — click+drag a label to push the value(s). `inputs` is one
+// (axis label) or many (group label) inputs; each px of horizontal drag adds
+// `sens` to every target, then fires its change handler so the data + preview
+// update live. Hold Shift for fine control (×0.1). Shared by the prop collider
+// rows and the player-collider fields.
+function attachLabelScrub(labelEl, inputs, sens) {
+    labelEl.classList.add('pf-scrub');
+    labelEl.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        labelEl.setPointerCapture(e.pointerId);
+        const startX = e.clientX;
+        const starts = inputs.map(inp => parseFloat(inp.value) || 0);
+        document.body.classList.add('pf-scrubbing');
+        const onMove = (ev) => {
+            const step = sens * (ev.shiftKey ? 0.1 : 1);
+            const dx = ev.clientX - startX;
+            inputs.forEach((inp, i) => {
+                inp.value = Math.round((starts[i] + dx * step) * 1000) / 1000;
+                inp.dispatchEvent(new Event('change'));
+            });
+        };
+        const onUp = () => {
+            try { labelEl.releasePointerCapture(e.pointerId); } catch (_) {}
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            document.body.classList.remove('pf-scrubbing');
+        };
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+    });
+}
+
 function renderPrefabColliderRows() {
     const def = PrefabLibrary[activePrefab];
     const wrap = document.getElementById('prefabColliderRows');
@@ -1067,38 +1191,6 @@ function renderPrefabColliderRows() {
         wrap.appendChild(e);
         return;
     }
-
-    // Unity-style "scrub" — click+drag a label to push the value(s). `inputs` is
-    // one (axis label) or all (group label) inputs in the group; each px of
-    // horizontal drag adds `sens` to every target, then fires its change handler so
-    // the data + preview update live. Hold Shift for fine control (×0.1).
-    const attachScrub = (labelEl, inputs, sens) => {
-        labelEl.classList.add('pf-scrub');
-        labelEl.addEventListener('pointerdown', (e) => {
-            if (e.button !== 0) return;
-            e.preventDefault();
-            labelEl.setPointerCapture(e.pointerId);
-            const startX = e.clientX;
-            const starts = inputs.map(inp => parseFloat(inp.value) || 0);
-            document.body.classList.add('pf-scrubbing');
-            const onMove = (ev) => {
-                const step = sens * (ev.shiftKey ? 0.1 : 1);
-                const dx = ev.clientX - startX;
-                inputs.forEach((inp, i) => {
-                    inp.value = Math.round((starts[i] + dx * step) * 1000) / 1000;
-                    inp.dispatchEvent(new Event('change'));
-                });
-            };
-            const onUp = () => {
-                try { labelEl.releasePointerCapture(e.pointerId); } catch (_) {}
-                document.removeEventListener('pointermove', onMove);
-                document.removeEventListener('pointerup', onUp);
-                document.body.classList.remove('pf-scrubbing');
-            };
-            document.addEventListener('pointermove', onMove);
-            document.addEventListener('pointerup', onUp);
-        });
-    };
 
     // Vector field group: {label, obj, keys}. Box uses rotation.y for its spin;
     // it is meaningless for round shapes but harmless, so we always show rot.y.
@@ -1137,9 +1229,9 @@ function renderPrefabColliderRows() {
             span.appendChild(inp);
             grp.appendChild(span);
             inputs.push(inp);
-            attachScrub(ic, [inp], sens);          // axis label → that one value
+            attachLabelScrub(ic, [inp], sens);     // axis label → that one value
         });
-        attachScrub(lbl, inputs, sens);            // group label → all axes together
+        attachLabelScrub(lbl, inputs, sens);       // group label → all axes together
         return grp;
     };
 
@@ -1232,13 +1324,16 @@ function buildPrefabsFileString() {
 '  Each prop TYPE defines its gameplay defaults (collision, climbable,\n' +
 '  hideSpot, canDisguise) and an optional compound `colliders` template\n' +
 '  (per piece: shape + position/rotation/scale, fractions of the prop bounds).\n' +
+'  PlayerCollider = the local player\'s own collider (radius + eye/center height,\n' +
+'  absolute world units; full body = 2× height).\n' +
 '=====================================================================*/\n\n';
 
     return header +
         'const PrefabLibrary = ' + JSON.stringify(PrefabLibrary, null, 4) + ';\n\n' +
         'const PREFAB_DEFAULT = ' + JSON.stringify(PREFAB_DEFAULT, null, 4) + ';\n\n' +
+        'const PlayerCollider = ' + JSON.stringify((typeof PlayerCollider !== 'undefined' ? PlayerCollider : { radius: 1, height: 1.5 }), null, 4) + ';\n\n' +
         "if (typeof module !== 'undefined' && module.exports) {\n" +
-        '    module.exports = { PrefabLibrary, PREFAB_DEFAULT };\n' +
+        '    module.exports = { PrefabLibrary, PREFAB_DEFAULT, PlayerCollider };\n' +
         '}\n';
 }
 
@@ -1263,6 +1358,13 @@ function resetPrefabsToFile() {
         PrefabLibrary[type] = JSON.parse(JSON.stringify(PREFAB_DEFAULTS_ORIG[type]));
     });
     localStorage.removeItem(PREFABS_KEY);
+    // Also revert the player collider to its file defaults.
+    if (typeof PlayerCollider !== 'undefined') {
+        PlayerCollider.radius = PLAYER_DEFAULTS_ORIG.radius;
+        PlayerCollider.height = PLAYER_DEFAULTS_ORIG.height;
+        localStorage.removeItem(PLAYER_KEY);
+        applyPlayerColliderToRuntime();
+    }
     collidersDirty = true;
     document.getElementById('prefabExportText').style.display = 'none';
     document.getElementById('prefabStatus').textContent = 'Reset to file defaults ✓';
@@ -1330,6 +1432,26 @@ function buildPrefabPreviewContent() {
     pfGizmos = [];
 
     const msg = document.getElementById('prefabPreviewMsg');
+
+    // Player pseudo-type: draw the player's own cylinder (radius × full height).
+    if (activePrefab === 'player') {
+        msg.textContent = '(player collider — world units)';
+        const r = Math.max(PlayerCollider.radius, 0.01);
+        const H = Math.max(PlayerCollider.height, 0.01) * 2;
+        const geo = new THREE.CylinderGeometry(r, r, H, 24);
+        const mat = new THREE.LineBasicMaterial({ color: 0x00e5ff });
+        mat.depthTest = false;
+        const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
+        helper.position.set(0, H / 2, 0);
+        helper.renderOrder = 999;
+        pfScene.add(helper);
+        pfGizmos.push(helper);
+        geo.dispose();
+        pfTarget.set(0, H / 2, 0);
+        pfDist = Math.max(H, r * 2) * 2 + 1.5;
+        return;
+    }
+
     const def = PrefabLibrary[activePrefab] || {};
     const propLike = { model: activePrefab, x: 0, z: 0,
         scale: { x: 1, y: 1, z: 1 }, rotation: { x: 0, y: 0, z: 0 } };

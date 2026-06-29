@@ -260,7 +260,7 @@ const Mechanics = {
     // Effective movement-collision radius: 1 as a player, else the disguised prop's
     // ground-level radius (slim trunk for a tree), not the full canopy.
     myColliderRadius: function() {
-        if (localDisguise.type === 'player') return 1;
+        if (localDisguise.type === 'player') return PropLevel.PLAYER_COLLIDER_RADIUS;
         return localDisguise.groundRadius || (localDisguise.size / 2);
     },
 
