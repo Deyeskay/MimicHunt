@@ -5,6 +5,13 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Disguise-cooldown indicator (hider).** After a hider is hit, disguising is locked for
+  `DISGUISE_LOCK_MS` (5s) — previously invisible to the player. Added a **top-center alert**
+  `#disguise-cd` (red pill "🥸 DISGUISE LOCKED · N.Ns" + depleting bar) shown only for a
+  living hider in-game while `disguiseLockUntil > Network.now()`, driven each `updateHUD`
+  tick. The mobile **PROP** button also mirrors the lock (shows "🔒 N.Ns", disabled).
+  Markup in `index.html`, styles in `css/style.css`, logic in `UI.updateHUD` (`js/ui.js`).
+  See [UI_FLOW.md](UI_FLOW.md).
 - **Camera: vertical orbit + Cinemachine-style collision.** Two related fixes to the
   third-person rig in `Level.render` (`js/level.js`):
   - *Vertical orbit (framing fix).* The camera used to sit at a **fixed height** and only

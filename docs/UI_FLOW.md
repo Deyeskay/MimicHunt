@@ -49,6 +49,12 @@ Bottom-center (`.bottom-center-hud`, absolutely positioned):
 Plus: centered `#crosshair` (Seeker+HUNTING+alive; `UI.hitMarker()` flashes it red
 on a landed hit); mobile **SHOOT** (seeker) / **PROP(F)** (hider) toggled by role.
 
+Top-center (`#disguise-cd`, Hider only): **disguise-cooldown alert** shown for the
+`DISGUISE_LOCK_MS` (5s) window after a hit, when `disguiseLockUntil > Network.now()`.
+Red-bordered pill "🥸 DISGUISE LOCKED · `N.Ns`" with a depleting bar (`#disguise-cd-bar`,
+width = `remain/DISGUISE_LOCK_MS`), refreshed each `updateHUD` tick (60fps). The mobile
+**PROP** button mirrors this: while locked it shows "🔒 N.Ns" and is `disabled`.
+
 ## Lobby (`UI.updateLobby`)
 Player rows (name + `(Host)` tag); the local row gets a Hider/Seeker **segmented
 toggle** (`.role-toggle` → `Network.setLocalRole`); others show a read-only role

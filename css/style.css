@@ -352,6 +352,20 @@ button.leave {
 .blink { animation: hud-blink 0.7s steps(1, end) infinite; }
 @keyframes hud-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 
+/* Hider disguise cooldown alert (top-centre, shown for ~5s after being hit). */
+#disguise-cd {
+    position: absolute; left: 50%; top: 70px; transform: translateX(-50%);
+    z-index: 13; pointer-events: none;
+    background: rgba(26, 26, 36, 0.9); padding: 8px 16px; border-radius: 22px;
+    border: 1px solid var(--accent-red); color: #ff6b81; font-weight: bold;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+}
+.dcd-row { display: flex; align-items: center; gap: 6px; letter-spacing: 1px; white-space: nowrap; }
+#disguise-cd-text { font-family: monospace; color: #ffa502; }
+.dcd-track { width: 160px; height: 6px; background: rgba(255,255,255,0.18); border-radius: 3px; overflow: hidden; }
+.dcd-bar { height: 100%; width: 100%; background: var(--accent-red); transition: width .1s linear; }
+
 /* Event toasts — stacked bottom-center, just above the health/reload row. */
 #toast-container {
     position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
@@ -467,6 +481,8 @@ button.leave {
     #timer-display { font-size: 0.95rem; }
     #health-hud .hp-track { width: 150px; height: 12px; }
     .bottom-center-hud { bottom: 14px; padding: 6px 14px; font-size: 0.85rem; }
+    #disguise-cd { top: 48px; padding: 5px 12px; font-size: 0.78rem; gap: 4px; }
+    #disguise-cd .dcd-track { width: 130px; height: 5px; }
     button.leave { padding: 5px 11px; font-size: 0.78rem; }
 
     #joystick-zone { width: 96px; height: 96px; }

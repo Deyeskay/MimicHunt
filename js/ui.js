@@ -281,6 +281,22 @@ const UI = {
             }
         }
 
+        // Hider disguise cooldown (top-center): after a hit, disguising is locked for
+        // DISGUISE_LOCK_MS — show the remaining time + a depleting bar so the escaping
+        // hider knows when they can hide again. Driven each HUD tick (60fps).
+        const cdEl = document.getElementById('disguise-cd');
+        if (cdEl) {
+            const remainMs = (me.disguiseLockUntil || 0) - Network.now();
+            const showCd = !isSeeker && !me.isCaught && gameState.phase !== 'LOBBY' && remainMs > 0;
+            cdEl.style.display = showCd ? 'flex' : 'none';
+            if (showCd) {
+                const txt = document.getElementById('disguise-cd-text');
+                if (txt) txt.innerText = (remainMs / 1000).toFixed(1) + 's';
+                const bar = document.getElementById('disguise-cd-bar');
+                if (bar) bar.style.width = Math.max(0, Math.min(1, remainMs / DISGUISE_LOCK_MS)) * 100 + '%';
+            }
+        }
+
         // Mobile action buttons by role: Seeker shoots, Hider disguises.
         const shootBtn = document.getElementById('btn-action-shoot');
         const propBtn = document.getElementById('btn-action-disguise');
@@ -289,10 +305,15 @@ const UI = {
             propBtn.style.display = isSeeker ? 'none' : '';
             if (!isSeeker) {
                 const canAct = !me.isCaught && gameState.phase !== 'LOBBY';
+                const locked = canAct && me.disguiseLockUntil && Network.now() < me.disguiseLockUntil;
                 if (canAct && Mechanics.isDisguised()) {
                     // Disguised → offer Reset.
                     propBtn.innerHTML = '🔄 Reset';
                     propBtn.disabled = false;
+                } else if (locked) {
+                    // Hit recently → disguise locked; show the countdown on the button too.
+                    propBtn.innerHTML = '🔒 ' + ((me.disguiseLockUntil - Network.now()) / 1000).toFixed(1) + 's';
+                    propBtn.disabled = true;
                 } else {
                     // Not disguised → enable + name the prop only when near one.
                     const near = canAct ? Mechanics.findNearestDisguiseProp() : null;
