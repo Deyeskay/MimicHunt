@@ -5,6 +5,10 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Client HUD now refreshes at 60 FPS (bug fix).** On a client the HUD was only updated
+  when a snapshot arrived (20 Hz), so the disguise button's near/away state — and the new
+  cooldown countdown — lagged behind the client's 60 FPS predicted movement. Added
+  `UI.updateHUD()` to the client prediction loop (`js/network.js`), matching the host loop.
 - **Disguise reach tightened (bug fix).** You could disguise from far away — the reach in
   `findNearestDisguiseProp` (`js/mechanics.js`) was `prop.radius * 2 + 2` (≈ radius+2
   *beyond* the surface, several units for wide props). Now `prop.radius + 2` (surface +

@@ -1034,6 +1034,10 @@ const Network = {
             Mechanics.handleLocalMovement();
             this.applyLocalTransform(gameState.players[myId]);
             Mechanics.tickReload();   // finish weapon reloads (client seeker)
+            // Refresh the HUD at 60 FPS too (not just on the 20 Hz snapshot), so the
+            // disguise button's proximity state and the cooldown countdown track our
+            // locally-predicted movement immediately instead of lagging behind.
+            UI.updateHUD();
         }, 1000 / 60);
 
         // Network loop — send our movement to the host at NETWORK_SEND_RATE.
