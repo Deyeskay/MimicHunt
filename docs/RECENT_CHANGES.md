@@ -5,6 +5,22 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Graphics quality setting + lighting/grass/sky overhaul.** New `GAME_SETTINGS.graphicsQuality`
+  (`low`/`medium`/`high`, default **medium**) via a Graphics dropdown on the Settings screen,
+  applied live and at `Level.init`. Fixes the washed-out look:
+  - *Colour management* (Medium/High): `sRGBEncoding` output + **ACES** tone mapping, colour-map
+    sRGB encoding + max anisotropy. Highlights stop clipping so grass keeps detail.
+  - *Lights rebalanced* (Medium/High): low flat ambient (0.30) + strong sky/ground **hemisphere
+    fill** + warmer/stronger sun → contrast while the player stays lit (the old fix of just
+    dimming made the player dark). Light refs kept on `Level` for live re-tuning.
+  - *Grass*: sRGB + anisotropy (sharper, less muddy); high-DPI via `pixelRatio ≤ 2`.
+  - *Sky*: **cloud skydome** (`buildSkydome`, reuses `assets/textures/background.png`) on
+    Medium/High, recentred on the camera each frame; flat blue on Low.
+  - *High* adds **bloom** (`EffectComposer`/`UnrealBloomPass`; example scripts in `index.html`).
+    Render branches to the composer when active; `resize` syncs it.
+  - Core: `Level.QUALITY` + `Level.setGraphicsQuality`/`refreshTextures` (`js/level.js`); wiring in
+    `js/app.js`/`js/globals.js`; `.setting-select` CSS. Low = the original look. See
+    [RENDERING.md](RENDERING.md).
 - **HUD/menu visual pass (premium look).** Four UI changes (markup `index.html`, styles
   `css/style.css`, logic `js/ui.js`/`js/app.js`):
   - *In-game top bar* — the right side is now an icon cluster (`.hud-right`): `👥 N`,

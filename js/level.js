@@ -28,6 +28,10 @@ const Level = {
         sc.near = 0.5; sc.far = 120;
         dirLight.shadow.bias = -0.0005;
         scene.add(dirLight);
+        // Keep refs so setGraphicsQuality() can re-tune them live.
+        this._ambient = ambientLight;
+        this._hemi = hemiLight;
+        this._dir = dirLight;
 
         const groundGeo = new THREE.PlaneGeometry(200, 200);
         const groundTex = this.makeGroundTexture();
@@ -37,16 +41,131 @@ const Level = {
         ground.position.y = 0;
         ground.receiveShadow = true;
         scene.add(ground);
+        this._groundMat = groundMat;
+        this._groundTex = groundTex;
 
         // Prefer the real image texture if present; the procedural one above shows
         // instantly and is kept as the fallback if the image is missing/fails.
         this.loadGroundImage(groundMat);
+
+        // Wraparound cloud sky (shown on Medium/High; hidden on Low → flat colour).
+        this.buildSkydome();
 
         // Load the first registered level as the default. Levels come from the
         // js/levels/ folder via the registry (LEVELS); the lobby lets the host
         // pick which one, and loadLevel() swaps it in at game start.
         const def = (typeof LEVELS !== 'undefined' && LEVELS[0]) ? LEVELS[0].props : [];
         this.loadLevel(def);
+
+        // Apply the saved graphics quality (default Medium) now that the scene exists.
+        this.setGraphicsQuality(
+            (typeof GAME_SETTINGS !== 'undefined' && GAME_SETTINGS.graphicsQuality) || 'medium');
+    },
+
+    // --- Graphics quality (Low / Medium / High) -----------------------------
+    // Low = original flat look; Medium = colour-managed + rebalanced lights +
+    // sharper grass + cloud sky; High = Medium + bloom. Applied at init and live
+    // from the Settings screen.
+    QUALITY: {
+        low:    { pixelRatio: 1, srgb: false, toneMap: false, aniso: false, bloom: false, sky: 'flat',
+                  ambient: 0.9,  hemi: 0.6,  hemiGround: 0x4a6a3a, dir: 1.2, dirColor: 0xffffff },
+        medium: { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: false, sky: 'dome',
+                  ambient: 0.30, hemi: 0.85, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xfff3e0 },
+        high:   { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: true,  sky: 'dome',
+                  ambient: 0.30, hemi: 0.90, hemiGround: 0x6a8a4a, dir: 1.8, dirColor: 0xfff3e0 },
+    },
+
+    setGraphicsQuality: function(q) {
+        if (!renderer) return;
+        const p = this.QUALITY[q] || this.QUALITY.medium;
+        this._quality = this.QUALITY[q] ? q : 'medium';
+
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, p.pixelRatio));
+        renderer.toneMapping = p.toneMap ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        renderer.outputEncoding = p.srgb ? THREE.sRGBEncoding : THREE.LinearEncoding;
+
+        if (this._ambient) this._ambient.intensity = p.ambient;
+        if (this._hemi) { this._hemi.intensity = p.hemi; this._hemi.groundColor.setHex(p.hemiGround); }
+        if (this._dir) { this._dir.intensity = p.dir; this._dir.color.setHex(p.dirColor); }
+
+        this.refreshTextures(p.srgb, p.aniso);
+
+        // Sky: cloud dome for Medium/High, flat colour for Low.
+        if (this._skydome) this._skydome.visible = (p.sky === 'dome');
+        scene.background = (p.sky === 'dome') ? null : new THREE.Color(0x87ceeb);
+
+        // Bloom (High only).
+        this._useComposer = !!p.bloom;
+        if (p.bloom) this.buildComposer();
+
+        this.resize();
+    },
+
+    // Set colour space + anisotropy on every colour map in the scene, the model
+    // library and the character rigs (GLB clones share texture refs, so updating
+    // the templates covers spawned props). Forces shader recompile so live
+    // tone-mapping / encoding changes take effect.
+    refreshTextures: function(srgb, aniso) {
+        const enc = srgb ? THREE.sRGBEncoding : THREE.LinearEncoding;
+        const maxAniso = aniso ? renderer.capabilities.getMaxAnisotropy() : 1;
+        const seen = new Set();
+        const touchMat = (m) => {
+            if (!m || seen.has(m)) return;
+            seen.add(m);
+            if (m.map) { m.map.encoding = enc; m.map.anisotropy = maxAniso; m.map.needsUpdate = true; }
+            m.needsUpdate = true;
+        };
+        const touchObj = (o) => {
+            if (!o || !o.isMesh || !o.material) return;
+            Array.isArray(o.material) ? o.material.forEach(touchMat) : touchMat(o.material);
+        };
+        if (scene) scene.traverse(touchObj);
+        if (typeof modelLibrary !== 'undefined' && modelLibrary)
+            Object.values(modelLibrary).forEach(root => root && root.traverse(touchObj));
+        if (this.rigs) Object.values(this.rigs).forEach(r => r && r.scene && r.scene.traverse(touchObj));
+        // Skydome map is colour too (basic material, no shadows).
+        if (this._skydome && this._skydome.material && this._skydome.material.map) {
+            this._skydome.material.map.encoding = enc;
+            this._skydome.material.map.needsUpdate = true;
+            this._skydome.material.needsUpdate = true;
+        }
+    },
+
+    // Inverted sphere with the cloud image; sits beyond the action, ignores fog,
+    // and is recentred on the camera each frame so it never visibly slides.
+    buildSkydome: function() {
+        const geo = new THREE.SphereGeometry(400, 32, 16);
+        const mat = new THREE.MeshBasicMaterial({ side: THREE.BackSide, fog: false, depthWrite: false });
+        const dome = new THREE.Mesh(geo, mat);
+        dome.visible = false;
+        scene.add(dome);
+        this._skydome = dome;
+        new THREE.TextureLoader().load(
+            'assets/textures/sky.png',
+            (tex) => {
+                tex.encoding = (this._quality && this._quality !== 'low')
+                    ? THREE.sRGBEncoding : THREE.LinearEncoding;
+                mat.map = tex; mat.needsUpdate = true;
+            },
+            undefined,
+            () => { mat.color.setHex(0x87ceeb); mat.needsUpdate = true; }  // fallback: plain blue dome
+        );
+    },
+
+    // Build the bloom post-processing chain once (High quality). Requires the
+    // EffectComposer/UnrealBloomPass example scripts loaded in index.html.
+    buildComposer: function() {
+        if (this._composer || typeof THREE.EffectComposer === 'undefined') return;
+        const w = window.innerWidth, h = window.innerHeight;
+        const composer = new THREE.EffectComposer(renderer);
+        composer.addPass(new THREE.RenderPass(scene, camera));
+        const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(w, h), 0.5, 0.4, 0.85);
+        composer.addPass(bloom);
+        composer.setPixelRatio(renderer.getPixelRatio());
+        composer.setSize(w, h);
+        this._composer = composer;
+        this._bloomPass = bloom;
     },
 
     // Procedural grass texture (no asset files): a green base with speckled
@@ -84,7 +203,10 @@ const Level = {
                 const old = mat.map;
                 mat.map = tex;
                 mat.needsUpdate = true;
+                this._groundTex = tex;
                 if (old) old.dispose();
+                // Re-apply the current quality's colour space / anisotropy to the new map.
+                this.setGraphicsQuality(this._quality || 'medium');
             },
             undefined,
             () => { /* missing/failed → keep the procedural fallback */ }
@@ -309,6 +431,10 @@ const Level = {
         renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+        if (this._composer) {
+            this._composer.setPixelRatio(renderer.getPixelRatio());
+            this._composer.setSize(window.innerWidth, window.innerHeight);
+        }
     },
 
     // Change the camera FOV live (from the Settings screen). Clamped to a sane
@@ -960,6 +1086,10 @@ const Level = {
             );
         }
 
-        renderer.render(scene, camera);
+        // Keep the cloud dome centred on the camera so the sky never "slides".
+        if (this._skydome && this._skydome.visible) this._skydome.position.copy(camera.position);
+
+        if (this._useComposer && this._composer) this._composer.render();
+        else renderer.render(scene, camera);
     }
 };

@@ -11,6 +11,7 @@ let GAME_SETTINGS = {
     huntingTime: 300,   // seconds (5 min); settings slider edits this in minutes (5–20)
     mouseSensitivity: 0.002,
     cameraFov: 60,
+    graphicsQuality: 'medium',   // 'low' | 'medium' | 'high' (see Level.setGraphicsQuality)
     invertY: false,
     showMobileControls: true,
     playerName: ''

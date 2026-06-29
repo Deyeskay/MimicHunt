@@ -17,6 +17,7 @@ authoritative-host star topology, no backend.
 | [GAMEPLAY.md](GAMEPLAY.md) | Rules, phases, combat (shooting/health/reveal), win conditions. |
 | [ANIMATION_SYSTEM.md](ANIMATION_SYSTEM.md) | Clip loading, lower/upper masked layers, jump, shoot, back-walk. |
 | [CAMERA_AND_CONTROLS.md](CAMERA_AND_CONTROLS.md) | Over-the-shoulder rig, desktop+mobile input, landscape. |
+| [RENDERING.md](RENDERING.md) | Lights, colour management/tone mapping, grass, sky, Graphics quality tiers. |
 | [LEVEL_SYSTEM.md](LEVEL_SYSTEM.md) | Registry, level files, dynamic load, spawns. |
 | [PROP_SYSTEM.md](PROP_SYSTEM.md) | Prefabs, compound colliders, disguise, ray occlusion, climbing. |
 | [UI_FLOW.md](UI_FLOW.md) | Screen flow, HUD, responsive/landscape CSS, the editor. |

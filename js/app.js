@@ -32,6 +32,7 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
     GAME_SETTINGS.huntingTime = parseInt(document.getElementById('setting-hunt-time').value) * 60;
     GAME_SETTINGS.mouseSensitivity = parseFloat(document.getElementById('setting-sensitivity').value);
     GAME_SETTINGS.cameraFov = parseInt(document.getElementById('setting-fov').value);
+    GAME_SETTINGS.graphicsQuality = document.getElementById('setting-graphics').value;
     GAME_SETTINGS.invertY = document.getElementById('setting-invert-y').checked;
     GAME_SETTINGS.showMobileControls = document.getElementById('setting-mobile-ui').checked;
 
@@ -68,6 +69,11 @@ function syncSettingDisplays() {
         GAME_SETTINGS.cameraFov = Math.round(Number(fov.value));
         Level.setFov(GAME_SETTINGS.cameraFov);
         syncSettingDisplays();
+    });
+    const gfx = document.getElementById('setting-graphics');
+    if (gfx) gfx.addEventListener('change', () => {
+        GAME_SETTINGS.graphicsQuality = gfx.value;
+        Level.setGraphicsQuality(gfx.value);
     });
     // Time sliders apply on Save; just keep their value chips live.
     if (hide) hide.addEventListener('input', syncSettingDisplays);
@@ -213,6 +219,7 @@ if(savedSettings)
     document.getElementById('setting-hunt-time').value = huntMin;
     document.getElementById('setting-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
     document.getElementById('setting-fov').value = GAME_SETTINGS.cameraFov;
+    document.getElementById('setting-graphics').value = GAME_SETTINGS.graphicsQuality;
     document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY;
     document.getElementById('setting-mobile-ui').checked = GAME_SETTINGS.showMobileControls;
 }

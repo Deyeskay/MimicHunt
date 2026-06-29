@@ -160,6 +160,7 @@ input:focus { border-color: var(--candy-blue-2); outline: none; }
 .ic-fov    { background: #36c2c2; }
 .ic-invert { background: #9b59ff; }
 .ic-mobile { background: var(--candy-green-2); }
+.ic-gfx    { background: #e056a0; }
 .setting-unit { color: var(--cream-dim); font-size: 0.72rem; font-weight: 600; }
 .setting-control { flex: 0 0 52%; display: flex; align-items: center; gap: 10px; }
 .setting-control input[type="range"] { flex: 1; }
@@ -169,6 +170,15 @@ input:focus { border-color: var(--candy-blue-2); outline: none; }
     background: linear-gradient(180deg, #2c1c0e, #43280f); border: 2px solid #25160a;
     border-radius: 8px; padding: 4px 6px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
+/* Dropdown (Graphics quality) — matches the wooden value-chip look. */
+.setting-select {
+    flex: 0 0 52%; font-family: "Fredoka", system-ui, sans-serif; font-weight: 700;
+    font-size: 0.86rem; color: var(--cream); cursor: pointer;
+    background: linear-gradient(180deg, #2c1c0e, #43280f); border: 2px solid #25160a;
+    border-radius: 8px; padding: 7px 10px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+    text-transform: uppercase; letter-spacing: 0.5px;
+}
+.setting-select option { background: #2c1c0e; color: var(--cream); }
 
 /* Range slider: recessed groove + glossy knob */
 input[type="range"] {
