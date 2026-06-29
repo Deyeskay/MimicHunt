@@ -5,6 +5,8 @@
   Each prop TYPE defines its gameplay defaults (collision, climbable,
   hideSpot, canDisguise) and an optional compound `colliders` template
   (per piece: shape + position/rotation/scale, fractions of the prop bounds).
+  PlayerCollider = the local player's own collider (radius + eye/center height,
+  absolute world units; full body = 2× height).
 =====================================================================*/
 
 const PrefabLibrary = {
@@ -18,7 +20,7 @@ const PrefabLibrary = {
               "shape": "cylinder",
               "position": {
                   "x": 0,
-                  "y": 0.275,
+                  "y": 0.307,
                   "z": 0
               },
               "rotation": {
@@ -26,7 +28,7 @@ const PrefabLibrary = {
               },
               "scale": {
                   "x": 0.18,
-                  "y": 0.55,
+                  "y": 0.838,
                   "z": 0.18
               }
           },
@@ -34,7 +36,7 @@ const PrefabLibrary = {
               "shape": "cylinder",
               "position": {
                   "x": 0,
-                  "y": 0.75,
+                  "y": 0.814,
                   "z": 0
               },
               "rotation": {
@@ -42,7 +44,7 @@ const PrefabLibrary = {
               },
               "scale": {
                   "x": 0.95,
-                  "y": 0.5,
+                  "y": 0.223,
                   "z": 0.95
               }
           }
@@ -100,14 +102,8 @@ const PREFAB_DEFAULT = {
   "canDisguise": false
 };
 
-// The local player's own collider (NOT a prop — absolute world units).
-//   radius  horizontal collision radius of the undisguised player
-//   height  eye/center height above the feet (PLAYER_BASE_HEIGHT); the full
-//           standing body is 2× this. Drives the camera height, climbing, and
-//           the undisguised movement collision. A disguised hider instead adopts
-//           its prop's collider, so this only applies in player form.
 const PlayerCollider = {
-  "radius": 1,
+  "radius": 0.7,
   "height": 1.5
 };
 
