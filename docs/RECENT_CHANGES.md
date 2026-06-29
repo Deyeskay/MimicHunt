@@ -5,6 +5,44 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Remote players' footsteps — heard client-side, no new packets.** Previously
+  `Sound.step()` only played for the local player. Now each client emits footsteps for
+  the OTHER players too, derived entirely from their already-synced rendered motion —
+  **zero added network traffic**. New `Level.tickRemoteFootstep(mesh, p, dt)`
+  (`js/level.js`) is called for every remote player in the render loop (right after the
+  interpolated transform is applied): it computes horizontal speed from the mesh's own
+  position delta (its own EMA-smoothed `userData._foot*` state, independent of the
+  animation mixer — so a **moving prop-disguised hider is heard** too), steps on the same
+  ~330 ms cadence with start/stop hysteresis, and skips eliminated players.
+  - **Distance + stereo direction.** Footstep volume falls off with distance from the
+    local player (full within `FOOTSTEP_MIN_DIST`, silent past `FOOTSTEP_MAX_DIST`,
+    squared falloff) and pans left/right toward the source via a `StereoPannerNode`
+    (pan = source's offset along the listener's right vector, matching the movement
+    convention). New tunables in `js/globals.js`: `FOOTSTEP_MAX_DIST` (40),
+    `FOOTSTEP_MIN_DIST` (4), `FOOTSTEP_SPEED_ON/OFF` (1.5/0.5 u/s), `FOOTSTEP_INTERVAL_MS`
+    (330).
+  - **`Sound` made spatial-capable (backward compatible).** `Sound.step(right, {volume,
+    pan})` now scales gain by `volume` and routes through a new `Sound._spatialOut(pan)`
+    panner; `Sound._noiseBurst` gained an `out` option. Calling `Sound.step(right)` with
+    no opts (the local player) is unchanged — full-volume mono.
+
+- **Footstep / jump / landing / UI-click audio.** Extended the synthesized `Sound`
+  object (`js/globals.js`) with four new theme-matched effects — no audio assets, all
+  WebAudio (same approach as the existing `pew`/`hurt`/`reload`):
+  - `Sound.step(right)` — a soft footstep scuff built from a band-limited white-noise
+    burst (new `Sound._noiseBurst` helper); `right` alternates the filter cutoff for a
+    walking gait. Emitted on a ~330 ms cadence while the local player is moving on the
+    ground, driven from `Mechanics.handleLocalMovement` (`js/mechanics.js`) via
+    `_lastStepAt` / `_stepFoot`. Timer resets when idle so the first step is instant.
+  - `Sound.jump()` — a quick upward sine "whoomp", played in `Mechanics.jump`.
+  - `Sound.land()` — a low tonal thud + noise transient, played in
+    `handleLocalMovement` on the airborne→grounded transition (guarded by downward
+    speed so standing still never triggers it).
+  - `Sound.click()` — a crisp sci-fi UI blip. Wired via a single capture-phase
+    delegated `click` listener on `document` (`Mechanics.initInputs`) that fires for
+    any `<button>` except the in-game `.action-btn` pads (those keep their own audio).
+    The first menu click also unlocks the AudioContext.
+
 - **PUBG-style "Edit Layout" for the touch controls.** The HUD hamburger (☰ `btn-leave`)
   no longer exits directly — it opens a dropdown (`#game-menu`, `index.html`) with **Edit
   Layout** and **Exit Game**. Edit Layout (new `js/layout.js` → `LayoutEditor`) dims the

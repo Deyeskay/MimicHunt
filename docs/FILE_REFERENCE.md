@@ -40,7 +40,13 @@ All cross-file globals. Key items:
   `WATCHDOG_MS=500`, `CLIENT_TIMEOUT_MS=3000`, `migrating`, `sessionEnding`,
   `departedHostId`, `pendingRoomCode`, `rejoinExpected{}`, `codePeer`, intervals.
 - `developer` (false) — dev collider gizmos (G key).
-- `Sound` — `Sound.pew()` (shot), `Sound.hurt()` (hider damage); lazy AudioContext.
+- `Sound` — all WebAudio-synthesized (no assets), lazy AudioContext: `pew()` (shot),
+  `hurt()` (hider damage), `reload()`, `step(right, {volume, pan})` (footstep, via
+  `_noiseBurst`; `volume`/`pan` used for distance-attenuated remote footsteps),
+  `jump()`, `land()`, `click()` (UI button). Helpers: `_noiseBurst(dur, {…, out})`,
+  `_spatialOut(pan)` (StereoPannerNode for positional sounds).
+  Remote footsteps are emitted by `Level.tickRemoteFootstep` (`js/level.js`), tuned by
+  `FOOTSTEP_*` consts (`js/globals.js`).
 - Three refs: `scene`, `camera`, `renderer`, `playerMeshes{}`, `mapProps3D[]`,
   `modelLibrary{}`.
 

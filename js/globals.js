@@ -126,6 +126,14 @@ const HIT_SCORE = 100;         // points per hit
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
 const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit
 const SHOOT_ANIM_MS = 1200;    // aim-stance window after a shot (upper-body shoot + face target + back-walk)
+
+// --- REMOTE FOOTSTEPS (heard from OTHER players; computed client-side, no packets) ---
+const FOOTSTEP_MAX_DIST   = 40;   // beyond this (world units), remote footsteps are silent
+const FOOTSTEP_MIN_DIST   = 4;    // within this, full volume
+const FOOTSTEP_SPEED_ON   = 1.5;  // u/s to start stepping (matches anim walk threshold)
+const FOOTSTEP_SPEED_OFF  = 0.5;  // u/s hysteresis to stop stepping
+const FOOTSTEP_INTERVAL_MS = 330; // step cadence (same as the local player)
+
 let ammo = MAG_SIZE;           // local seeker's current magazine
 let reloading = false;
 let lastShotAt = 0;
@@ -190,6 +198,117 @@ const Sound = {
             osc.start(t + dt);
             osc.stop(t + dt + 0.1);
         });
+    },
+    // Output node for a sound: a StereoPannerNode (so remote sounds come from the
+    // correct side) when a non-zero pan is given and the browser supports it, else
+    // the bare destination. Returns a node you connect the sound's gain chain into.
+    _spatialOut(pan) {
+        const ctx = this.ensure();
+        if (!ctx) return null;
+        if (pan && ctx.createStereoPanner) {
+            const p = ctx.createStereoPanner();
+            p.pan.value = Math.max(-1, Math.min(1, pan));
+            p.connect(ctx.destination);
+            return p;
+        }
+        return ctx.destination;
+    },
+    // Short burst of band-limited white noise — the texture base for footsteps and
+    // landing thuds (a pure oscillator reads as "musical", noise reads as physical).
+    // `out` lets a caller route through a panner; defaults to the destination.
+    _noiseBurst(dur, { freq = 400, q = 0.7, gain = 0.07, type = 'lowpass', out = null } = {}) {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const frames = Math.max(1, Math.floor(ctx.sampleRate * dur));
+        const buf = ctx.createBuffer(1, frames, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < frames; i++) data[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const filt = ctx.createBiquadFilter();
+        filt.type = type; filt.frequency.value = freq; filt.Q.value = q;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        src.connect(filt).connect(g).connect(out || ctx.destination);
+        src.start(t);
+        src.stop(t + dur);
+    },
+    // Footstep: a low sine "body" tap (carries the loudness) plus a brighter noise
+    // scuff for texture. `right` alternates pitch/cutoff so a gait doesn't sound
+    // like one repeated sample. opts.volume (0..1) and opts.pan (-1..1) let remote
+    // players' steps attenuate with distance and come from the correct side; with
+    // no opts (the local player) it's full-volume mono — unchanged behaviour.
+    step(right, opts = {}) {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const vol = opts.volume == null ? 1 : opts.volume;
+        if (vol <= 0.001) return;
+        const out = this._spatialOut(opts.pan || 0);
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        const f = right ? 130 : 110;
+        osc.frequency.setValueAtTime(f, t);
+        osc.frequency.exponentialRampToValueAtTime(f * 0.65, t + 0.07);
+        gain.gain.setValueAtTime(0.22 * vol, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+        osc.connect(gain).connect(out);
+        osc.start(t);
+        osc.stop(t + 0.1);
+        this._noiseBurst(0.07, { freq: right ? 900 : 760, q: 0.9, gain: 0.13 * vol, out });
+    },
+    // Quick upward "whoomp" as the player leaves the ground.
+    jump() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(200, t);
+        osc.frequency.exponentialRampToValueAtTime(620, t + 0.16);
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.21);
+    },
+    // Low thud as the player touches down — tonal drop plus a noise transient.
+    land() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(170, t);
+        osc.frequency.exponentialRampToValueAtTime(65, t + 0.12);
+        gain.gain.setValueAtTime(0.26, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.16);
+        this._noiseBurst(0.08, { freq: 320, q: 0.6, gain: 0.12 });
+    },
+    // Crisp UI blip for menu / button presses — matches the sci-fi energy theme.
+    click() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(680, t);
+        osc.frequency.exponentialRampToValueAtTime(1040, t + 0.04);
+        gain.gain.setValueAtTime(0.06, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.08);
     }
 };
 

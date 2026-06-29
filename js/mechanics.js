@@ -8,6 +8,16 @@ const Mechanics = {
         });
         window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
+        // UI click feedback: one delegated listener covers every menu/HUD button
+        // (capture phase so it fires even if a handler stops propagation). The
+        // in-game action pads (jump/shoot/disguise) are skipped — they drive on
+        // touchstart and have their own gameplay audio.
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button');
+            if (!btn || btn.classList.contains('action-btn')) return;
+            Sound.click();
+        }, true);
+
         const canvas = document.getElementById('gameCanvas');
         canvas.addEventListener('click', () => {
             if (gameState.phase !== 'LOBBY') canvas.requestPointerLock();
@@ -137,6 +147,7 @@ const Mechanics = {
     jump: function() {
         velocityY = JUMP_STRENGTH;
         isGrounded = false;
+        Sound.jump();
         // Trigger the jump animation locally + on every peer.
         const me = gameState.players[myId];
         if (me) me.jumpAt = Network.now();
@@ -351,10 +362,26 @@ const Mechanics = {
         localPos.y += velocityY;
         if (localPos.y <= floorY) {
             localPos.y = floorY;
+            // Touched down after being airborne (with real downward speed) → thud.
+            if (!isGrounded && velocityY < -0.05) Sound.land();
             velocityY = 0;
             isGrounded = true;
         } else {
             isGrounded = false;
+        }
+
+        // Footsteps: emit a scuff at a fixed cadence while actually walking on the
+        // ground. Resetting the timer when idle makes the first step after you
+        // start moving fire immediately rather than after the interval.
+        if (length > 0 && isGrounded) {
+            const tnow = Network.now();
+            if (tnow - (this._lastStepAt || 0) > 330) {
+                this._lastStepAt = tnow;
+                this._stepFoot = !this._stepFoot;
+                Sound.step(this._stepFoot);
+            }
+        } else {
+            this._lastStepAt = 0;
         }
     },
 

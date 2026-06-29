@@ -679,6 +679,54 @@ const Level = {
         mesh.rotation.y = p.rotY;
     },
 
+    // Footsteps for a REMOTE player, played on THIS client from the player's
+    // rendered motion — no network event. Independent of the animation mixer (its
+    // own _foot* state), so a moving prop-disguised hider is heard too. Volume
+    // attenuates with distance from the local player and pans to the source side.
+    tickRemoteFootstep: function(mesh, p, dt) {
+        const ud = mesh.userData;
+        if (p.isCaught) { ud._stepLastAt = 0; return; }   // eliminated players are silent
+
+        // Horizontal speed from the mesh's own position delta, EMA-smoothed so an
+        // interpolation-stalled frame doesn't drop a step (same filter as the anim).
+        let inst = 0;
+        if (ud._footPrev && dt > 0) {
+            const ddx = mesh.position.x - ud._footPrev.x;
+            const ddz = mesh.position.z - ud._footPrev.z;
+            inst = Math.hypot(ddx, ddz) / dt;
+        }
+        if (!ud._footPrev) ud._footPrev = new THREE.Vector3();
+        ud._footPrev.set(mesh.position.x, mesh.position.y, mesh.position.z);
+        ud._footSpeed = (ud._footSpeed || 0) + (inst - (ud._footSpeed || 0)) * Math.min(1, dt * 12);
+
+        // Hysteresis: start above ON, keep stepping until we drop below OFF.
+        const moving = ud._footSpeed > FOOTSTEP_SPEED_ON ||
+                       (ud._stepLastAt && ud._footSpeed > FOOTSTEP_SPEED_OFF);
+        if (!moving) { ud._stepLastAt = 0; return; }
+
+        const tnow = Network.now();
+        if (tnow - (ud._stepLastAt || 0) < FOOTSTEP_INTERVAL_MS) return;
+        ud._stepLastAt = tnow;
+        ud._stepFoot = !ud._stepFoot;
+
+        // Distance attenuation from the local player (XZ plane).
+        const dx = mesh.position.x - localPos.x;
+        const dz = mesh.position.z - localPos.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > FOOTSTEP_MAX_DIST) return;
+        let vol = 1 - Math.max(0, dist - FOOTSTEP_MIN_DIST) / (FOOTSTEP_MAX_DIST - FOOTSTEP_MIN_DIST);
+        vol = Math.max(0, Math.min(1, vol));
+        vol *= vol;   // gentle perceptual falloff
+
+        // Stereo pan = how far to the listener's right the source sits. Right vector
+        // matches the movement convention (D key = cos(yaw), -sin(yaw)). ×0.9 so a
+        // step is never fully one-eared.
+        const pan = Math.max(-1, Math.min(1,
+            (dx * Math.cos(cameraYaw) - dz * Math.sin(cameraYaw)) / (dist || 1))) * 0.9;
+
+        Sound.step(ud._stepFoot, { volume: vol, pan });
+    },
+
     // Crossfade idle/walk based on the character's rendered movement speed, then
     // advance its mixer. Works for the local player and interpolated remotes alike
     // because it measures the mesh's own position delta (no networked anim state).
@@ -1045,6 +1093,10 @@ const Level = {
                     mesh,
                     s ? { ...p, x: s.x, y: s.y, z: s.z, rotY: s.rotY } : p
                 );
+                // Footsteps for OTHER players, derived from their rendered motion
+                // (no network event). Runs for prop-disguised hiders too, so a
+                // moving prop gives itself away.
+                this.tickRemoteFootstep(mesh, p, dt);
             }
 
             // Drive the character animation from its rendered movement.
