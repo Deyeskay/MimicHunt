@@ -5,6 +5,27 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **PUBG-style "Edit Layout" for the touch controls.** The HUD hamburger (☰ `btn-leave`)
+  no longer exits directly — it opens a dropdown (`#game-menu`, `index.html`) with **Edit
+  Layout** and **Exit Game**. Edit Layout (new `js/layout.js` → `LayoutEditor`) dims the
+  scene, force-shows the joystick + jump/prop/shoot buttons, and lets the player drag each
+  one anywhere via pointer events; a top toolbar (`#layout-editor`) offers Save / Cancel /
+  Reset. Positions are stored in `GAME_SETTINGS.controlLayout` as per-control `{x,y}`
+  viewport percentages (persisted with the rest of the settings) and restored at startup
+  via `LayoutEditor.apply()` (`js/app.js`). A new `isEditingLayout` global (`js/globals.js`)
+  makes the joystick / jump / shoot / disguise / camera-look touch handlers (`js/mechanics.js`)
+  bail out while editing. New CSS for the dropdown, toolbar, and `body.layout-editing`
+  drag affordances (`css/style.css`). Script `js/layout.js` loads after `js/ui.js`.
+  - **Default positions baked in.** New `DEFAULT_CONTROL_LAYOUT` (`js/globals.js`) places
+    joystick lower-left, JUMP upper-right, and PROP/SHOOT stacked lower-right (matching the
+    mockup). `LayoutEditor.effective()` uses it whenever `controlLayout` is empty, so these
+    are the positions shown in-game before any custom save, and the target **Reset** reverts to.
+
+- **Shoot button sized to match the disguise/prop button** (128px desktop / 100px mobile,
+  was the smaller 70px/60px `.action-btn`) so the two role-slot buttons line up — they share
+  the same default layout spot. Bullet icon scaled up to suit (`#btn-action-shoot`,
+  `css/style.css`).
+
 - **Mobile action buttons now use PNG artwork instead of emoji.** The disguise/switch button
   shows `assets/icons/refresh.png` (swap) over the prop icon (`tree.png` / `bush.png` /
   `rock.png`) with the prop name + `[F]`; JUMP uses `jump.png` and SHOOT uses `bullet.png`

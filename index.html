@@ -67,7 +67,12 @@
                 <span class="hud-div"></span>
                 <button id="btn-fullscreen" class="interactive hud-icon-btn fs-toggle" title="Fullscreen">⛶</button>
                 <span class="hud-div"></span>
-                <button id="btn-leave" class="interactive hud-icon-btn" title="Exit Match">☰</button>
+                <button id="btn-leave" class="interactive hud-icon-btn" title="Menu">☰</button>
+            </div>
+            <!-- Hamburger dropdown: opened by ☰ (btn-leave). -->
+            <div id="game-menu" class="game-menu interactive" style="display:none;">
+                <button id="btn-edit-layout" class="game-menu-item">✥ Edit Layout</button>
+                <button id="btn-exit-game" class="game-menu-item danger">⏏ Exit Game</button>
             </div>
         </div>
 
@@ -88,6 +93,16 @@
 
         <div id="mouse-hint" style="position:absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none;">
             Click screen to Lock Mouse. Press ESC to unlock.
+        </div>
+
+        <!-- Edit Layout toolbar: shown only while dragging controls around. -->
+        <div id="layout-editor" class="interactive" style="display:none;">
+            <span class="le-title">✥ EDIT LAYOUT — drag the controls, then Save</span>
+            <div class="le-actions">
+                <button id="btn-layout-reset" class="le-btn le-reset">Reset</button>
+                <button id="btn-layout-cancel" class="le-btn le-cancel">Cancel</button>
+                <button id="btn-layout-save" class="le-btn le-save">Save</button>
+            </div>
         </div>
 
         <div class="mobile-controls">
@@ -212,6 +227,7 @@
     <script src="js/prefabs.js?v=24"></script>
     <script src="js/props.js?v=24"></script>
     <script src="js/ui.js?v=24"></script>
+    <script src="js/layout.js?v=24"></script>
     <script src="js/levels/registry.js?v=24"></script>
     <!-- Level files are loaded dynamically from registry.js (LEVEL_FILES). -->
     <script src="js/level.js?v=24"></script>

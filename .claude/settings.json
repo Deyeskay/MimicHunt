@@ -35,7 +35,15 @@
       "PowerShell(claude mcp list 2>&1)",
       "PowerShell(claude mcp add chrome-devtools --scope user -- npx -y chrome-devtools-mcp@latest --browserUrl http://127.0.0.1:9222 2>&1)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:cdn.jsdelivr.net)"
+      "WebFetch(domain:cdn.jsdelivr.net)",
+      "mcp__chrome-devtools__new_page",
+      "PowerShell($chrome = @\\(\"$env:ProgramFiles\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\"${env:ProgramFiles\\(x86\\)}\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\",\"$env:LOCALAPPDATA\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\"\\) | Where-Object { Test-Path $_ } | Select-Object -First 1; if \\($chrome\\) { Start-Process $chrome -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\dindi\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\chrome-debug','http://localhost:8731/index.html'; Start-Sleep -Seconds 2; \"launched: $chrome\" } else { \"Chrome not found\" })",
+      "mcp__chrome-devtools__list_console_messages",
+      "mcp__chrome-devtools__evaluate_script",
+      "Bash(pkill -f \"http.server 8731\")",
+      "mcp__chrome-devtools__resize_page",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\dindi\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\chrome-debug','--window-size=1180,640','http://localhost:8731/index.html')",
+      "PowerShell(\"ok\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\dindi"

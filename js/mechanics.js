@@ -41,6 +41,7 @@ const Mechanics = {
         // Joystick is bound to its OWN touch identifier so a second finger (the
         // right-half camera look) can run at the same time without hijacking it.
         joyZone.addEventListener('touchstart', (e) => {
+            if (isEditingLayout) return;   // dragging the joystick in Edit Layout
             if (joyTouchId !== null) return;
             const t = e.changedTouches[0];
             joyTouchId = t.identifier;
@@ -64,16 +65,17 @@ const Mechanics = {
         joyZone.addEventListener('touchend', endJoy);
         joyZone.addEventListener('touchcancel', endJoy);
 
-        document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { e.preventDefault(); this.handleDisguiseSwap(); });
-        document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (isGrounded) this.jump(); });
+        document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); this.handleDisguiseSwap(); });
+        document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); if (isGrounded) this.jump(); });
         const shootBtn = document.getElementById('btn-action-shoot');
-        if (shootBtn) shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.fireShot(); });
+        if (shootBtn) shootBtn.addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); this.fireShot(); });
 
         // --- Mobile camera look (PUBG): drag anywhere on the RIGHT half of the
         // screen (except on UI buttons) to orbit the camera. Tracked by its own
         // touch id so it coexists with the left joystick. No visible UI. ---
         const lookSens = () => GAME_SETTINGS.mouseSensitivity * 1.5;
         document.addEventListener('touchstart', (e) => {
+            if (isEditingLayout) return;   // no camera-look while editing layout
             if (gameState.phase === 'LOBBY') return;
             if (lookTouchId !== null) return;
             const ts = e.changedTouches;

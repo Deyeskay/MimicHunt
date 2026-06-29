@@ -93,6 +93,15 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
 - **Buttons** (`#action-pad`, bottom-right, all `.interactive`): JUMP always; PROP(F)
   for hiders, SHOOT for seekers (toggled by role in `UI.updateHUD`). `touchstart` →
   `jump`/`handleDisguiseSwap`/`fireShot`.
+- **Edit Layout** (`js/layout.js`, `LayoutEditor`): hamburger ☰ → `#game-menu` →
+  "Edit Layout" lets the player drag the joystick + jump/prop/shoot anywhere (pointer
+  events), Save/Cancel/Reset via `#layout-editor`. Positions persist in
+  `GAME_SETTINGS.controlLayout` as `{x,y}` viewport % (centre), re-applied at startup.
+  When `controlLayout` is empty, `LayoutEditor.effective()` falls back to
+  `DEFAULT_CONTROL_LAYOUT` (`js/globals.js`) — joystick lower-left, JUMP upper-right,
+  PROP/SHOOT stacked lower-right; this is also what **Reset** restores.
+  The `isEditingLayout` global gates all the touch handlers above so dragging a control
+  doesn't also move/jump/shoot.
 
 ## Movement, collision, climbing (`handleLocalMovement`)
 - Speed `moveSpeed = 0.15`/tick (~9 u/s; was 0.3). World clamp ±100.

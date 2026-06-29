@@ -14,8 +14,28 @@ let GAME_SETTINGS = {
     graphicsQuality: 'medium',   // 'low' | 'medium' | 'high' (see Level.setGraphicsQuality)
     invertY: false,
     showMobileControls: true,
-    playerName: ''
+    playerName: '',
+    // PUBG-style custom control layout: per-control { x, y } as % of the
+    // viewport (centre of the element). Empty = use DEFAULT_CONTROL_LAYOUT.
+    // Edited via the Edit Layout mode (js/layout.js); see LayoutEditor.
+    controlLayout: {}
 };
+
+// Default on-screen positions for the touch controls (centre of each element as
+// % of the viewport). Applied when the player hasn't saved a custom layout, and
+// the target that "Reset" reverts to. shoot is stacked on prop (only one shows
+// per role). Tuned to match the shipped mockup placement.
+const DEFAULT_CONTROL_LAYOUT = {
+    joystick: { x: 10.8, y: 73 },
+    jump:     { x: 93.5, y: 65 },
+    prop:     { x: 87,   y: 84 },
+    shoot:    { x: 87,   y: 84 }
+};
+
+// True only while the Edit Layout overlay is open — movement/action touch
+// handlers (js/mechanics.js) bail out so dragging a button doesn't also
+// jump/shoot/move.
+let isEditingLayout = false;
 
 // Local player's chosen display name (entered on the menu).
 let myName = '';

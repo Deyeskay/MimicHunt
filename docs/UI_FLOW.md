@@ -47,7 +47,8 @@ Top header (`.hud-header`, one nowrap row). Left = `.hud-card` pills; right =
   (or `RELOAD`).
 - Right cluster (icon-only, premium): **player count** (`👥 N`, `.hud-stat`
   `#player-count-card`) │ **fullscreen** (`#btn-fullscreen .hud-icon-btn .fs-toggle`)
-  │ **menu/exit** (`#btn-leave .hud-icon-btn`, hamburger ☰ → `UI.showConfirm` exit).
+  │ **menu** (`#btn-leave .hud-icon-btn`, hamburger ☰ → toggles the `#game-menu`
+  dropdown: **Edit Layout** opens `LayoutEditor` / **Exit Game** → `UI.showConfirm` exit).
   Note: fullscreen toggle now targets `.fs-toggle` (not `.fs-btn`) so other
   `.fs-btn`-styled icons (e.g. the menu settings gear) aren't hijacked.
 

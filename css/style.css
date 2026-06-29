@@ -500,6 +500,9 @@ button.leave {
 /* Generic circular action button (jump / shoot) holding a PNG icon. */
 .action-btn.icon-btn { display: flex; align-items: center; justify-content: center; padding: 0; }
 .action-btn.icon-btn .btn-icon-img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55)); }
+/* Shoot button matches the disguise/prop button size (they share the same role slot). */
+#btn-action-shoot { width: 128px; height: 128px; }
+#btn-action-shoot .btn-icon-img { width: 70px; height: 70px; }
 .disguise-btn .db-label { font-size: 0.82rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-green); }
 .disguise-btn .db-key   { font-size: 0.7rem; opacity: 0.7; margin-top: -1px; }
 /* Reset (currently disguised) → blue ring. */
@@ -519,6 +522,71 @@ button.leave {
 }
 
 @media (pointer: coarse) { .mobile-controls { display: flex; } }
+
+/* ============================================================= */
+/* Hamburger dropdown (Edit Layout / Exit Game)                   */
+/* ============================================================= */
+.game-menu {
+    position: fixed; top: 56px; right: 10px; z-index: 130;
+    display: flex; flex-direction: column; gap: 4px; padding: 6px;
+    background: rgba(14, 20, 18, 0.96); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px; box-shadow: 0 8px 28px rgba(0,0,0,0.55);
+    min-width: 168px;
+}
+.game-menu-item {
+    display: flex; align-items: center; gap: 8px;
+    background: transparent; border: none; color: #fff;
+    font-family: "Fredoka", system-ui, sans-serif; font-size: 0.95rem; font-weight: 600;
+    text-align: left; padding: 10px 12px; border-radius: 8px; cursor: pointer;
+}
+.game-menu-item:hover { background: rgba(255,255,255,0.10); }
+.game-menu-item.danger { color: #ff6b78; }
+.game-menu-item.danger:hover { background: rgba(255,71,87,0.16); }
+
+/* ============================================================= */
+/* Edit Layout mode: drag controls, toolbar, dim backdrop        */
+/* ============================================================= */
+#layout-editor {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 140;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center;
+    background: rgba(14, 20, 18, 0.97); border: 1px solid var(--accent-green);
+    box-shadow: 0 0 22px rgba(46,213,115,0.4); border-radius: 14px;
+    padding: 10px 16px; max-width: 94vw;
+}
+#layout-editor .le-title {
+    font-family: "Fredoka", system-ui, sans-serif; font-weight: 700; font-size: 0.9rem;
+    letter-spacing: 0.5px; color: var(--accent-green);
+}
+#layout-editor .le-actions { display: flex; gap: 8px; }
+.le-btn {
+    border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer;
+    font-family: "Fredoka", system-ui, sans-serif; font-weight: 700; font-size: 0.85rem; color: #fff;
+}
+.le-btn.le-save   { background: var(--accent-green); color: #08120c; }
+.le-btn.le-cancel { background: rgba(255,255,255,0.14); }
+.le-btn.le-reset  { background: rgba(255,71,87,0.22); color: #ff8a94; }
+.le-btn:active { transform: scale(0.96); }
+
+/* While editing: dim the scene and force every control on-screen so it can be placed. */
+body.layout-editing #ui-layer::before {
+    content: ''; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 40; pointer-events: none;
+}
+body.layout-editing .mobile-controls {
+    display: flex !important; visibility: visible !important; pointer-events: auto !important;
+}
+body.layout-editing #btn-action-shoot,
+body.layout-editing #btn-action-disguise { display: flex !important; }
+body.layout-editing .action-btn:disabled,
+body.layout-editing .disguise-btn:disabled { opacity: 1 !important; filter: none !important; }
+body.layout-editing #joystick-zone,
+body.layout-editing #btn-action-jump,
+body.layout-editing #btn-action-disguise,
+body.layout-editing #btn-action-shoot {
+    z-index: 60; cursor: grab; touch-action: none;
+    outline: 2px dashed rgba(255,255,255,0.85); outline-offset: 3px;
+}
+.le-dragging { cursor: grabbing !important; opacity: 0.9; z-index: 70 !important; }
 
 /* ============================================================= */
 /* Landscape-only: cover the screen with a rotate prompt in portrait. */
@@ -557,6 +625,8 @@ button.leave {
     #joystick-nub { width: 42px; height: 42px; top: 27px; left: 27px; }
     .action-btn { width: 60px; height: 60px; font-size: 0.72rem; }
     .action-btn.icon-btn .btn-icon-img { width: 46px; height: 46px; }
+    #btn-action-shoot { width: 100px; height: 100px; }
+    #btn-action-shoot .btn-icon-img { width: 56px; height: 56px; }
     .disguise-btn { width: 100px; height: 100px; }
     .disguise-btn .db-swap { font-size: 1.15rem; height: 21px; }
     .disguise-btn .db-icon { font-size: 1.6rem; height: 34px; }

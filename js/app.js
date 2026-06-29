@@ -9,10 +9,38 @@ function commitPlayerName() {
 
 document.getElementById('btn-host').addEventListener('click', () => { commitPlayerName(); Network.initHost(); });
 document.getElementById('btn-join').addEventListener('click', () => { commitPlayerName(); Network.initClient(); });
-document.getElementById('btn-leave').addEventListener('click', () => {
-    UI.showConfirm('Exit Match?', 'Are you sure you want to leave the match?',
+// Hamburger (☰) now opens a small dropdown (Edit Layout / Exit Game) instead of
+// leaving the match directly.
+const gameMenu = document.getElementById('game-menu');
+function toggleGameMenu(show) {
+    const open = (show === undefined) ? (gameMenu.style.display === 'none') : show;
+    gameMenu.style.display = open ? 'flex' : 'none';
+}
+document.getElementById('btn-leave').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleGameMenu();
+});
+// Click anywhere else closes the dropdown.
+document.addEventListener('click', (e) => {
+    if (gameMenu.style.display !== 'none' && !gameMenu.contains(e.target) &&
+        e.target.id !== 'btn-leave') {
+        toggleGameMenu(false);
+    }
+});
+document.getElementById('btn-edit-layout').addEventListener('click', () => {
+    toggleGameMenu(false);
+    LayoutEditor.open();
+});
+document.getElementById('btn-exit-game').addEventListener('click', () => {
+    toggleGameMenu(false);
+    UI.showConfirm('Exit Game?', 'Are you sure you want to leave the match?',
         () => Network.leaveMatch(), 'Exit');
 });
+
+// Edit Layout toolbar actions.
+document.getElementById('btn-layout-save').addEventListener('click', () => LayoutEditor.save());
+document.getElementById('btn-layout-cancel').addEventListener('click', () => LayoutEditor.cancel());
+document.getElementById('btn-layout-reset').addEventListener('click', () => LayoutEditor.reset());
 document.getElementById('btn-lobby-leave').addEventListener('click', () => Network.leaveMatch());
 
 document.getElementById('btn-settings').addEventListener('click', () => {
@@ -231,6 +259,8 @@ const nameInput = document.getElementById('input-player-name');
 if (nameInput) nameInput.value = myName;
 
 refreshMobileControls();
+// Restore any saved custom control layout (PUBG-style Edit Layout positions).
+LayoutEditor.apply();
 
 function refreshMobileControls()
 {
