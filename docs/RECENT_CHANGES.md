@@ -5,6 +5,24 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **HUD/menu visual pass (premium look).** Four UI changes (markup `index.html`, styles
+  `css/style.css`, logic `js/ui.js`/`js/app.js`):
+  - *In-game top bar* — the right side is now an icon cluster (`.hud-right`): `👥 N`,
+    thin divider, fullscreen icon, divider, **hamburger ☰** that replaces the old
+    "Exit Match" text button (same `UI.showConfirm` exit action; `#btn-leave` id kept).
+    No pills on the right; role pill border is tinted by role.
+  - *Disguise/switch button* — redesigned as a circular `.disguise-btn` with a glowing
+    ring + stacked 🔄 / prop-emoji / label / `[F]`. Ring colour = state (green ready,
+    blue RESET when disguised, red locked during cooldown, grey when not near a prop).
+    Prop emoji via new `UI.propIcon`.
+  - *Menu settings* — a chunky gear **corner button on the menu card** (`#btn-settings
+    .gear-corner`), mirroring the settings card's corner button; fullscreen stays a
+    floating top-right icon. Fullscreen toggle keys off `.fs-toggle` (not `.fs-btn`) so the
+    gear isn't turned into a fullscreen button. In the settings screen the corner ✕ is now
+    a **← back** button (`#btn-back-menu`) and the redundant bottom BACK button is removed
+    (action row = SAVE only).
+  - *Settings hunting time* — slider is now **minutes (5–20)**; `huntingTime` still stored
+    in seconds (×60 save / ÷60 load + clamp, normalising legacy saves). Default 300s.
 - **Client HUD now refreshes at 60 FPS (bug fix).** On a client the HUD was only updated
   when a snapshot arrived (20 Hz), so the disguise button's near/away state — and the new
   cooldown countdown — lagged behind the client's 60 FPS predicted movement. Added

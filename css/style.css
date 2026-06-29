@@ -260,6 +260,17 @@ button.leave {
     box-shadow: 0 3px 8px rgba(0,0,0,0.4); backdrop-filter: blur(2px); }
 .hud-fs-btn { width: 38px; height: 38px; }
 
+/* Settings gear: chunky corner button on the menu card (mirrors .close-x placement). */
+.gear-corner {
+    position: absolute; top: -14px; right: -10px; width: 42px; height: 42px; padding: 0;
+    border-radius: 12px; font-size: 1.3rem; line-height: 1; color: var(--cream); cursor: pointer;
+    background: linear-gradient(180deg, #3a4150, #232834);
+    border: 3px solid #11141b;
+    box-shadow: 0 4px 0 #11141b, 0 6px 10px rgba(0,0,0,0.35), inset 0 2px 0 rgba(255,255,255,0.18);
+}
+.gear-corner:active { transform: translateY(3px);
+    box-shadow: 0 1px 0 #11141b, 0 3px 6px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.15); }
+
 /* Red X close button (settings) */
 .close-x {
     position: absolute; top: -14px; right: -10px; width: 42px; height: 42px; padding: 0;
@@ -319,12 +330,28 @@ button.leave {
     box-shadow: 0 0 0 2px rgba(30,144,255,0.35);
 }
 
-.hud-header { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.hud-header { display: flex; justify-content: flex-start; align-items: center; width: 100%; }
 .hud-card {
     background: rgba(26, 26, 36, 0.85); padding: 10px 16px; border-radius: 30px;
     font-weight: bold; border: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px;
     align-items: center; white-space: nowrap;
 }
+/* Premium right-side cluster: icon + count, fullscreen, menu — no pills, thin dividers. */
+.hud-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.hud-stat {
+    display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff;
+    font-size: 1.05rem; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+.hud-stat .hud-ic { font-size: 1.15rem; opacity: 0.95; }
+.hud-div { width: 1px; height: 22px; background: rgba(255,255,255,0.25); }
+.hud-icon-btn {
+    width: 40px; height: 40px; padding: 0; border: none; background: transparent;
+    color: #fff; font-size: 1.35rem; line-height: 1; cursor: pointer; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6); transition: background .15s ease, transform .08s ease;
+}
+.hud-icon-btn:hover { background: rgba(255,255,255,0.12); }
+.hud-icon-btn:active { transform: scale(0.92); }
 /* The header is a single non-wrapping row; items shrink rather than stack. */
 .hud-header { gap: 8px; flex-wrap: nowrap; }
 #timer-display { font-size: 1.3rem; color: #ffa502; font-family: monospace; }
@@ -444,6 +471,32 @@ button.leave {
 }
 .action-btn:disabled { opacity: 0.4; filter: grayscale(0.6); cursor: default; }
 
+/* Premium circular disguise/switch button (mockup look): glowing ring, stacked
+   swap-icon / prop-icon / label / key hint. State colour via .db-* classes. */
+.disguise-btn {
+    width: 128px; height: 128px; border-radius: 50%; padding: 0;
+    background: radial-gradient(circle at 50% 38%, rgba(22,30,26,0.94), rgba(8,12,10,0.96));
+    border: 3px solid var(--accent-green);
+    box-shadow: 0 0 20px rgba(46,213,115,0.55), inset 0 0 16px rgba(46,213,115,0.22);
+    color: #fff; font-family: "Fredoka", system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+}
+.disguise-btn:active:not(:disabled) { transform: scale(0.95); }
+.disguise-btn .db-swap  { font-size: 1.45rem; line-height: 1; }
+.disguise-btn .db-icon  { font-size: 2.05rem; line-height: 1; margin-top: -1px; }
+.disguise-btn .db-label { font-size: 0.82rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-green); }
+.disguise-btn .db-key   { font-size: 0.7rem; opacity: 0.7; margin-top: -1px; }
+/* Reset (currently disguised) → blue ring. */
+.disguise-btn.db-reset { border-color: var(--accent-blue); box-shadow: 0 0 20px rgba(30,144,255,0.5), inset 0 0 16px rgba(30,144,255,0.2); }
+.disguise-btn.db-reset .db-label { color: var(--accent-blue); }
+/* Locked (post-hit cooldown) → red ring, stays vivid even though disabled. */
+.disguise-btn.db-locked { border-color: var(--accent-red); box-shadow: 0 0 20px rgba(255,71,87,0.5), inset 0 0 16px rgba(255,71,87,0.2); }
+.disguise-btn.db-locked .db-label { color: var(--accent-red); }
+.disguise-btn.db-locked:disabled { opacity: 1; filter: none; cursor: default; }
+/* Not near a prop → faded/greyed. */
+.disguise-btn:disabled { opacity: 0.45; filter: grayscale(0.55); border-color: rgba(255,255,255,0.3); box-shadow: none; }
+
 .hide-mobile-controls .mobile-controls {
     display: none !important;
     visibility: hidden !important;
@@ -488,6 +541,11 @@ button.leave {
     #joystick-zone { width: 96px; height: 96px; }
     #joystick-nub { width: 42px; height: 42px; top: 27px; left: 27px; }
     .action-btn { width: 60px; height: 60px; font-size: 0.72rem; }
+    .disguise-btn { width: 100px; height: 100px; }
+    .disguise-btn .db-swap { font-size: 1.15rem; }
+    .disguise-btn .db-icon { font-size: 1.6rem; }
+    .disguise-btn .db-label { font-size: 0.68rem; }
+    .disguise-btn .db-key { font-size: 0.6rem; }
     .mobile-controls { padding-bottom: 10px; }
 }
 

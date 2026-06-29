@@ -28,7 +28,8 @@ document.getElementById('btn-back-menu').addEventListener('click', () => {
 document.getElementById('btn-save-settings').addEventListener('click', () => {
 
     GAME_SETTINGS.hidingTime = parseInt(document.getElementById('setting-hide-time').value);
-    GAME_SETTINGS.huntingTime = parseInt(document.getElementById('setting-hunt-time').value);
+    // Hunting-time slider is in MINUTES (5–20); store huntingTime in seconds.
+    GAME_SETTINGS.huntingTime = parseInt(document.getElementById('setting-hunt-time').value) * 60;
     GAME_SETTINGS.mouseSensitivity = parseFloat(document.getElementById('setting-sensitivity').value);
     GAME_SETTINGS.cameraFov = parseInt(document.getElementById('setting-fov').value);
     GAME_SETTINGS.invertY = document.getElementById('setting-invert-y').checked;
@@ -141,12 +142,14 @@ function toggleFullscreen() { isFullscreen() ? exitFullscreen() : enterFullscree
 
 function syncFullscreenButtons() {
     const fs = isFullscreen();
-    document.querySelectorAll('.fs-btn').forEach(b => {
+    // Only the fullscreen-toggle buttons (.fs-toggle) — NOT other .fs-btn-styled
+    // icons like the settings gear, which must keep their own glyph/action.
+    document.querySelectorAll('.fs-toggle').forEach(b => {
         b.innerText = fs ? '🗗' : '⛶';
         b.title = fs ? 'Exit Fullscreen' : 'Fullscreen';
     });
 }
-document.querySelectorAll('.fs-btn').forEach(b => b.addEventListener('click', toggleFullscreen));
+document.querySelectorAll('.fs-toggle').forEach(b => b.addEventListener('click', toggleFullscreen));
 document.addEventListener('fullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
 document.addEventListener('webkitfullscreenchange', () => { syncFullscreenButtons(); Level.resize(); });
 syncFullscreenButtons();
@@ -203,7 +206,11 @@ if(savedSettings)
     // keep their default when an older saved blob is loaded.
     GAME_SETTINGS = Object.assign({}, GAME_SETTINGS, JSON.parse(savedSettings));
     document.getElementById('setting-hide-time').value = GAME_SETTINGS.hidingTime;
-    document.getElementById('setting-hunt-time').value = GAME_SETTINGS.huntingTime;
+    // huntingTime is stored in seconds; the slider shows minutes (clamped 5–20).
+    // Normalise legacy seconds-based saves so the value and the slider agree.
+    const huntMin = Math.min(20, Math.max(5, Math.round(GAME_SETTINGS.huntingTime / 60)));
+    GAME_SETTINGS.huntingTime = huntMin * 60;
+    document.getElementById('setting-hunt-time').value = huntMin;
     document.getElementById('setting-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
     document.getElementById('setting-fov').value = GAME_SETTINGS.cameraFov;
     document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY;

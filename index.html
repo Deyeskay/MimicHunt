@@ -59,12 +59,16 @@
 
     <div id="ui-layer">
         <div class="hud-header">
-            <div class="hud-card"><span id="role-badge">Spectator</span></div>
+            <div class="hud-card" id="role-card"><span id="role-badge">Spectator</span></div>
             <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
             <div class="hud-card" id="combat-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
-            <div class="hud-card" id="player-count-card" style="border-color: var(--accent-blue); margin-left:auto;">👥 <span id="player-count">1</span></div>
-            <button id="btn-fullscreen" class="interactive fs-btn hud-fs-btn" title="Fullscreen">⛶</button>
-            <button id="btn-leave" class="interactive leave">Exit Match</button>
+            <div class="hud-right">
+                <span class="hud-stat" id="player-count-card" title="Players"><span class="hud-ic">👥</span><span id="player-count">1</span></span>
+                <span class="hud-div"></span>
+                <button id="btn-fullscreen" class="interactive hud-icon-btn fs-toggle" title="Fullscreen">⛶</button>
+                <span class="hud-div"></span>
+                <button id="btn-leave" class="interactive hud-icon-btn" title="Exit Match">☰</button>
+            </div>
         </div>
 
         <div id="crosshair"></div>
@@ -90,18 +94,23 @@
             <div id="joystick-zone" class="interactive"><div id="joystick-nub"></div></div>
             <div id="action-pad" class="interactive" style="flex-direction: row; gap: 10px;">
                 <button class="action-btn" id="btn-action-jump">JUMP</button>
-                <button class="action-btn" id="btn-action-disguise" style="background: var(--accent-red); border-color: #ff6b81;">PROP (F)</button>
+                <button class="action-btn disguise-btn" id="btn-action-disguise">
+                    <span class="db-swap" id="db-swap">🔄</span>
+                    <span class="db-icon" id="db-icon">🌳</span>
+                    <span class="db-label" id="db-label">PROP</span>
+                    <span class="db-key">[F]</span>
+                </button>
                 <button class="action-btn" id="btn-action-shoot" style="background: rgba(73,182,255,0.6); border-color: var(--accent-blue); display:none;">SHOOT</button>
             </div>
         </div>
     </div>
 
     <div id="menu-screen" class="menu-screen">
-        <button id="btn-fullscreen-menu" class="fs-btn fs-float" title="Fullscreen">⛶</button>
+        <button id="btn-fullscreen-menu" class="fs-btn fs-float fs-toggle" title="Fullscreen">⛶</button>
         <div class="menu-card">
+            <button id="btn-settings" class="gear-corner" title="Settings">⚙</button>
             <h1 class="game-title"><span class="t-3d">3D</span> <span class="t-hide">HIDE&nbsp;&amp;</span> <span class="t-hunt">HUNT</span></h1>
             <p class="subtitle">MODULAR WEBRTC PROTOTYPE</p>
-            <button id="btn-settings" class="success" style="margin-bottom:15px;">⚙ SETTINGS</button>
             <div class="form-group">
                 <input type="text" id="input-player-name" placeholder="YOUR NAME" maxlength="16" style="margin-bottom:10px;">
                 <button id="btn-host" class="success">HOST NEW SESSION</button>
@@ -115,7 +124,7 @@
 
     <div id="settings-screen" class="menu-screen" style="display:none;">
         <div class="menu-card settings-card">
-            <button class="close-x" title="Close" onclick="document.getElementById('btn-back-menu').click()">✕</button>
+            <button id="btn-back-menu" class="close-x" title="Back">←</button>
             <h2 class="panel-title">SETTINGS</h2>
             <div class="form-group">
                 <div class="settings-list">
@@ -127,10 +136,10 @@
                         </div>
                     </div>
                     <div class="setting-row">
-                        <label for="setting-hunt-time"><span class="set-icon ic-hunt">🔦</span> HUNTING TIME <span class="setting-unit">sec</span></label>
+                        <label for="setting-hunt-time"><span class="set-icon ic-hunt">🔦</span> HUNTING TIME <span class="setting-unit">min</span></label>
                         <div class="setting-control">
-                            <input id="setting-hunt-time" type="range" min="30" max="300" step="10" value="90">
-                            <span id="val-hunt-time" class="setting-value">90</span>
+                            <input id="setting-hunt-time" type="range" min="5" max="20" step="1" value="5">
+                            <span id="val-hunt-time" class="setting-value">5</span>
                         </div>
                     </div>
                     <div class="setting-row">
@@ -158,7 +167,6 @@
                 </div>
                 <div class="btn-row">
                     <button id="btn-save-settings" class="success"> SAVE </button>
-                    <button id="btn-back-menu" class="secondary"> BACK </button>
                 </div>
             </div>
         </div>

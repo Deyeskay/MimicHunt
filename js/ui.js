@@ -226,6 +226,8 @@ const UI = {
         const suffix = (!isSeeker && me.isCaught) ? ' (ELIMINATED)' : '';
         document.getElementById('role-badge').innerText = `${namePrefix}${me.role.toUpperCase()}${suffix}`;
         document.getElementById('role-badge').style.color = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';
+        const roleCard = document.getElementById('role-card');
+        if (roleCard) roleCard.style.borderColor = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';
 
         let m = Math.floor(gameState.timer / 60).toString().padStart(2, '0');
         let s = (gameState.timer % 60).toString().padStart(2, '0');
@@ -304,23 +306,43 @@ const UI = {
         if (propBtn) {
             propBtn.style.display = isSeeker ? 'none' : '';
             if (!isSeeker) {
+                const swap = document.getElementById('db-swap');
+                const icon = document.getElementById('db-icon');
+                const label = document.getElementById('db-label');
+                const setBtn = (cls, sw, ic, lb, dis) => {
+                    propBtn.classList.remove('db-reset', 'db-locked');
+                    if (cls) propBtn.classList.add(cls);
+                    if (swap) swap.textContent = sw;
+                    if (icon) icon.textContent = ic;
+                    if (label) label.textContent = lb;
+                    propBtn.disabled = dis;
+                };
                 const canAct = !me.isCaught && gameState.phase !== 'LOBBY';
                 const locked = canAct && me.disguiseLockUntil && Network.now() < me.disguiseLockUntil;
                 if (canAct && Mechanics.isDisguised()) {
-                    // Disguised → offer Reset.
-                    propBtn.innerHTML = '🔄 Reset';
-                    propBtn.disabled = false;
+                    // Disguised → offer Reset (blue ring).
+                    setBtn('db-reset', '🔄', '🧍', 'RESET', false);
                 } else if (locked) {
-                    // Hit recently → disguise locked; show the countdown on the button too.
-                    propBtn.innerHTML = '🔒 ' + ((me.disguiseLockUntil - Network.now()) / 1000).toFixed(1) + 's';
-                    propBtn.disabled = true;
+                    // Hit recently → disguise locked; show the countdown (red ring).
+                    setBtn('db-locked', '🔒', '⏳', ((me.disguiseLockUntil - Network.now()) / 1000).toFixed(1) + 's', true);
                 } else {
-                    // Not disguised → enable + name the prop only when near one.
+                    // Not disguised → name + icon the prop only when near one (green ring).
                     const near = canAct ? Mechanics.findNearestDisguiseProp() : null;
-                    propBtn.innerHTML = near ? ('🔄 ' + near.model.toUpperCase()) : '🔄';
-                    propBtn.disabled = !near;
+                    setBtn(null, '🔄', near ? this.propIcon(near.model) : '❓',
+                           near ? near.model.toUpperCase() : 'PROP', !near);
                 }
             }
+        }
+    },
+
+    // Emoji for a disguisable prop type, shown on the switch button.
+    propIcon: function(model) {
+        switch (model) {
+            case 'tree': return '🌳';
+            case 'bush': return '🌿';
+            case 'rock': return '🪨';
+            case 'wall': return '🧱';
+            default:     return '📦';
         }
     }
 };

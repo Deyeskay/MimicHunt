@@ -8,7 +8,7 @@ let developer = false;
 // --- CONFIGURATION ---
 let GAME_SETTINGS = {
     hidingTime: 20,
-    huntingTime: 90,
+    huntingTime: 300,   // seconds (5 min); settings slider edits this in minutes (5–20)
     mouseSensitivity: 0.002,
     cameraFov: 60,
     invertY: false,
