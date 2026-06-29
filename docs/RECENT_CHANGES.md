@@ -5,18 +5,25 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
-- **Camera collision (Cinemachine-style).** The third-person camera no longer clips
-  through walls/props. In `Level.render` (`js/level.js`), before positioning the camera
-  a ray is cast from the head pivot toward the desired camera spot via the existing
-  `PropLevel.raycastProps` (covers all collidable props — walls, trees, rocks). If a
-  collider is closer than the boom, the boom is clamped to `hit - CAM_CLEAR` and the
-  whole offset scaled toward the pivot (camera height stays fixed; shoulder offset
-  shrinks too → it "slides" along walls as you rotate). Feel = **snap in, glide out**:
-  pull-in is instant (no clipping on fast turns), extend eases by `CAM_EXTEND`; the
-  smoothed distance persists as `Level._camDist`. Tunables `CAM_CLEAR=0.4`, `CAM_MIN=1.0`,
-  `CAM_EXTEND=0.12`. Ray is horizontal at eye height (low bushes ignored); reads only
-  static `mapProps3D`, so it won't pull toward — and reveal — disguised hiders. See
-  [CAMERA_AND_CONTROLS.md](CAMERA_AND_CONTROLS.md).
+- **Camera: vertical orbit + Cinemachine-style collision.** Two related fixes to the
+  third-person rig in `Level.render` (`js/level.js`):
+  - *Vertical orbit (framing fix).* The camera used to sit at a **fixed height** and only
+    rotate its look with pitch, so looking down made the camera stare at the ground and
+    the player slid off the top of the screen. The boom now points *opposite the look
+    direction* `(dX,dY,dZ)`, so it **orbits up/down with pitch** — looking down lifts the
+    camera above-behind and keeps the player framed; looking up lowers it. At `pitch = 0`
+    it's identical to the old over-the-shoulder view.
+  - *Collision (no clipping through walls).* Before positioning the camera, a **3D** ray
+    is cast from the head pivot along the boom via the existing `PropLevel.raycastProps`
+    (covers all collidable props — walls, trees, rocks). If a collider is closer than the
+    boom, it's clamped to `hit - CAM_CLEAR` and the whole offset scaled toward the pivot,
+    so the camera "slides" along walls/props as you rotate. Feel = **snap in, glide out**:
+    pull-in is instant (no clipping on fast turns), extend eases by `CAM_EXTEND`; smoothed
+    distance persists as `Level._camDist`. Tunables `CAM_CLEAR=0.4`, `CAM_MIN=1.0`,
+    `CAM_EXTEND=0.12`. Reads only static `mapProps3D`, so it won't pull toward — and
+    reveal — disguised hiders. Pitch range is in `js/globals.js` (`CAMERA_MAX_LOOK_UP`
+    `+70°` = look down; lower it to cap a steep top-down). See
+    [CAMERA_AND_CONTROLS.md](CAMERA_AND_CONTROLS.md).
 - **Google Analytics (GA4) added.** Standard `gtag.js` snippet in `index.html` `<head>`
   for the GA4 property **huntnhide** (Measurement ID `G-BNV1CHY5CV`, web data stream
   → `https://deyeskay.github.io/MimicHunt/`). Enhanced measurement is on (page views,

@@ -6,16 +6,26 @@ right shoulder** of the local player, so the player renders **left-of-centre** w
 lots of space ahead; the **centred crosshair = the aim/shot direction**.
 
 ```js
-const CAM_BACK = 5.0;   // distance behind (smaller → bigger character on screen)
+const CAM_BACK = 5.0;   // boom length (smaller → bigger character on screen)
 const CAM_RIGHT = 1.7;  // right-shoulder offset (player sits left-of-centre)
-const CAM_EYE = 2.6;    // camera height above the player's feet
+const CAM_EYE = 2.6;    // pivot (player head) height above the feet
 // forward (into screen): fX=-sin(yaw), fZ=-cos(yaw); right: rX=-fZ, rZ=fX
 // look dir incl. pitch: dX=fX*cos(pitch), dY=-sin(pitch), dZ=fZ*cos(pitch)
-camera.position = (p.x - fX*CAM_BACK + rX*CAM_RIGHT, groundY+CAM_EYE, p.z - fZ*CAM_BACK + rZ*CAM_RIGHT)
-camera.lookAt(camera.position + d)   // crosshair-centred aim
+// Boom ORBITS the pivot opposite the look dir, so the camera rises/lowers with pitch:
+const pivot = (p.x, groundY+CAM_EYE, p.z)
+const off   = (-dX*CAM_BACK + rX*CAM_RIGHT, -dY*CAM_BACK, -dZ*CAM_BACK + rZ*CAM_RIGHT)
+camera.position = pivot + off          // (× collision scale, see below)
+camera.lookAt(camera.position + d)     // crosshair-centred aim
 ```
-- Default downward tilt comes from `cameraPitch ≈ 0.2 rad ≈ 11°` (range
-  `[-10°, +70°]`).
+- **Vertical orbit (why looking down still frames the player):** the boom points
+  *opposite the look direction* `(dX,dY,dZ)`, so its vertical component `-dY*CAM_BACK`
+  lifts the camera **above-behind** when you look down and lowers it when you look up —
+  the player stays in frame instead of the camera staring at the ground from head height.
+  At `pitch = 0` the vertical term is 0, so it matches the old over-the-shoulder view.
+- Default downward tilt comes from `cameraPitch ≈ 0.2 rad ≈ 11°`. Pitch range is set by
+  `CAMERA_MAX_LOOK_DOWN = -10°` (look up) and `CAMERA_MAX_LOOK_UP = +70°` (look down) in
+  `js/globals.js` — note the names read backwards (`+` pitch = look **down**). Lower the
+  `+70°` if a steep top-down look is unwanted.
 - **Tuning** (to match the user's `expected.png`): bigger `CAM_BACK` shrinks the
   character (target "fills 28–35% of height"); bigger `CAM_RIGHT` pushes the player
   further left (target "22–28% from left edge"); flip `CAM_RIGHT` sign if the player
@@ -26,14 +36,14 @@ camera.lookAt(camera.position + d)   // crosshair-centred aim
 
 ### Camera collision (Cinemachine-style decollision)
 The boom no longer passes through walls. Each frame, before positioning the camera, a
-ray is cast from the **head pivot** `(p.x, groundY+CAM_EYE, p.z)` outward along the
-desired camera offset (the normalized `offX/offZ`, which includes the shoulder) using
-the existing `PropLevel.raycastProps(...)` — the same ray-vs-collider test used for
-shots, so it covers **all collidable props** (walls, trees, rocks). If the nearest hit
-is closer than the full boom, the boom is clamped to `hit - CAM_CLEAR`, and the whole
-offset is scaled by `effectiveLen / boomLen` (pulling straight toward the pivot, so the
-camera **height stays fixed** and the shoulder offset shrinks proportionally — it slides
-along the wall as you rotate).
+**3D** ray is cast from the **head pivot** `(p.x, groundY+CAM_EYE, p.z)` along the
+normalized boom offset (`off`, which includes the shoulder *and* the pitch-driven
+vertical component) using the existing `PropLevel.raycastProps(...)` — the same
+ray-vs-collider test used for shots, so it covers **all collidable props** (walls,
+trees, rocks). If the nearest hit is closer than the full boom, the boom is clamped to
+`hit - CAM_CLEAR`, and the whole offset is scaled by `effectiveLen / boomLen` (pulling
+straight toward the pivot, so the shoulder offset and the orbit height shrink
+proportionally — it slides along the wall as you rotate).
 ```js
 const CAM_CLEAR = 0.4;   // keep camera this far in front of a wall (camera "radius")
 const CAM_MIN   = 1.0;   // never pull closer than this to the head pivot

@@ -922,17 +922,21 @@ const Level = {
             const cp = Math.cos(cameraPitch), sp = Math.sin(cameraPitch);
             const dX = fX * cp, dY = -sp, dZ = fZ * cp;
 
-            // Desired camera offset from the pivot (player's head), full boom incl. shoulder.
-            const offX = -fX * CAM_BACK + rX * CAM_RIGHT;
-            const offZ = -fZ * CAM_BACK + rZ * CAM_RIGHT;
-            const pivotY = groundY + CAM_EYE;
-            const boomLen = Math.hypot(offX, offZ);
-            const dirX = offX / boomLen, dirZ = offZ / boomLen;
+            // Desired camera offset from the pivot (player's head): a full-length boom
+            // pointing OPPOSITE the look direction (dX,dY,dZ), so the camera ORBITS up/down
+            // with pitch and the player stays framed (looking down lifts the camera above-
+            // behind rather than staring at the ground), plus the right-shoulder offset.
+            const offX = -dX * CAM_BACK + rX * CAM_RIGHT;
+            const offY = -dY * CAM_BACK;
+            const offZ = -dZ * CAM_BACK + rZ * CAM_RIGHT;
+            const pivotX = p.x, pivotY = groundY + CAM_EYE, pivotZ = p.z;
+            const boomLen = Math.hypot(offX, offY, offZ);
+            const dirX = offX / boomLen, dirY = offY / boomLen, dirZ = offZ / boomLen;
 
-            // Cast from the head outward toward the desired camera spot (horizontal ray at
-            // eye height). The nearest collider hit clamps how far the camera can sit back,
-            // so it slides along walls/props instead of clipping through them.
-            const hit = PropLevel.raycastProps(p.x, pivotY, p.z, dirX, 0, dirZ, boomLen);
+            // Cast from the head toward the desired camera spot (3D ray — follows the boom's
+            // pitch). The nearest collider hit clamps how far the camera can sit back, so it
+            // slides along walls/props instead of clipping through them.
+            const hit = PropLevel.raycastProps(pivotX, pivotY, pivotZ, dirX, dirY, dirZ, boomLen);
             const targetLen = (hit < boomLen) ? Math.max(hit - CAM_CLEAR, CAM_MIN) : boomLen;
 
             // Snap in instantly (no clipping on fast turns), glide back out smoothly.
@@ -943,9 +947,9 @@ const Level = {
 
             const scale = this._camDist / boomLen;
             camera.position.set(
-                p.x + offX * scale,
-                pivotY,
-                p.z + offZ * scale
+                pivotX + offX * scale,
+                pivotY + offY * scale,
+                pivotZ + offZ * scale
             );
             // Aim straight along the look direction so the centred crosshair = the
             // shot direction; the right offset keeps the body left-of-centre.
