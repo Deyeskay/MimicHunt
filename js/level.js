@@ -67,24 +67,27 @@ const Level = {
     // sharper grass + cloud sky; High = Medium + bloom. Applied at init and live
     // from the Settings screen.
     QUALITY: {
-        // grassTint multiplies ONLY the ground material. Low isn't colour-managed, so its
-        // grass reads dull/olive — this tint lifts it to the lush look the sRGB/ACES tiers
-        // get for free, without touching walls/props/anything else. Tune here if needed.
+        // grassTint multiplies ONLY the ground material. Low isn't colour-managed, so the
+        // raw grass texture (#2f7d32) reads too bright/lurid — this tint darkens it toward
+        // the bush's natural GLB green, without touching walls/props/anything else. Tune here.
+        // grassTint multiplies ONLY the ground material; foliageTint multiplies ONLY the
+        // tree/bush materials (templates + instances, so disguises stay colour-matched).
+        // Both are tunable [r,g,b] knobs and touch nothing else.
         low:    { pixelRatio: 1, srgb: false, toneMap: false, aniso: false, bloom: false, sky: 'flat',
                   ambient: 0.9,  hemi: 0.6,  hemiGround: 0x4a6a3a, dir: 1.2, dirColor: 0xffffff,
                   env: false, envIntensity: 0, exposure: 1.0, fogFar: 100, shadowRadius: 1,
-                  grassTint: [1.25, 1.45, 1.0] },
+                  grassTint: [0.35, 0.4, 0.3], foliageTint: [1, 1, 1] },
         medium: { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: false, sky: 'dome',
                   ambient: 0.30, hemi: 0.85, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xfff3e0,
                   env: false, envIntensity: 0, exposure: 1.0, fogFar: 100, shadowRadius: 1,
-                  grassTint: [1, 1, 1] },
+                  grassTint: [0.35, 0.4, 0.3], foliageTint: [0.3, 0.35, 0.25] },
         // High adds image-based lighting (env map → soft sky-lit props/characters), softer
         // contact shadows, crisper fog and a more visible bloom. Exposure + fill are pulled
         // down a touch so it isn't washed out (sun kept high so shine/bloom stay).
         high:   { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: true,  sky: 'dome',
                   ambient: 0.22, hemi: 0.70, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xffefd0,
                   env: true,  envIntensity: 0.65, exposure: 0.85, fogFar: 180, shadowRadius: 4,
-                  grassTint: [1, 1, 1],
+                  grassTint: [0.45, 0.5, 0.4], foliageTint: [0.3, 0.35, 0.25],
                   bloomStrength: 0.55, bloomRadius: 0.4, bloomThreshold: 0.75 },
     },
 
@@ -106,12 +109,16 @@ const Level = {
         // Crisper distance on High (push the fog back); keep depth haze on Low/Medium.
         if (scene.fog) { scene.fog.near = 20; scene.fog.far = p.fogFar; }
 
-        // Grass-only colour lift (affects nothing else). Low gets boosted to match the
-        // lush look the colour-managed tiers produce; Medium/High stay [1,1,1].
+        // Grass-only colour (affects nothing else). Low gets darkened toward the bush
+        // green so ground and foliage read alike; Medium/High stay [1,1,1].
         if (this._groundMat && p.grassTint) {
             this._groundMat.color.setRGB(p.grassTint[0], p.grassTint[1], p.grassTint[2]);
             this._groundMat.needsUpdate = true;
         }
+
+        // Foliage-only colour (tree/bush): counters tone-mapping desaturation so the
+        // greens stay rich. Tints shared templates so disguised hiders match.
+        this.applyFoliageTint(p.foliageTint);
 
         // Image-based lighting (High): a sky-derived environment makes the GLB
         // props/characters (MeshStandard) read soft and lit instead of flat.
@@ -163,6 +170,34 @@ const Level = {
             this._skydome.material.map.needsUpdate = true;
             this._skydome.material.needsUpdate = true;
         }
+    },
+
+    // Per-tier foliage colour (tree/bush only). Tone mapping desaturates the GLB
+    // greens; this multiplies them back. Applied to the shared templates (so future
+    // clones AND disguised hiders match) and to already-spawned instances. Always
+    // recomputed from a stored base colour so repeated calls can't compound.
+    applyFoliageTint: function(tint) {
+        const t = tint || [1, 1, 1];
+        const apply = (root) => {
+            if (!root) return;
+            root.traverse(o => {
+                if (!o.isMesh || !o.material) return;
+                const mats = Array.isArray(o.material) ? o.material : [o.material];
+                mats.forEach(m => {
+                    if (!m.color) return;
+                    if (!m.userData) m.userData = {};
+                    if (!m.userData._foliageBase) m.userData._foliageBase = m.color.clone();
+                    const b = m.userData._foliageBase;
+                    m.color.setRGB(b.r * t[0], b.g * t[1], b.b * t[2]);
+                });
+            });
+        };
+        if (typeof modelLibrary !== 'undefined' && modelLibrary)
+            ['tree', 'bush'].forEach(k => apply(modelLibrary[k]));
+        (this.levelMeshes || []).forEach(mesh => {
+            const pd = mesh.userData && mesh.userData.propData;
+            if (pd && (pd.model === 'tree' || pd.model === 'bush')) apply(mesh);
+        });
     },
 
     // Inverted sphere with the cloud image; sits beyond the action, ignores fog,
@@ -570,8 +605,10 @@ const Level = {
         const ringColor = p.isCaught ? 0x333333 : (p.role === "Seeker" ? 0xff4757 : 0x2ed573);
         const ring = new THREE.Mesh(
             new THREE.RingGeometry(0.7, 1.0, 24),
+            // toneMapped:false keeps the saturated role colours vivid — ACES (Medium/High)
+            // would otherwise wash the bright red/green toward white. No-op on Low.
             new THREE.MeshBasicMaterial({ color: ringColor, side: THREE.DoubleSide,
-                transparent: true, opacity: 0.85 })
+                transparent: true, opacity: 0.85, toneMapped: false })
         );
         ring.rotation.x = -Math.PI / 2;
         ring.position.y = 0.02;

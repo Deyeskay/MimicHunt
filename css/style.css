@@ -493,8 +493,13 @@ button.leave {
     transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
 }
 .disguise-btn:active:not(:disabled) { transform: scale(0.95); }
-.disguise-btn .db-swap  { font-size: 1.45rem; line-height: 1; }
-.disguise-btn .db-icon  { font-size: 2.05rem; line-height: 1; margin-top: -1px; }
+.disguise-btn .db-swap  { font-size: 1.45rem; line-height: 1; display: flex; align-items: center; justify-content: center; height: 26px; }
+.disguise-btn .db-icon  { font-size: 2.05rem; line-height: 1; margin-top: -1px; display: flex; align-items: center; justify-content: center; height: 44px; }
+.disguise-btn .db-swap .db-img { width: 26px; height: 26px; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.disguise-btn .db-icon .db-img { width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55)); }
+/* Generic circular action button (jump / shoot) holding a PNG icon. */
+.action-btn.icon-btn { display: flex; align-items: center; justify-content: center; padding: 0; }
+.action-btn.icon-btn .btn-icon-img { width: 56px; height: 56px; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.55)); }
 .disguise-btn .db-label { font-size: 0.82rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--accent-green); }
 .disguise-btn .db-key   { font-size: 0.7rem; opacity: 0.7; margin-top: -1px; }
 /* Reset (currently disguised) → blue ring. */
@@ -551,9 +556,12 @@ button.leave {
     #joystick-zone { width: 96px; height: 96px; }
     #joystick-nub { width: 42px; height: 42px; top: 27px; left: 27px; }
     .action-btn { width: 60px; height: 60px; font-size: 0.72rem; }
+    .action-btn.icon-btn .btn-icon-img { width: 46px; height: 46px; }
     .disguise-btn { width: 100px; height: 100px; }
-    .disguise-btn .db-swap { font-size: 1.15rem; }
-    .disguise-btn .db-icon { font-size: 1.6rem; }
+    .disguise-btn .db-swap { font-size: 1.15rem; height: 21px; }
+    .disguise-btn .db-icon { font-size: 1.6rem; height: 34px; }
+    .disguise-btn .db-swap .db-img { width: 21px; height: 21px; }
+    .disguise-btn .db-icon .db-img { width: 34px; height: 34px; }
     .disguise-btn .db-label { font-size: 0.68rem; }
     .disguise-btn .db-key { font-size: 0.6rem; }
     .mobile-controls { padding-bottom: 10px; }

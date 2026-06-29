@@ -81,13 +81,29 @@ tone-map double-apply). Requires the example scripts in `index.html` (load order
 `render` branches: `this._useComposer && this._composer ? composer.render() :
 renderer.render(...)`. `resize` keeps the composer size/pixelRatio in sync.
 
-## Grass colour (per-tier `grassTint`)
-Low isn't colour-managed, so the grass texture reads dull/olive while the sRGB+ACES tiers
-get a lush grass for free. `Level.QUALITY[*].grassTint` is an `[r,g,b]` multiplier applied
-**only** to `this._groundMat` in `setGraphicsQuality` — Low uses `[1.25,1.45,1.0]` to match
-the lush look without touching walls/props/anything else; Medium/High use `[1,1,1]`. Nudge
-the Low values if the green is too strong/weak.
+## Per-tier colour knobs (touch nothing else)
+Two `[r,g,b]` multipliers in `Level.QUALITY`, applied in `setGraphicsQuality`:
+- **`grassTint`** → `this._groundMat` only. Low isn't colour-managed so the raw grass
+  texture reads too bright/lurid; Low uses `[0.75,0.85,0.6]` to darken it toward the bush's
+  natural GLB green (without affecting walls/props). Medium/High `[1,1,1]` (already balanced).
+- **`foliageTint`** → tree/bush materials only, via `applyFoliageTint`. Tone mapping
+  desaturates the GLB greens on Medium/High, so they get a deepening tint (e.g. medium
+  `[0.78,1.08,0.66]`). It tints the **shared templates** (so future clones *and disguised
+  hiders* stay colour-matched — avoids giving a disguised hider away) and existing instances,
+  always recomputed from a stored base colour so it can't compound.
+
+## Walls bypass tone mapping (vivid rainbow stripes)
+Wall materials set `toneMapped = false` in `PropLevel.createWallMesh` (`js/props.js`). ACES
+Filmic (Medium/High) desaturates bright saturated primaries toward white, which washed out the
+rainbow `wall.png`. Opting walls out keeps them raw/vivid like Low on every tier; it's
+per-material so grass/props/characters still tone-map. No-op on Low (no tone mapping there).
+
+## Exposure / fill (avoiding "washed out")
+`exposure` (→ `renderer.toneMappingExposure`) and `envIntensity` (→ `material.envMapIntensity`)
+are per-tier. High uses `exposure 0.85` + trimmed ambient/hemi + `envIntensity 0.65` so the
+image isn't blown out, while keeping the sun strong (so shine/bloom remain).
 
 ## Tuning knobs
-Light intensities/colours and per-tier flags live in `Level.QUALITY`. Bloom params in
-`buildComposer`. Grass `repeat` in `loadGroundImage`; grass colour via per-tier `grassTint`.
+Light intensities/colours and all per-tier flags live in `Level.QUALITY`. Bloom params in
+`buildComposer`. Grass `repeat` in `loadGroundImage`; grass colour via `grassTint`; tree/bush
+colour via `foliageTint`; overall brightness via `exposure`/`envIntensity`.

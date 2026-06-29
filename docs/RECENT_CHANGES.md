@@ -5,6 +5,38 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-29
 
+- **Mobile action buttons now use PNG artwork instead of emoji.** The disguise/switch button
+  shows `assets/icons/refresh.png` (swap) over the prop icon (`tree.png` / `bush.png` /
+  `rock.png`) with the prop name + `[F]`; JUMP uses `jump.png` and SHOOT uses `bullet.png`
+  (`index.html`). `UI.propIcon()` (`js/ui.js`) now returns icon paths, and a new `setIcon()`
+  helper in `updateActionButtons` renders a `.png` value as an `<img class="db-img">` while
+  falling back to emoji for states with no artwork (locked 🔒/⏳, reset 🧍, no-prop ❓). New
+  CSS sizes `.db-img` and `.action-btn.icon-btn .btn-icon-img` for desktop and mobile
+  (`css/style.css`).
+
+- **Lobby title + status restyled.** Lobby `ROOM CODE:` label is now yellow with the code in
+  larger bold white, via a new `UI.setLobbyCode(code)` helper (`js/ui.js`) used by all five
+  call sites in `js/network.js` (was duplicated `lobby-title.innerText`). The connect
+  `status-msg` (`index.html`) changed from blue to white.
+
+- **Foot rings stay vivid on Medium/High.** Same ACES-desaturation issue as the walls: the
+  red Seeker / green Hider foot rings (`MeshBasicMaterial` in `spawnPlayer`, `js/level.js`)
+  washed toward white on the colour-managed tiers. Added `toneMapped: false` to the ring
+  material so the role colours read bright on every tier. No-op on Low.
+
+- **Walls stay vivid on Medium/High (opt out of tone mapping).** The rainbow wall stripes
+  (`wall.png` on a Lambert material) looked washed-out on the colour-managed tiers because
+  ACES Filmic tone mapping rolls bright saturated primaries toward white. Set
+  `mat.toneMapped = false` in `createWallMesh` (`js/props.js`) so wall materials bypass ACES
+  and render raw/vivid like Low on every tier. Per-material — grass/props/characters still
+  tone-map normally. No-op on Low. See [RENDERING.md](RENDERING.md).
+
+- **Low-tier grass darkened to match foliage.** Low's `grassTint` was `[1.05,1.25,0.85]`,
+  a green boost that made the ground read bright/lurid lime vs the bushes' natural green.
+  Lowered to `[0.75,0.85,0.6]` in `js/level.js` (`Level.QUALITY.low`) so the ground reads as
+  a darker forest green closer to the GLB bush/tree foliage. Ground-only change (walls, props,
+  Medium/High untouched). Tune the multiplier if it needs to go lighter/darker.
+
 - **High-tier visual polish (IBL + contact shadows + crisper fog + tuned bloom).** Follow-up to
   the graphics overhaul — High looked flat. In `js/level.js`:
   - *Image-based lighting* (`buildEnvironment`): `sky.png` → PMREM → `scene.environment` on

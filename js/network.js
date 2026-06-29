@@ -421,7 +421,7 @@ const Network = {
             // Show lobby UI (replicating previous manual DOM handling)
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('lobby-screen').style.display = 'flex';
-            document.getElementById('lobby-title').innerText = `ROOM CODE: ${code}`;
+            UI.setLobbyCode(code);
             this.runHostLogic();
         });
 
@@ -457,7 +457,7 @@ const Network = {
                 // Show lobby UI for client
                 document.getElementById('menu-screen').style.display = 'none';
                 document.getElementById('lobby-screen').style.display = 'flex';
-                document.getElementById('lobby-title').innerText = `ROOM CODE: ${input}`;
+                UI.setLobbyCode(input);
                 this.runClientLogic();
             });
 
@@ -834,8 +834,7 @@ const Network = {
                 if (data.levelName) gameState.levelName = data.levelName;
                 if (data.roomCode) {
                     pendingRoomCode = data.roomCode;
-                    const t = document.getElementById('lobby-title');
-                    if (t) t.innerText = `ROOM CODE: ${data.roomCode}`;
+                    UI.setLobbyCode(data.roomCode);
                 }
                 // A lobbySync can arrive after a migration while we were still
                 // in-game; make sure we're actually showing the lobby.
@@ -874,8 +873,7 @@ const Network = {
                 if (data.levelName) gameState.levelName = data.levelName;
                 if (data.roomCode) {
                     pendingRoomCode = data.roomCode;
-                    const t = document.getElementById('lobby-title');
-                    if (t) t.innerText = `ROOM CODE: ${data.roomCode}`;
+                    UI.setLobbyCode(data.roomCode);
                 }
                 // Re-seed local prediction from our (preserved) record.
                 const me = gameState.players[myId];
@@ -1312,8 +1310,7 @@ const Network = {
         codePeer = cp;
         cp.on('open', () => {
             pendingRoomCode = code;
-            const t = document.getElementById('lobby-title');
-            if (t) t.innerText = `ROOM CODE: ${code}`;
+            UI.setLobbyCode(code);
             // Tell connected clients the new joinable code.
             this.broadcast({ type: 'lobbySync', players: gameState.players, roomCode: code });
         });

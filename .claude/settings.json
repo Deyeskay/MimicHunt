@@ -33,7 +33,9 @@
       "Bash(ls assets/icons)",
       "PowerShell(node --version; npm --version; \\(Get-Command npx\\).Source)",
       "PowerShell(claude mcp list 2>&1)",
-      "PowerShell(claude mcp add chrome-devtools --scope user -- npx -y chrome-devtools-mcp@latest --browserUrl http://127.0.0.1:9222 2>&1)"
+      "PowerShell(claude mcp add chrome-devtools --scope user -- npx -y chrome-devtools-mcp@latest --browserUrl http://127.0.0.1:9222 2>&1)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:cdn.jsdelivr.net)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dindi"

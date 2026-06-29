@@ -9,6 +9,11 @@ const PropLevel = {
         const mat = tex
             ? new THREE.MeshLambertMaterial({ map: tex })
             : new THREE.MeshLambertMaterial({ color: this.WALL_COLOR });
+        // Walls bypass tone mapping so their saturated rainbow stripes stay vivid on
+        // Medium/High. ACES Filmic (the colour-managed tiers) rolls bright saturated
+        // primaries toward white — great for foliage, washed-out for the rainbow walls.
+        // No-op on Low (no tone mapping there). Per-material, so nothing else changes.
+        mat.toneMapped = false;
         if (tex) (this._wallMats = this._wallMats || []).push(mat);   // for image swap
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.scale.set(4, 3, 0.3);

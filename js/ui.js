@@ -40,6 +40,15 @@ const UI = {
         document.getElementById('status-msg').innerText = msg;
     },
 
+    // Lobby title: "ROOM CODE:" in yellow, the code itself white + larger so it
+    // stands out as the thing players share. Called from every spot that knows the code.
+    setLobbyCode: function(code) {
+        const t = document.getElementById('lobby-title');
+        if (!t) return;
+        t.innerHTML = '<span style="color:#ffd54a;">ROOM CODE:</span> ' +
+            '<span style="color:#ffffff; font-size:1.35em; font-weight:800;">' + code + '</span>';
+    },
+
     // Transient bottom-center notification (player left / eliminated / disconnected).
     // Auto-dismisses; CSS handles the fade in/out.
     toast: function(text) {
@@ -309,11 +318,22 @@ const UI = {
                 const swap = document.getElementById('db-swap');
                 const icon = document.getElementById('db-icon');
                 const label = document.getElementById('db-label');
+                // Render either a PNG icon (path ending in .png) or an emoji glyph
+                // into a slot span — lets the same states fall back to emoji where
+                // no artwork exists (locked/reset).
+                const setIcon = (el, val) => {
+                    if (!el) return;
+                    if (val && val.slice(-4) === '.png') {
+                        el.innerHTML = '<img class="db-img" src="' + val + '" alt="">';
+                    } else {
+                        el.textContent = val;
+                    }
+                };
                 const setBtn = (cls, sw, ic, lb, dis) => {
                     propBtn.classList.remove('db-reset', 'db-locked');
                     if (cls) propBtn.classList.add(cls);
-                    if (swap) swap.textContent = sw;
-                    if (icon) icon.textContent = ic;
+                    setIcon(swap, sw);
+                    setIcon(icon, ic);
                     if (label) label.textContent = lb;
                     propBtn.disabled = dis;
                 };
@@ -321,26 +341,27 @@ const UI = {
                 const locked = canAct && me.disguiseLockUntil && Network.now() < me.disguiseLockUntil;
                 if (canAct && Mechanics.isDisguised()) {
                     // Disguised → offer Reset (blue ring).
-                    setBtn('db-reset', '🔄', '🧍', 'RESET', false);
+                    setBtn('db-reset', 'assets/icons/refresh.png', '🧍', 'RESET', false);
                 } else if (locked) {
                     // Hit recently → disguise locked; show the countdown (red ring).
                     setBtn('db-locked', '🔒', '⏳', ((me.disguiseLockUntil - Network.now()) / 1000).toFixed(1) + 's', true);
                 } else {
                     // Not disguised → name + icon the prop only when near one (green ring).
                     const near = canAct ? Mechanics.findNearestDisguiseProp() : null;
-                    setBtn(null, '🔄', near ? this.propIcon(near.model) : '❓',
+                    setBtn(null, 'assets/icons/refresh.png', near ? this.propIcon(near.model) : '❓',
                            near ? near.model.toUpperCase() : 'PROP', !near);
                 }
             }
         }
     },
 
-    // Emoji for a disguisable prop type, shown on the switch button.
+    // Icon for a disguisable prop type, shown on the switch button. PNG artwork
+    // where it exists; emoji fallback otherwise (setIcon picks renderer by suffix).
     propIcon: function(model) {
         switch (model) {
-            case 'tree': return '🌳';
-            case 'bush': return '🌿';
-            case 'rock': return '🪨';
+            case 'tree': return 'assets/icons/tree.png';
+            case 'bush': return 'assets/icons/bush.png';
+            case 'rock': return 'assets/icons/rock.png';
             case 'wall': return '🧱';
             default:     return '📦';
         }

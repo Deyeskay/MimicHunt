@@ -93,14 +93,14 @@
         <div class="mobile-controls">
             <div id="joystick-zone" class="interactive"><div id="joystick-nub"></div></div>
             <div id="action-pad" class="interactive" style="flex-direction: row; gap: 10px;">
-                <button class="action-btn" id="btn-action-jump">JUMP</button>
+                <button class="action-btn icon-btn" id="btn-action-jump" title="Jump"><img class="btn-icon-img" src="assets/icons/jump.png" alt="Jump"></button>
                 <button class="action-btn disguise-btn" id="btn-action-disguise">
-                    <span class="db-swap" id="db-swap">🔄</span>
-                    <span class="db-icon" id="db-icon">🌳</span>
+                    <span class="db-swap" id="db-swap"><img class="db-img" src="assets/icons/refresh.png" alt=""></span>
+                    <span class="db-icon" id="db-icon"><img class="db-img" src="assets/icons/tree.png" alt=""></span>
                     <span class="db-label" id="db-label">PROP</span>
                     <span class="db-key">[F]</span>
                 </button>
-                <button class="action-btn" id="btn-action-shoot" style="background: rgba(73,182,255,0.6); border-color: var(--accent-blue); display:none;">SHOOT</button>
+                <button class="action-btn icon-btn" id="btn-action-shoot" title="Shoot" style="background: rgba(73,182,255,0.6); border-color: var(--accent-blue); display:none;"><img class="btn-icon-img" src="assets/icons/bullet.png" alt="Shoot"></button>
             </div>
         </div>
     </div>
@@ -118,7 +118,7 @@
                 <input type="text" id="input-room-id" placeholder="4-DIGIT CODE" maxlength="4">
                 <button id="btn-join" class="secondary">JOIN ROOM</button>
             </div>
-            <div id="status-msg" style="margin-top:15px; font-size:0.85rem; color: var(--accent-blue);"></div>
+            <div id="status-msg" style="margin-top:15px; font-size:0.85rem; color: #ffffff;"></div>
         </div>
     </div>
 
