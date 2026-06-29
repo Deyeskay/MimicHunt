@@ -21,6 +21,32 @@ each round of asset changes is in parentheses where relevant.
     mockup). `LayoutEditor.effective()` uses it whenever `controlLayout` is empty, so these
     are the positions shown in-game before any custom save, and the target **Reset** reverts to.
 
+- **Role badge reads "YOU — HIDER/SEEKER".** Dropped the player-name prefix on the HUD role
+  badge (`UI.updateHUD`, `js/ui.js`) — always shows `YOU — <ROLE>` (+ `(ELIMINATED)` when
+  caught).
+
+- **Clickable player roster.** The 👥 player-count pill (`#player-count-card`, now
+  `.interactive`) opens a `#players-modal` listing each player's name (+ You/Host), role
+  chip, and ALIVE/ELIMINATED status, with a close-X (and backdrop-click to dismiss). New
+  `UI.showPlayerList()` / `UI.hidePlayerList()` (`js/ui.js`), modal markup (`index.html`,
+  reusing `.player-list`/`.player-item`/`.role-tag`), handlers in `js/app.js`.
+
+- **Disguise button polish.** Removed the `[F]` key hint (`.db-key` span) under the prop
+  icon (`index.html`). The Reset state now shows `assets/icons/face.png` instead of the 🧍
+  emoji (`UI.updateActionButtons` setBtn call, `js/ui.js`).
+
+- **Timer pill centred along the top.** The hiding/hunting timer (`#timer-card`, new id)
+  is now absolutely centred in the `.hud-header` (`position:relative` + `left:50%` translate)
+  instead of sitting just right of the role badge. The role badge stays top-left and the
+  icon cluster stays top-right. `index.html` + `css/style.css`.
+
+- **Seeker ammo/score pill moved to bottom-center.** The combat HUD (`#combat-hud`,
+  🔫 ammo · ⭐ score) left the top header and now renders as a `.bottom-center-hud` pill in
+  the same spot the hider's health bar uses — consistent per-role bottom HUD. The
+  `RELOADING…` pill (`#reload-indicator`) stacks just above it (`bottom: 74px` desktop /
+  `56px` mobile) so the two don't overlap. `index.html` + `css/style.css`; no JS change
+  (`UI.updateHUD` still toggles/fills it).
+
 - **Shoot button sized to match the disguise/prop button** (128px desktop / 100px mobile,
   was the smaller 70px/60px `.action-btn`) so the two role-slot buttons line up — they share
   the same default layout spot. Bullet icon scaled up to suit (`#btn-action-shoot`,

@@ -50,6 +50,17 @@
         </div>
     </div>
 
+    <!-- In-game player list: opened by the 👥 player-count pill. -->
+    <div id="players-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>Players</h2>
+            <div class="player-list" id="players-modal-list"></div>
+            <div class="modal-actions">
+                <button id="btn-players-close" class="secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
     <div id="blind-overlay">
         <h2>YOU ARE BLINDED</h2>
         <p style="text-align:center;">Hiders are blending into the environment.<br>Stand by...</p>
@@ -60,10 +71,9 @@
     <div id="ui-layer">
         <div class="hud-header">
             <div class="hud-card" id="role-card"><span id="role-badge">Spectator</span></div>
-            <div class="hud-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
-            <div class="hud-card" id="combat-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
+            <div class="hud-card" id="timer-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
             <div class="hud-right">
-                <span class="hud-stat" id="player-count-card" title="Players"><span class="hud-ic">👥</span><span id="player-count">1</span></span>
+                <span class="hud-stat interactive" id="player-count-card" title="Players" style="cursor:pointer;"><span class="hud-ic">👥</span><span id="player-count">1</span></span>
                 <span class="hud-div"></span>
                 <button id="btn-fullscreen" class="interactive hud-icon-btn fs-toggle" title="Fullscreen">⛶</button>
                 <span class="hud-div"></span>
@@ -86,6 +96,8 @@
 
         <!-- Bottom-center HUD: hider health bar / seeker reload indicator. -->
         <div id="health-hud" class="bottom-center-hud" style="display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
+        <!-- Seeker ammo/score pill: bottom-center, mirrors the hider health bar. -->
+        <div id="combat-hud" class="bottom-center-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
         <div id="reload-indicator" class="bottom-center-hud" style="display:none;">RELOADING…</div>
 
         <!-- Event toasts (player left / eliminated / disconnected), stacked above the bottom HUD. -->
@@ -113,7 +125,6 @@
                     <span class="db-swap" id="db-swap"><img class="db-img" src="assets/icons/refresh.png" alt=""></span>
                     <span class="db-icon" id="db-icon"><img class="db-img" src="assets/icons/tree.png" alt=""></span>
                     <span class="db-label" id="db-label">PROP</span>
-                    <span class="db-key">[F]</span>
                 </button>
                 <button class="action-btn icon-btn" id="btn-action-shoot" title="Shoot" style="background: rgba(73,182,255,0.6); border-color: var(--accent-blue); display:none;"><img class="btn-icon-img" src="assets/icons/bullet.png" alt="Shoot"></button>
             </div>

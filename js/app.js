@@ -37,6 +37,14 @@ document.getElementById('btn-exit-game').addEventListener('click', () => {
         () => Network.leaveMatch(), 'Exit');
 });
 
+// Player count pill (👥) → open the in-game player roster modal.
+document.getElementById('player-count-card').addEventListener('click', () => UI.showPlayerList());
+document.getElementById('btn-players-close').addEventListener('click', () => UI.hidePlayerList());
+// Click the dim backdrop (outside the card) to dismiss.
+document.getElementById('players-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'players-modal') UI.hidePlayerList();
+});
+
 // Edit Layout toolbar actions.
 document.getElementById('btn-layout-save').addEventListener('click', () => LayoutEditor.save());
 document.getElementById('btn-layout-cancel').addEventListener('click', () => LayoutEditor.cancel());

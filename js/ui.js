@@ -217,6 +217,48 @@ const UI = {
         }
     },
 
+    // In-game player roster, opened by the 👥 count pill. Shows each player's
+    // name, role, and alive/eliminated status. Read-only (no lobby role toggles).
+    showPlayerList: function() {
+        const list = document.getElementById('players-modal-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const ROLE_ICONS = { Hider: '🙈', Seeker: '🔦' };
+        const hostId = isHost ? myId : (connToHost && connToHost.peer);
+        const ids = Object.keys(gameState.players);
+        ids.forEach((id, index) => {
+            const p = gameState.players[id];
+            const item = document.createElement('div');
+            item.className = 'player-item';
+
+            const nameSpan = document.createElement('span');
+            let label = p.name || (id === myId ? 'You' : `Player ${index + 1}`);
+            if (id === myId) label += ' (You)';
+            if (id === hostId) label += ' (Host)';
+            nameSpan.textContent = label;
+            item.appendChild(nameSpan);
+
+            const roleSpan = document.createElement('span');
+            roleSpan.className = 'role-tag role-tag-' + (p.role === 'Seeker' ? 'seeker' : 'hider');
+            roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${p.role}`;
+            item.appendChild(roleSpan);
+
+            const statusSpan = document.createElement('span');
+            const out = (p.role !== 'Seeker' && p.isCaught);
+            statusSpan.textContent = out ? 'ELIMINATED' : 'ALIVE';
+            statusSpan.className = out ? 'status-not' : 'status-ready';
+            item.appendChild(statusSpan);
+
+            list.appendChild(item);
+        });
+        document.getElementById('players-modal').style.display = 'flex';
+    },
+
+    hidePlayerList: function() {
+        const m = document.getElementById('players-modal');
+        if (m) m.style.display = 'none';
+    },
+
     // Brief red crosshair flash when the local seeker lands a hit.
     hitMarker: function() {
         const ch = document.getElementById('crosshair');
@@ -231,9 +273,8 @@ const UI = {
         if (!me) return;
 
         const isSeeker = me.role === 'Seeker';
-        const namePrefix = me.name ? `${me.name} — ` : '';
         const suffix = (!isSeeker && me.isCaught) ? ' (ELIMINATED)' : '';
-        document.getElementById('role-badge').innerText = `${namePrefix}${me.role.toUpperCase()}${suffix}`;
+        document.getElementById('role-badge').innerText = `YOU — ${me.role.toUpperCase()}${suffix}`;
         document.getElementById('role-badge').style.color = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';
         const roleCard = document.getElementById('role-card');
         if (roleCard) roleCard.style.borderColor = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';
@@ -341,7 +382,7 @@ const UI = {
                 const locked = canAct && me.disguiseLockUntil && Network.now() < me.disguiseLockUntil;
                 if (canAct && Mechanics.isDisguised()) {
                     // Disguised → offer Reset (blue ring).
-                    setBtn('db-reset', 'assets/icons/refresh.png', '🧍', 'RESET', false);
+                    setBtn('db-reset', 'assets/icons/refresh.png', 'assets/icons/face.png', 'RESET', false);
                 } else if (locked) {
                     // Hit recently → disguise locked; show the countdown (red ring).
                     setBtn('db-locked', '🔒', '⏳', ((me.disguiseLockUntil - Network.now()) / 1000).toFixed(1) + 's', true);

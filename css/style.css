@@ -340,7 +340,9 @@ button.leave {
     box-shadow: 0 0 0 2px rgba(30,144,255,0.35);
 }
 
-.hud-header { display: flex; justify-content: flex-start; align-items: center; width: 100%; }
+.hud-header { display: flex; justify-content: flex-start; align-items: center; width: 100%; position: relative; }
+/* Timer pill is centred along the top; role badge stays left, icon cluster right. */
+#timer-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 .hud-card {
     background: rgba(26, 26, 36, 0.85); padding: 10px 16px; border-radius: 30px;
     font-weight: bold; border: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px;
@@ -365,7 +367,6 @@ button.leave {
 /* The header is a single non-wrapping row; items shrink rather than stack. */
 .hud-header { gap: 8px; flex-wrap: nowrap; }
 #timer-display { font-size: 1.3rem; color: #ffa502; font-family: monospace; }
-#combat-hud { font-family: monospace; }
 
 /* Bottom-center HUD pills: hider health bar + seeker reload indicator. */
 .bottom-center-hud {
@@ -376,7 +377,9 @@ button.leave {
     border: 1px solid rgba(255,255,255,0.08);
 }
 #health-hud { border-color: var(--accent-green); }
-#reload-indicator { color: #ffa502; letter-spacing: 2px; border-color: #ffa502; }
+#combat-hud { font-family: monospace; border-color: var(--accent-blue); }
+/* Reload pill stacks just above the seeker ammo pill (both bottom-center). */
+#reload-indicator { color: #ffa502; letter-spacing: 2px; border-color: #ffa502; bottom: 74px; }
 .hp-track {
     width: 220px; height: 16px; background: rgba(255,255,255,0.18);
     border-radius: 8px; overflow: hidden;
@@ -617,6 +620,7 @@ body.layout-editing #btn-action-shoot {
     #timer-display { font-size: 0.95rem; }
     #health-hud .hp-track { width: 150px; height: 12px; }
     .bottom-center-hud { bottom: 14px; padding: 6px 14px; font-size: 0.85rem; }
+    #reload-indicator { bottom: 56px; }
     #disguise-cd { top: 48px; padding: 5px 12px; font-size: 0.78rem; gap: 4px; }
     #disguise-cd .dcd-track { width: 130px; height: 5px; }
     button.leave { padding: 5px 11px; font-size: 0.78rem; }

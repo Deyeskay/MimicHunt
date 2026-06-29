@@ -43,7 +43,10 @@
       "Bash(pkill -f \"http.server 8731\")",
       "mcp__chrome-devtools__resize_page",
       "PowerShell(Start-Process \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\dindi\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\chrome-debug','--window-size=1180,640','http://localhost:8731/index.html')",
-      "PowerShell(\"ok\")"
+      "PowerShell(\"ok\")",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Google\\\\Chrome\\\\Application\\\\chrome.exe\" -ArgumentList '--remote-debugging-port=9222','--user-data-dir=C:\\\\Users\\\\dindi\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\chrome-debug','http://localhost:8731/index.html')",
+      "mcp__chrome-devtools__take_screenshot",
+      "Bash(pkill -f \"http.server\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\dindi"
