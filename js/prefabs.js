@@ -17,35 +17,35 @@ const PrefabLibrary = {
         "canDisguise": true,
         "colliders": [
             {
-                "shape": "cylinder",
+                "shape": "box",
                 "position": {
                     "x": 0,
-                    "y": 0.307,
-                    "z": 0
+                    "y": 0.754,
+                    "z": 0.032
                 },
                 "rotation": {
                     "y": 0
                 },
                 "scale": {
-                    "x": 0.18,
-                    "y": 0.838,
-                    "z": 0.18
+                    "x": 0.401,
+                    "y": 0.286,
+                    "z": 0.828
                 }
             },
             {
                 "shape": "box",
                 "position": {
-                    "x": 0,
-                    "y": 0.81,
-                    "z": 0
+                    "x": -0.024,
+                    "y": 0.324,
+                    "z": -0.136
                 },
                 "rotation": {
                     "y": 0
                 },
                 "scale": {
-                    "x": 0.329,
-                    "y": 0.158,
-                    "z": 1.012
+                    "x": 0.036,
+                    "y": 0.592,
+                    "z": 0.06
                 }
             }
         ]

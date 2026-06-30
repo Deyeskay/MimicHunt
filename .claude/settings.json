@@ -49,7 +49,9 @@
       "Bash(pkill -f \"http.server\")",
       "Bash(python -m http.server 8731)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8731/index.html)",
-      "Bash(node -e \"const fs=require\\('fs'\\);const h=fs.readFileSync\\('editor.html','utf8'\\);const m=[...h.matchAll\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)].map\\(x=>x[1]\\).join\\('\\\\n;\\\\n'\\);const vm=require\\('vm'\\);try{new vm.Script\\(m\\);console.log\\('editor inline JS: OK'\\)}catch\\(e\\){console.log\\('editor JS ERROR:',e.message\\)}\")"
+      "Bash(node -e \"const fs=require\\('fs'\\);const h=fs.readFileSync\\('editor.html','utf8'\\);const m=[...h.matchAll\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)].map\\(x=>x[1]\\).join\\('\\\\n;\\\\n'\\);const vm=require\\('vm'\\);try{new vm.Script\\(m\\);console.log\\('editor inline JS: OK'\\)}catch\\(e\\){console.log\\('editor JS ERROR:',e.message\\)}\")",
+      "Bash(node -e ' *)",
+      "mcp__chrome-devtools__list_pages"
     ],
     "additionalDirectories": [
       "C:\\Users\\dindi"

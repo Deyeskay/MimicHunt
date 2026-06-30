@@ -275,7 +275,7 @@ const Mechanics = {
         let r = 0;
         (pieces || []).forEach(c => {
             if (c.yMin <= 0.2) {
-                const pr = c.shape === 'box' ? Math.max(c.halfX, c.halfZ) : c.radius;
+                const pr = c.shape === 'box' ? Math.max(c.hx, c.hz) : c.radius;
                 if (pr > r) r = pr;
             }
         });
@@ -524,15 +524,19 @@ const Mechanics = {
             const c = pieces[i];
             if (!(pBottom < c.yMax && pTop > c.yMin)) continue;   // vertical band
             if (c.shape === 'box') {
-                const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-                const px = x - c.x, pz = z - c.z;
-                const lx = px * cs + pz * sn;        // box-local frame
-                const lz = -px * sn + pz * cs;
-                const dxBox = Math.abs(lx) - c.halfX;
-                const dzBox = Math.abs(lz) - c.halfZ;
-                if (dxBox <= 0 && dzBox <= 0) return true;   // centre inside box
-                const ex = Math.max(dxBox, 0), ez = Math.max(dzBox, 0);
-                if (ex * ex + ez * ez < myRadius * myRadius) return true;
+                // The player is a vertical capsule (circle of myRadius over the band).
+                // Sample its column where it overlaps the box's world-AABB band and
+                // test each point against the ORIENTED box; blocked if any sample is
+                // within myRadius. Upright boxes are band-constant, so one sample
+                // already matches the old footprint test — extra samples only matter
+                // for tilted slabs.
+                const y0 = Math.max(pBottom, c.yMin), y1 = Math.min(pTop, c.yMax);
+                const r2 = myRadius * myRadius;
+                const N = 5;
+                for (let k = 0; k <= N; k++) {
+                    const sy = y0 + (y1 - y0) * (k / N);
+                    if (PropLevel.pointBoxDist2(x, sy, z, c) < r2) return true;
+                }
                 continue;
             }
             if (Math.hypot(x - c.x, z - c.z) < (myRadius + c.radius)) return true;
@@ -545,19 +549,28 @@ const Mechanics = {
     // hiders. Mirrors the climb test footprint logic.
     _climbFloor: function(prop, baseHeight, myRadius, best) {
         if (!PropLevel.isClimbable(prop)) return best;
-        const surf = PropLevel.getPropTop(prop) + baseHeight;
-        // Only a surface the player is on/above counts (you must jump onto it).
-        if (!(localPos.y >= surf - 0.3 && surf > best)) return best;
         const pieces = PropLevel.getColliders(prop);
+        const propTop = PropLevel.getPropTop(prop) + baseHeight;
         for (let i = 0; i < pieces.length; i++) {
             const c = pieces[i];
             if (c.shape === 'box') {
-                const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-                const px = localPos.x - c.x, pz = localPos.z - c.z;
-                const lx = px * cs + pz * sn, lz = -px * sn + pz * cs;
-                if (Math.abs(lx) <= c.halfX + myRadius && Math.abs(lz) <= c.halfZ + myRadius) return surf;
+                // Support the player wherever the box would BLOCK them — the SAME rounded
+                // footprint _propBlocks uses (pointBoxDist2, corners included) — not the
+                // old cardinal-ray "plus" that missed the diagonal corners and dropped you
+                // into the box. Stand at the prop's MESH top (propTop = getPropTop),
+                // exactly like the cylinder branch below — NOT the box collider's own top.
+                // A box's collision band ceiling is its CONSERVATIVE world-AABB top c.yMax,
+                // which sits a hair ABOVE its actual ray-hit top for any micro-tilted box
+                // (rocks/trees all carry tiny tilts), so landing the player on the collider
+                // top left their feet inside the band (pBottom < c.yMax) → blocked in EVERY
+                // direction (the rock/tree "sink in and get stuck"). The mesh top clears
+                // c.yMax with margin, so you stand flush on the visual surface and stay
+                // free to move. Cylinders never hit this — they already stand at propTop.
+                if (PropLevel.pointBoxDist2(localPos.x, c.yMax, localPos.z, c) < myRadius * myRadius) {
+                    if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
+                }
             } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
-                return surf;
+                if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
             }
         }
         return best;

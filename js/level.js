@@ -353,8 +353,9 @@ const Level = {
                 const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
                 mat.depthTest = false;   // draw over geometry like editor gizmos
                 const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-                helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
-                if (c.shape === 'box') helper.rotation.y = c.rot || 0;
+                const ctr = PropLevel.colliderCenter(c);
+                helper.position.set(ctr.x, ctr.y, ctr.z);
+                helper.quaternion.copy(PropLevel.colliderQuat(c));
                 helper.renderOrder = 999;
                 scene.add(helper);
                 this.colliderHelpers.push(helper);
@@ -384,8 +385,9 @@ const Level = {
                 const mat = new THREE.LineBasicMaterial({ color: 0xffaa00 });
                 mat.depthTest = false;
                 const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-                helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
-                if (c.shape === 'box') helper.rotation.y = c.rot || 0;
+                const ctr = PropLevel.colliderCenter(c);
+                helper.position.set(ctr.x, ctr.y, ctr.z);
+                helper.quaternion.copy(PropLevel.colliderQuat(c));
                 helper.renderOrder = 999;
                 scene.add(helper);
                 this.dynColliderHelpers.push(helper);
@@ -1758,8 +1760,9 @@ const Level = {
                     dz.forEach(c => {
                         const geo = PropLevel.colliderGeometry(c);
                         const seg = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-                        seg.position.set(c.x || 0, (c.yMin + c.yMax) / 2, c.z || 0);
-                        if (c.shape === 'box') seg.rotation.y = c.rot || 0;
+                        const ctr = PropLevel.colliderCenter(c);
+                        seg.position.set(ctr.x || 0, ctr.y, ctr.z || 0);
+                        seg.quaternion.copy(PropLevel.colliderQuat(c));
                         seg.renderOrder = 999;
                         group.add(seg);
                         geo.dispose();

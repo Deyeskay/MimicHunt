@@ -416,7 +416,8 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 
     <div class="section">
         <div class="section-label">Object</div>
-        <button id="toggleCollidersBtn" class="btn" onclick="toggleEditorColliders(this)">🟡 Show Colliders</button>
+        <button id="gizmoSpaceBtn" class="btn" onclick="toggleGizmoSpace()" title="Toggle gizmo axes between the object's local orientation and world axes (Q)">🌐 Gizmo: Local</button>
+        <button id="toggleCollidersBtn" class="btn" style="margin-top:8px;" onclick="toggleEditorColliders(this)">🟡 Show Colliders</button>
     </div>
 
     <div class="section">
@@ -883,8 +884,30 @@ transformControls = new THREE.TransformControls(
 );
 
 // Default to LOCAL space so the Move/Scale gizmo follows the object's rotation
-// (drag along the rotated object's own axes, not the world X/Z). Toggle with Q.
+// (drag along the rotated object's own axes, not the world X/Z). Toggle with Q
+// or the toolbar button (both call setGizmoSpace so they stay in sync).
 transformControls.setSpace('local');
+
+// Single source of truth for the gizmo's transform space. Both the toolbar
+// button and the Q shortcut route through here so the button label always
+// reflects the live state. 'world' = drag along world X/Y/Z; 'local' = drag
+// along the selected object's own (rotated) axes.
+function setGizmoSpace(space) {
+    transformControls.setSpace(space);
+    const btn = document.getElementById('gizmoSpaceBtn');
+    if (btn) {
+        const local = space === 'local';
+        btn.innerText = local ? '🌐 Gizmo: Local' : '🌐 Gizmo: World';
+        btn.classList.toggle('btn-primary', !local);
+    }
+    // Re-orient the gizmo pivot to match the new space right away (world → identity,
+    // local → object). positionPivot() self-guards on selection; skip mid-drag so we
+    // don't fight the gizmo while it's driving the pivot.
+    if (!isTransforming) positionPivot();
+}
+function toggleGizmoSpace() {
+    setGizmoSpace(transformControls.space === 'world' ? 'local' : 'world');
+}
 
 // Uniform scaling handling (checkbox)
 const uniformCheckbox = document.getElementById('uniformScale');
@@ -932,17 +955,21 @@ function rebuildEditorColliders() {
         if (!PropLevel.hasCollision(data)) return;
 
         // Compute live world bounds, then resolve the prefab's compound collider
-        // template (passing rotation.y in degrees, as resolveColliders expects).
-        // The selected object has an AxesHelper(5) child — temporarily detach it
-        // so Box3.setFromObject doesn't include the helper's rays (which would
-        // inflate/offset the bounds and the gizmo).
+        // template. computeBounds captures the mesh's full rotation (bounds.quat),
+        // which resolveColliders uses to build ORIENTED boxes — so a prop tilted on
+        // any axis gets a collider that follows it. The selected object has an
+        // AxesHelper(5) child — temporarily detach it so Box3.setFromObject doesn't
+        // include the helper's rays (which would inflate/offset the bounds).
         const axes = obj.userData && obj.userData.axesHelper;
         if (axes) obj.remove(axes);
         const bounds = PropLevel.computeBounds(obj);
         if (axes) obj.add(axes);
 
         const def = PropLevel.getPrefab(data.model);
-        const propLike = { rotation: { y: THREE.MathUtils.radToDeg(obj.rotation.y) } };
+        const propLike = { rotation: {
+            x: THREE.MathUtils.radToDeg(obj.rotation.x),
+            y: THREE.MathUtils.radToDeg(obj.rotation.y),
+            z: THREE.MathUtils.radToDeg(obj.rotation.z) } };
         const pieces = PropLevel.resolveColliders(propLike, bounds, def);
 
         // Selected objects' colliders are drawn purple; everything else yellow.
@@ -953,8 +980,9 @@ function rebuildEditorColliders() {
             const mat = new THREE.LineBasicMaterial({ color: colliderColor });
             mat.depthTest = false;
             const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-            helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
-            if (c.shape === 'box') helper.rotation.y = c.rot || 0;
+            const ctr = PropLevel.colliderCenter(c);
+            helper.position.set(ctr.x, ctr.y, ctr.z);
+            helper.quaternion.copy(PropLevel.colliderQuat(c));
             helper.renderOrder = 999;
             scene.add(helper);
             editorColliderHelpers.push(helper);
@@ -1475,8 +1503,9 @@ function buildPrefabPreviewContent() {
         const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
         mat.depthTest = false;
         const helper = new THREE.LineSegments(new THREE.EdgesGeometry(geo), mat);
-        helper.position.set(c.x, (c.yMin + c.yMax) / 2, c.z);
-        if (c.shape === 'box') helper.rotation.y = c.rot || 0;
+        const ctr = PropLevel.colliderCenter(c);
+        helper.position.set(ctr.x, ctr.y, ctr.z);
+        helper.quaternion.copy(PropLevel.colliderQuat(c));
         helper.renderOrder = 999;
         pfScene.add(helper);
         pfGizmos.push(helper);
@@ -2373,7 +2402,13 @@ function positionPivot() {
     selectedObjects.forEach(o => c.add(o.getWorldPosition(tmp)));
     c.multiplyScalar(1 / selectedObjects.length);
     transformPivot.position.copy(c);
-    if (selectedObjects.length === 1) {
+    // The gizmo attaches to this pivot, so the pivot's orientation IS the gizmo's
+    // "local" frame. In WORLD space we want the handles world-aligned, so we keep the
+    // pivot identity. This also works around an r128 bug where the translate/rotate
+    // gizmo *visual* always renders in local orientation (TransformControlsGizmo
+    // forces space='local' for non-scale modes) even though the drag math correctly
+    // uses world axes — making the pivot identity realigns the handles to match.
+    if (selectedObjects.length === 1 && transformControls.space === 'local') {
         selectedObjects[0].getWorldQuaternion(transformPivot.quaternion);
     } else {
         transformPivot.quaternion.identity();
@@ -2695,7 +2730,7 @@ window.addEventListener(
                 break;
 
             case "q":
-                transformControls.setSpace(transformControls.space === "world" ? "local" : "world" );
+                toggleGizmoSpace();
                 break;
             case "f":
                 if(selectedObject)

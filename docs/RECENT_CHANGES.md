@@ -5,6 +5,90 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-30
 
+- **Fix: can't stand/walk on box props — sink in & get stuck on rocks/trees.** File:
+  `js/mechanics.js` (`_climbFloor`, box branch). Two regressions from the same-day OBB
+  rework, both fixed by making the box branch behave like the (working) cylinder branch:
+  1. **Corner dead zone.** The box *climb* test cast 5 downward rays in a cardinal "plus"
+     (centre + `±myRadius` on X/Z), but the box *collision* test
+     (`_propBlocks`→`pointBoxDist2`) blocks across the footprint expanded by `myRadius` in
+     EVERY direction (corners included). A diagonal approach was *blocked* yet found *no
+     floor* → you fell into the box. Replaced the 5-ray plus with the SAME footprint test
+     collision uses: `pointBoxDist2(localPos.x, c.yMax, localPos.z, c) < myRadius²`.
+  2. **Sink-in & stuck.** The climb stood the player on the box collider's own top, but a
+     box's collision band ceiling is its CONSERVATIVE world-AABB top `c.yMax`, which sits
+     a hair ABOVE the actual top for any micro-tilted box (rocks/trees all carry tiny
+     tilts). So the player's feet landed *inside* the band (`pBottom < c.yMax`) → blocked
+     in EVERY direction (stuck), while also sinking up to ~0.43 below the visual top. Now
+     the box branch stands the player at the prop's MESH top (`getPropTop`), exactly like
+     the cylinder branch — clearing `c.yMax` with margin (no stuck) and sitting flush on
+     the visual surface (no sink). Cylinders (bush) never had either bug because they
+     already use the footprint test + `getPropTop`.
+
+  Verified in-browser against the live 128-prop level: the old box code left **23/36 rocks
+  and 9/10 trees fully stuck** (blocked in all 4 directions on top) and up to 0.43 sink;
+  the fix gives **0 stuck, 0 sink** across all rocks/trees/bushes, you can still jump on
+  (only ~0.06 of free-coast needed) and walking off the edge still drops you. *Caveat:*
+  tilted slabs now stand at their flat AABB top rather than the sloped surface — the same-
+  day "stand on the tilted top" nicety is deferred until the collision band ceiling can be
+  evaluated per-point. (An earlier mis-diagnosis targeting the cylinder branch, and an
+  intermediate `rayBox`-height version, were both discarded — the bush was never broken.)
+
+- **Fix: editor gizmo handles now actually re-orient in World space.** File:
+  `editor.html` (`positionPivot`, `setGizmoSpace`). The 🌐 Gizmo Local/World toggle
+  flipped the drag *math* to world axes but the **visual handles stayed object-aligned**
+  — a real **three.js r128 bug**: `TransformControlsGizmo.updateMatrixWorld` hard-forces
+  `space='local'` for translate/rotate (its ternary is inverted vs the drag-plane math),
+  so the arrows/rings always render in the object's local frame. Worked around it in the
+  editor's own code: the gizmo attaches to `transformPivot`, whose orientation is the
+  gizmo's "local" frame, so `positionPivot()` now keeps the **pivot identity whenever
+  space is World** (was: always the object's quaternion for single selection). That makes
+  the buggy local-forced handles render world-aligned, matching the (already-correct)
+  world-space drag. `setGizmoSpace()` also re-runs `positionPivot()` on toggle so the
+  handles snap immediately (guarded against running mid-drag). Drag results are unchanged
+  — world translate/rotate apply the same delta regardless of the pivot's start rotation.
+
+- **Colliders now follow rotation on ALL three axes (full 3D oriented boxes).**
+  Files: `js/props.js`, `js/mechanics.js`, `js/level.js`, `editor.html`. Previously the
+  whole collision system was **2.5D** — every collider was a footprint extruded
+  vertically and could only spin about the **Y axis**, so a wall/platform tilted on X/Z
+  (in the editor) kept an upright, axis-aligned collider that didn't match the mesh. Box
+  colliders are now true **oriented boxes (OBBs)**: a piece carries its centre
+  `(x,y,z)`, half-extents `(hx,hy,hz)` and three unit world axes `ax/ay/az` (replacing
+  the old `halfX/halfZ/rot`), rebuilt from the prop's un-rotated AABB + rotation
+  quaternion. This flows everywhere:
+  - **`computeBounds`** records the un-rotated AABB (`bounds.local`), rotation `pivot`,
+    and `quat`; **`resolveColliders`** rebuilds each box in that frame via `_obbPiece`.
+  - **Shots + camera collision** (`raycastProps` → new shared `rayBox` ray-vs-OBB test).
+  - **Player movement**: `blockedAt`'s box branch samples the player's body column
+    against the OBB (`pointBoxDist2`); `_climbFloor` ray-casts down through the box so you
+    **stand on the actual tilted top** (a sloped surface), not the flat AABB ceiling.
+  - **All debug/editor outlines** orient via `colliderCenter` / `colliderQuat`.
+  - The editor passes the mesh's **full** rotation to the resolver.
+  Upright props (the common case) are **unchanged** — the OBB math reduces exactly to the
+  old axis-aligned tests when the axes are world axes. **Caveat:** cylinder/sphere pieces
+  still stay vertical (tilting a tree keeps its trunk cylinder upright); only box pieces
+  tilt. Needs in-browser validation (host + client) per the manual-test workflow.
+
+- **Editor: gizmo Local/World space toggle button.** File: `editor.html`. Added a
+  **🌐 Gizmo: Local/World** button (toolbar → Object) that toggles `TransformControls`
+  space, with a live label. Routes through one `setGizmoSpace()` so it stays in sync with
+  the existing **Q** shortcut.
+
+- **Fix: shots pass through horizontal walls.** File: `js/props.js`
+  (`PropLevel.raycastProps`). The box-collider branch only ran a 2D slab test in
+  the **XZ** plane and then validated the wall's vertical extent at a *single
+  point* — the spot where the ray entered the XZ footprint. That works for an
+  **upright** wall (you enter through its thin side face inside its height band)
+  but fails for a **horizontal** wall/platform (thin in Y, wide in X/Z): the ray
+  truly pierces the top/bottom face, yet the XZ-entry height lands outside the
+  thin `[yMin,yMax]` band and the hit was rejected — so bolts passed straight
+  through. Added a proper **Y slab** to the test (world-aligned, since box
+  colliders rotate only about the vertical axis), making it a full 3D box
+  intersection; dropped the now-redundant single-point band check. Seekers can
+  now hit horizontal surfaces at any pitch. *(Superseded the same day by the
+  full-3D OBB rework above — the box branch is now the shared `rayBox` test, which
+  subsumes this Y-slab fix.)*
+
 - **Invisibility "ghost" look for hiders.** File: `js/level.js`. Previously an invisible
   hider was hidden from seekers but rendered **fully normal** to itself and other hiders —
   no visual cue you were invisible. Now an active invis window shows a **ghost** to

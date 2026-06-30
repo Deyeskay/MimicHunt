@@ -159,26 +159,35 @@ const PropLevel = {
     },
 
     computeBounds: function(object) {
+        object.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(object);
         const size = new THREE.Vector3();
         box.getSize(size);
 
-        // Local (rotation-removed) horizontal extents — used by BOX colliders on
-        // rotated props (walls), where the world AABB is much larger than the
-        // actual box footprint. Computed by momentarily zeroing the rotation.
+        // Un-rotated (LOCAL) AABB — momentarily zero the rotation so we capture the
+        // prop's true box in its own frame. This is what BOX colliders need to build
+        // an ORIENTED box: a tilted wall's collider must follow all three of the
+        // object's axes, not the (much larger, axis-aligned) world AABB. We also
+        // record the rotation `pivot` (the object's world origin) and `quat` (its
+        // world rotation) so resolveColliders can rebuild the oriented box exactly.
         let localX = size.x, localZ = size.z;
+        let local = null, pivot = null, quat = null;
         const rot = object.rotation;
-        if (object.quaternion && (rot.x || rot.y || rot.z)) {
-            const q = object.quaternion.clone();
+        const q0 = (object.quaternion && (rot.x || rot.y || rot.z)) ? object.quaternion.clone() : null;
+        if (q0) {
             object.quaternion.identity();
             object.updateMatrixWorld(true);
             const lbox = new THREE.Box3().setFromObject(object);
-            const lsize = new THREE.Vector3();
-            lbox.getSize(lsize);
-            localX = lsize.x;
-            localZ = lsize.z;
-            object.quaternion.copy(q);
+            object.quaternion.copy(q0);
             object.updateMatrixWorld(true);
+            localX = lbox.max.x - lbox.min.x;
+            localZ = lbox.max.z - lbox.min.z;
+            local = { minX: lbox.min.x, maxX: lbox.max.x,
+                      minY: lbox.min.y, maxY: lbox.max.y,
+                      minZ: lbox.min.z, maxZ: lbox.max.z };
+            const wp = object.getWorldPosition(new THREE.Vector3());
+            pivot = { x: wp.x, y: wp.y, z: wp.z };
+            quat = { x: q0.x, y: q0.y, z: q0.z, w: q0.w };
         }
 
         return {
@@ -189,7 +198,10 @@ const PropLevel = {
             centerX: (box.min.x + box.max.x) * 0.5,
             centerZ: (box.min.z + box.max.z) * 0.5,
             localX: localX,
-            localZ: localZ
+            localZ: localZ,
+            local: local,
+            pivot: pivot,
+            quat: quat
         };
     },
 
@@ -253,24 +265,78 @@ const PropLevel = {
     // (the 2.5D solver) but renders round. The OLD fraction format
     // ({radius, yMin, yMax, offsetX, offsetZ}, cylinder-only) is still accepted.
     // With no template, fall back to one full-height cylinder = the bounding box.
+    // Quaternion (THREE) from a prop's Euler rotation in DEGREES, using the same
+    // 'XYZ' order the editor applies via object.rotation.set(x,y,z).
+    _propQuat: function(rot) {
+        const e = new THREE.Euler(
+            THREE.MathUtils.degToRad((rot && rot.x) || 0),
+            THREE.MathUtils.degToRad((rot && rot.y) || 0),
+            THREE.MathUtils.degToRad((rot && rot.z) || 0), 'XYZ');
+        return new THREE.Quaternion().setFromEuler(e);
+    },
+
+    // Assemble one ORIENTED-BOX collider piece. localMin/localMax are the piece's
+    // un-rotated, world-positioned corners; the piece is then rotated about `pivot`
+    // (a THREE.Vector3) — its CENTER by centerQ and its AXES by axisQ (these differ
+    // only when a template piece carries its own extra spin on top of the prop's).
+    // Emits { shape:'box', x,y,z (center), hx,hy,hz (half-extents), ax/ay/az (unit
+    // world axes), yMin,yMax (conservative world-AABB Y band for broad-phase) }.
+    _obbPiece: function(localMin, localMax, pivot, centerQ, axisQ) {
+        const c0 = new THREE.Vector3(
+            (localMin.x + localMax.x) * 0.5,
+            (localMin.y + localMax.y) * 0.5,
+            (localMin.z + localMax.z) * 0.5);
+        const hx = (localMax.x - localMin.x) * 0.5;
+        const hy = (localMax.y - localMin.y) * 0.5;
+        const hz = (localMax.z - localMin.z) * 0.5;
+        const off = c0.sub(pivot).applyQuaternion(centerQ);
+        const cx = pivot.x + off.x, cy = pivot.y + off.y, cz = pivot.z + off.z;
+        const ax = new THREE.Vector3(1, 0, 0).applyQuaternion(axisQ);
+        const ay = new THREE.Vector3(0, 1, 0).applyQuaternion(axisQ);
+        const az = new THREE.Vector3(0, 0, 1).applyQuaternion(axisQ);
+        const ey = Math.abs(ax.y) * hx + Math.abs(ay.y) * hy + Math.abs(az.y) * hz;
+        return {
+            shape: 'box', x: cx, y: cy, z: cz, hx: hx, hy: hy, hz: hz,
+            ax: [ax.x, ax.y, ax.z], ay: [ay.x, ay.y, ay.z], az: [az.x, az.y, az.z],
+            yMin: cy - ey, yMax: cy + ey
+        };
+    },
+
     resolveColliders: function(prop, bounds, def) {
         const R = bounds.radius;
         const H = bounds.height;
         const base = bounds.bottomY;
 
-        // Box-shaped prop (walls): a single oriented box matching the prop's local
-        // footprint, rotated by rotation.y. halfX/halfZ are LOCAL half-extents so
-        // a rotated wall blocks as a thin rectangle, not a fat cylinder.
+        // Full 3D rotation: prefer the mesh's actual quaternion (ground truth from
+        // computeBounds); otherwise build one from the prop's Euler degrees. Box
+        // pieces become true oriented boxes, so a wall/rock tilted on ANY axis gets
+        // a collider that follows it. Cylinders/spheres stay vertical (2.5D solver)
+        // — only their CENTER follows the rotation.
+        const quat = bounds.quat
+            ? new THREE.Quaternion(bounds.quat.x, bounds.quat.y, bounds.quat.z, bounds.quat.w)
+            : this._propQuat(prop.rotation);
+
+        // Local (un-rotated) frame + rotation pivot. From a mesh we have the exact
+        // un-rotated AABB; otherwise (disguised hiders, runtime rebuilds) we
+        // synthesize it from the footprint — those props only spin about Y, where
+        // the synthesized frame is exact.
+        const L = bounds.local;
+        const pivot = bounds.pivot
+            ? new THREE.Vector3(bounds.pivot.x, bounds.pivot.y, bounds.pivot.z)
+            : new THREE.Vector3(bounds.centerX, base, bounds.centerZ);
+        const lcx = L ? (L.minX + L.maxX) * 0.5 : bounds.centerX;
+        const lcz = L ? (L.minZ + L.maxZ) * 0.5 : bounds.centerZ;
+        const lbase = L ? L.minY : base;
+        const lH = L ? (L.maxY - L.minY) : H;
+        const Rl = L ? Math.max(L.maxX - L.minX, L.maxZ - L.minZ) * 0.5 : R;
+
+        // Box-shaped prop (walls): a single oriented box = the prop's whole box.
         if (def && def.colliderShape === 'box') {
-            const ry = THREE.MathUtils.degToRad((prop.rotation && prop.rotation.y) || 0);
             const lx = (bounds.localX != null ? bounds.localX : R * 2);
             const lz = (bounds.localZ != null ? bounds.localZ : R * 2);
-            return [{
-                shape: 'box',
-                x: bounds.centerX, z: bounds.centerZ,
-                halfX: lx * 0.5, halfZ: lz * 0.5, rot: ry,
-                yMin: base, yMax: bounds.topY
-            }];
+            const lmin = { x: lcx - lx * 0.5, y: lbase,      z: lcz - lz * 0.5 };
+            const lmax = { x: lcx + lx * 0.5, y: lbase + lH, z: lcz + lz * 0.5 };
+            return [this._obbPiece(lmin, lmax, pivot, quat, quat)];
         }
 
         const tmpl = (def && def.colliders && def.colliders.length) ? def.colliders : null;
@@ -279,12 +345,9 @@ const PropLevel = {
             return [{ shape: 'cylinder', x: bounds.centerX, z: bounds.centerZ, radius: R, yMin: base, yMax: bounds.topY }];
         }
 
-        const ry = THREE.MathUtils.degToRad((prop.rotation && prop.rotation.y) || 0);
-        const cos = Math.cos(ry), sin = Math.sin(ry);
-
         return tmpl.map(c => {
             const shape = c.shape || 'cylinder';
-            let ofX, ofZ, rad, halfX, halfZ, yMin, yMax, pieceRotY;
+            let ofX, ofZ, rad, halfX, halfZ, pcy, phy, pieceRotY;
 
             if (c.position || c.scale) {
                 // New transform format (fractions of bounds).
@@ -294,46 +357,52 @@ const PropLevel = {
                 const sy = scl.y != null ? scl.y : 1;
                 const sz = scl.z != null ? scl.z : sx;
                 const py = pos.y != null ? pos.y : 0.5;      // center height, fraction of H
-                const cy = base + py * H;
-                const halfH = sy * H * 0.5;
-                ofX = (pos.x || 0) * R;
-                ofZ = (pos.z || 0) * R;
-                rad = sx * R;
-                halfX = sx * R; halfZ = sz * R;
-                yMin = cy - halfH; yMax = cy + halfH;
+                pcy = lbase + py * lH;
+                phy = sy * lH * 0.5;
+                ofX = (pos.x || 0) * Rl;
+                ofZ = (pos.z || 0) * Rl;
+                rad = sx * Rl;
+                halfX = sx * Rl; halfZ = sz * Rl;
                 pieceRotY = (c.rotation && c.rotation.y) || 0;
             } else {
                 // Legacy format: cylinder, radius·R, yMin/yMax·H, offset·R.
-                ofX = (c.offsetX || 0) * R;
-                ofZ = (c.offsetZ || 0) * R;
-                rad = (c.radius != null ? c.radius : 1) * R;
+                ofX = (c.offsetX || 0) * Rl;
+                ofZ = (c.offsetZ || 0) * Rl;
+                rad = (c.radius != null ? c.radius : 1) * Rl;
                 halfX = rad; halfZ = rad;
-                yMin = base + (c.yMin != null ? c.yMin : 0) * H;
-                yMax = base + (c.yMax != null ? c.yMax : 1) * H;
+                const yMin = lbase + (c.yMin != null ? c.yMin : 0) * lH;
+                const yMax = lbase + (c.yMax != null ? c.yMax : 1) * lH;
+                pcy = (yMin + yMax) * 0.5; phy = (yMax - yMin) * 0.5;
                 pieceRotY = 0;
             }
 
-            const x = bounds.centerX + ofX * cos - ofZ * sin;
-            const z = bounds.centerZ + ofX * sin + ofZ * cos;
+            // Piece center in the local (un-rotated) frame.
+            const lcxP = lcx + ofX, lczP = lcz + ofZ;
 
             if (shape === 'box') {
-                return { shape: 'box', x, z, halfX, halfZ,
-                    rot: ry + THREE.MathUtils.degToRad(pieceRotY), yMin, yMax };
+                const lmin = { x: lcxP - halfX, y: pcy - phy, z: lczP - halfZ };
+                const lmax = { x: lcxP + halfX, y: pcy + phy, z: lczP + halfZ };
+                // Piece's own Y spin composes on top of the prop's full rotation for
+                // its AXES; its CENTER is carried by the prop rotation alone.
+                const axisQ = quat.clone().multiply(this._propQuat({ y: pieceRotY }));
+                return this._obbPiece(lmin, lmax, pivot, quat, axisQ);
             }
-            // cylinder & sphere share the circular footprint runtime form.
-            return { shape, x, z, radius: rad, yMin, yMax };
+
+            // Cylinder & sphere stay vertical; their center follows the rotation.
+            const ctr = new THREE.Vector3(lcxP, pcy, lczP).sub(pivot).applyQuaternion(quat).add(pivot);
+            return { shape, x: ctr.x, z: ctr.z, radius: rad, yMin: ctr.y - phy, yMax: ctr.y + phy };
         });
     },
 
     // Build a wireframe-able THREE geometry for one resolved collider piece, so
     // every debug/preview outline (level.js, editor.html) draws the same shape
-    // the solver uses. Caller wraps in EdgesGeometry and positions it at the
-    // piece center; box pieces also need rotation.y = c.rot.
+    // the solver uses. Caller positions via colliderCenter(c) and orients via
+    // colliderQuat(c) (box pieces are oriented boxes; cylinders stay upright).
     colliderGeometry: function(c) {
-        const h = Math.max((c.yMax || 0) - (c.yMin || 0), 0.1);
         if (c.shape === 'box') {
-            return new THREE.BoxGeometry(c.halfX * 2, h, c.halfZ * 2);
+            return new THREE.BoxGeometry(c.hx * 2, c.hy * 2, c.hz * 2);
         }
+        const h = Math.max((c.yMax || 0) - (c.yMin || 0), 0.1);
         if (c.shape === 'sphere') {
             const r = Math.max(c.radius || 0.1, 0.001);
             const geo = new THREE.SphereGeometry(r, 20, 14);
@@ -341,6 +410,66 @@ const PropLevel = {
             return geo;
         }
         return new THREE.CylinderGeometry(c.radius, c.radius, h, 24);
+    },
+
+    // Where to position a collider outline. Box pieces carry an explicit center;
+    // cylinders/spheres sit at the mid-height of their vertical band.
+    colliderCenter: function(c) {
+        if (c.shape === 'box') return { x: c.x, y: c.y, z: c.z };
+        return { x: c.x, y: ((c.yMin || 0) + (c.yMax || 0)) * 0.5, z: c.z };
+    },
+
+    // Orientation for a collider outline. Box pieces are full oriented boxes (the
+    // quaternion is rebuilt from their world axes); everything else is upright.
+    colliderQuat: function(c) {
+        if (c.shape === 'box' && c.ax && c.ay && c.az) {
+            const m = new THREE.Matrix4().makeBasis(
+                new THREE.Vector3(c.ax[0], c.ax[1], c.ax[2]),
+                new THREE.Vector3(c.ay[0], c.ay[1], c.ay[2]),
+                new THREE.Vector3(c.az[0], c.az[1], c.az[2]));
+            return new THREE.Quaternion().setFromRotationMatrix(m);
+        }
+        return new THREE.Quaternion();
+    },
+
+    // Nearest entry distance t where a ray (unit dir D) enters an ORIENTED-box
+    // collider piece, or Infinity if it misses. Shared by shot/camera raycasts and
+    // the "stand on a tilted surface" probe. Works in the box's local frame via its
+    // unit axes, so it handles tilt on all three axes.
+    rayBox: function(ox, oy, oz, dx, dy, dz, c) {
+        const px = ox - c.x, py = oy - c.y, pz = oz - c.z;
+        const A = [c.ax, c.ay, c.az], hh = [c.hx, c.hy, c.hz];
+        let tmin = -Infinity, tmax = Infinity;
+        for (let s = 0; s < 3; s++) {
+            const a = A[s], h = hh[s];
+            const lo = px * a[0] + py * a[1] + pz * a[2];
+            const ld = dx * a[0] + dy * a[1] + dz * a[2];
+            if (Math.abs(ld) < 1e-6) { if (lo < -h || lo > h) return Infinity; }
+            else {
+                let t1 = (-h - lo) / ld, t2 = (h - lo) / ld;
+                if (t1 > t2) { const tt = t1; t1 = t2; t2 = tt; }
+                if (t1 > tmin) tmin = t1;
+                if (t2 < tmax) tmax = t2;
+            }
+        }
+        if (tmax < Math.max(tmin, 0)) return Infinity;
+        return tmin > 0 ? tmin : (tmax >= 0 ? tmax : Infinity);
+    },
+
+    // Squared distance from a point to an oriented-box piece (0 if inside). Used by
+    // movement collision to test the player's body column against tilted boxes.
+    pointBoxDist2: function(px, py, pz, c) {
+        const dx = px - c.x, dy = py - c.y, dz = pz - c.z;
+        const A = [c.ax, c.ay, c.az], hh = [c.hx, c.hy, c.hz];
+        let d2 = 0;
+        for (let s = 0; s < 3; s++) {
+            const a = A[s], h = hh[s];
+            const proj = dx * a[0] + dy * a[1] + dz * a[2];
+            const cl = proj < -h ? -h : (proj > h ? h : proj);
+            const diff = proj - cl;
+            d2 += diff * diff;
+        }
+        return d2;
     },
 
     // Safe accessor: precomputed colliders if enriched, else a single cylinder
@@ -378,33 +507,13 @@ const PropLevel = {
             for (let j = 0; j < pieces.length; j++) {
                 const c = pieces[j];
 
-                // Oriented-box piece (walls): ray-vs-rectangle in the box's local
-                // XZ frame (2D slab test), then the same vertical-band check.
+                // Oriented-box piece (walls, rock body, tree canopy): full 3D
+                // ray-vs-OBB in the box's local frame, so a ray piercing ANY face —
+                // including the top/bottom of a tilted or horizontal slab —
+                // registers, not just hits through the upright sides.
                 if (c.shape === 'box') {
-                    const cs = Math.cos(c.rot), sn = Math.sin(c.rot);
-                    const px = ox - c.x, pz = oz - c.z;
-                    const lx = px * cs + pz * sn;      // into box-local frame (-rot)
-                    const lz = -px * sn + pz * cs;
-                    const ldx = dx * cs + dz * sn;
-                    const ldz = -dx * sn + dz * cs;
-                    let tmin = -Infinity, tmax = Infinity, skip = false;
-                    // X slab
-                    if (Math.abs(ldx) < 1e-6) { if (lx < -c.halfX || lx > c.halfX) skip = true; }
-                    else { let t1 = (-c.halfX - lx) / ldx, t2 = (c.halfX - lx) / ldx;
-                           if (t1 > t2) { const tt = t1; t1 = t2; t2 = tt; }
-                           tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2); }
-                    // Z slab
-                    if (!skip) {
-                        if (Math.abs(ldz) < 1e-6) { if (lz < -c.halfZ || lz > c.halfZ) skip = true; }
-                        else { let t1 = (-c.halfZ - lz) / ldz, t2 = (c.halfZ - lz) / ldz;
-                               if (t1 > t2) { const tt = t1; t1 = t2; t2 = tt; }
-                               tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2); }
-                    }
-                    if (skip || tmax < Math.max(tmin, 0)) continue;
-                    let tb = tmin > 0 ? tmin : tmax;
+                    const tb = this.rayBox(ox, oy, oz, dx, dy, dz, c);
                     if (tb < 0 || tb > range || tb >= best) continue;
-                    const yb = oy + dy * tb;
-                    if (yb < c.yMin || yb > c.yMax) continue;
                     best = tb;
                     continue;
                 }

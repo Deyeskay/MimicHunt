@@ -35,7 +35,9 @@ Each `colliders` entry has a **shape** (`'cylinder' | 'box' | 'sphere'`) and a
 
 At load, `PropLevel.resolveColliders(prop, bounds, def)` turns the template into
 **runtime pieces** stored on `prop.colliders`: cylinder/sphere `{shape,x,z,radius,yMin,yMax}`,
-box `{shape:'box',x,z,halfX,halfZ,rot,yMin,yMax}`. No template → one full-height
+box `{shape:'box', x,y,z (center), hx,hy,hz (half-extents), ax,ay,az (unit world
+axes), yMin,yMax}` — a full **oriented box (OBB)** that follows the prop's rotation on
+**all three axes** (see "Box colliders" below). No template → one full-height
 cylinder from the bounding box. `getColliders(prop)` is the safe accessor. The
 **legacy** entry form (`{radius,yMin,yMax,offsetX,offsetZ}`, cylinder-only) is still
 accepted by the resolver. `PropLevel.colliderGeometry(c)` builds the matching wireframe
@@ -48,15 +50,24 @@ floating overhead you can pass under** — instead of one fat cylinder.
 in the 2.5D solver) but **renders round** (an ellipsoid squashed to the band). Use it
 for round rocks/bushes where the wireframe should read as a ball.
 
-**Box colliders.** A prefab with `colliderShape: 'box'` (e.g. `wall`) resolves to a
-single **oriented box** piece `{shape:'box', x,z, halfX, halfZ, rot, yMin, yMax}` from
-the bounds — so a long thin wall blocks as a rectangle, not a fat round column.
-`halfX/halfZ` are the prop's **local** half-extents (from `computeBounds.localX/localZ`,
-measured with rotation removed) and `rot` is its `rotation.y`. Per-piece `shape:'box'`
-entries (added in the editor) likewise block as oriented rectangles. All consumers
-branch on `c.shape`: `blockedAt` (circle-vs-oriented-box), `raycastProps`
-(ray-vs-oriented-box 2D slab), and the editor/game gizmos. Round shapes use the circle
-path.
+**Box colliders are full 3D oriented boxes (OBBs).** A prefab with
+`colliderShape: 'box'` (e.g. `wall`), and any per-piece `shape:'box'` (e.g. the rock
+body, tree canopy), resolves to an oriented box that **follows the prop's rotation on
+all three axes** — so a wall/platform tilted or laid flat gets a collider that matches
+the mesh, not just one spun about the vertical axis. A piece carries its **center**
+`(x,y,z)`, **half-extents** `(hx,hy,hz)`, and three **unit world axes** `ax/ay/az`
+(plus a conservative world-AABB `yMin/yMax` band for cheap broad-phase rejects).
+
+How it's built: `computeBounds` measures the prop's **un-rotated** AABB (`bounds.local`)
+and records the rotation `pivot` + `quat`; `resolveColliders` rebuilds each box in that
+local frame and rotates it by the quaternion via `_obbPiece`. Cylinders/spheres stay
+**vertical** (the 2.5D solver can't tilt a round footprint) — only their centre follows
+the rotation. Shared OBB helpers: `PropLevel.rayBox` (ray-vs-OBB, used by `raycastProps`
++ camera collision + the "stand on a tilted top" probe), `pointBoxDist2` (used by
+`blockedAt`'s box branch, which samples the player's body column against the OBB),
+`colliderCenter` / `colliderQuat` (orient every debug/editor outline). All consumers
+branch on `c.shape`; round shapes use the circle path. **Note:** cylinder/sphere pieces
+still cannot tilt — tilting a tree trunk keeps the trunk cylinder upright.
 
 `prop.radius`/`centerX/centerZ/topY/bottomY/height` (from `computeBounds`/`enrichProp`)
 are still used by disguise sizing, climbing, spawns, and the hit radius — only
