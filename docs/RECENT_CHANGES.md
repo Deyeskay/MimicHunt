@@ -5,6 +5,29 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-30
 
+- **Feature: ramps / tilted slabs are now walkable.** File: `js/mechanics.js`
+  (`_climbFloor` + `_propBlocks`, both gated to tilted boxes via `|c.ay[1]| <= 0.999`).
+  A wall rotated on X/Z (e.g. `wall_135`, `z:37.9°`) gets a correctly tilted OBB collider
+  from the OBB rework, but the movement code only knew flat tops, so you couldn't walk up
+  it. Now:
+  - **Climb**: for a TILTED box, `_climbFloor` casts straight down onto the slab and stands
+    you on the ACTUAL surface under you (rises as you ascend) instead of the flat AABB top.
+    Upright boxes keep the validated mesh-top behaviour (no regression).
+  - **Collision**: `_propBlocks` adds a ramp bypass — a tilted slab's surface sits below its
+    conservative AABB ceiling `c.yMax`, so a slope-stander would be wedged in the band.
+    A down-ray ring (centre + 8 dirs at `myRadius` + 8 at half-`myRadius`) checks if the
+    player's feet are on/above the slope; if so it doesn't block. The dense ring is what
+    lets you MOUNT the low leading edge (where the centre column is still just off the
+    footprint) without a coarse-ring dead gap.
+  Gated to tilted boxes, so upright walls/rocks/trees are byte-identical (and skip the
+  extra rays). Verified in-browser on the real `wall_135` collider: the player mounts from
+  flat ground and walks the full 37.9° slope bottom→top (y 1.5→~8) and back down; upright
+  walls still block from the side; rocks/trees/bushes unchanged. *Caveats:* (1) props
+  physically placed ON a ramp (e.g. `bush_15`/`bush_87` sit on `wall_135`) correctly block
+  the path — move them for a clear run; (2) very steep ramps at high run speed could
+  out-pace the 0.3 climb tolerance per frame — fine at 37.9°; (3) the ramp bypass costs
+  ~17 short ray casts per tilted box per move check (negligible for a few ramps).
+
 - **Fix: can't stand/walk on box props — sink in & get stuck on rocks/trees.** File:
   `js/mechanics.js` (`_climbFloor`, box branch). Two regressions from the same-day OBB
   rework, both fixed by making the box branch behave like the (working) cylinder branch:

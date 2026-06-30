@@ -154,7 +154,7 @@ registerLevel("Forest", [
         "model": "bush",
         "x": -18.28,
         "y": 0.04,
-        "z": 15.61,
+        "z": 16.18,
         "bottomY": -0.02,
         "scale": {
             "x": 1.78,
@@ -263,9 +263,9 @@ registerLevel("Forest", [
     {
         "id": "bush_15",
         "model": "bush",
-        "x": 12.13,
+        "x": 21.32,
         "y": 0.04,
-        "z": 40.3,
+        "z": 40.85,
         "bottomY": -0.02,
         "scale": {
             "x": 1.68,
@@ -339,9 +339,9 @@ registerLevel("Forest", [
     {
         "id": "rock_19",
         "model": "rock",
-        "x": -20.26,
+        "x": -19.9,
         "y": -0.01,
-        "z": 14.27,
+        "z": 15.34,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -957,12 +957,12 @@ registerLevel("Forest", [
         "id": "wall_61",
         "model": "wall",
         "x": 23.85,
-        "y": 3.74,
+        "y": 5.95,
         "z": 41.72,
-        "bottomY": -0.2,
+        "bottomY": -0.1,
         "scale": {
             "x": 7.31,
-            "y": 7.88,
+            "y": 12.11,
             "z": 0.3
         },
         "rotation": {
@@ -1066,7 +1066,7 @@ registerLevel("Forest", [
         "model": "wall",
         "x": -19.31,
         "y": 1.79,
-        "z": 6.4,
+        "z": 7.77,
         "bottomY": -0.65,
         "scale": {
             "x": 4,
@@ -1438,9 +1438,9 @@ registerLevel("Forest", [
     {
         "id": "bush_87",
         "model": "bush",
-        "x": 13.65,
+        "x": 22.84,
         "y": 0.04,
-        "z": 42.07,
+        "z": 42.62,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -1457,9 +1457,9 @@ registerLevel("Forest", [
     {
         "id": "bush_88",
         "model": "bush",
-        "x": 10.78,
+        "x": 10.87,
         "y": 0.04,
-        "z": 38.26,
+        "z": 37.43,
         "bottomY": -0.02,
         "scale": {
             "x": 1.68,
@@ -1468,7 +1468,7 @@ registerLevel("Forest", [
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 83.8,
             "z": 0
         },
         "hideSpot": false
@@ -1628,7 +1628,7 @@ registerLevel("Forest", [
     {
         "id": "rock_97",
         "model": "rock",
-        "x": 12.65,
+        "x": 0.84,
         "y": -0.01,
         "z": 38.28,
         "bottomY": 0,
@@ -1647,9 +1647,9 @@ registerLevel("Forest", [
     {
         "id": "rock_98",
         "model": "rock",
-        "x": 5.76,
+        "x": 6.21,
         "y": -0.01,
-        "z": 43.53,
+        "z": 44.55,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -2104,7 +2104,7 @@ registerLevel("Forest", [
         "x": -1.5,
         "y": 7.52,
         "z": 22.48,
-        "bottomY": 7.35,
+        "bottomY": 7.34,
         "scale": {
             "x": 8.81,
             "y": 0.35,
@@ -2248,7 +2248,7 @@ registerLevel("Forest", [
         "x": -17.48,
         "y": 7.52,
         "z": 22.48,
-        "bottomY": 7.35,
+        "bottomY": 7.34,
         "scale": {
             "x": 5.99,
             "y": 0.35,
@@ -2323,9 +2323,17 @@ registerLevel("Forest", [
         "x": -14.46,
         "y": 0,
         "z": 13.79,
-        "bottomY": 0,
-        "scale": { "x": 1, "y": 1, "z": 1 },
-        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "bottomY": -1.48,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
         "exitDoor": true
     },
     {
@@ -2334,9 +2342,17 @@ registerLevel("Forest", [
         "x": -3.41,
         "y": 0,
         "z": 8.62,
-        "bottomY": 0,
-        "scale": { "x": 1, "y": 1, "z": 1 },
-        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "bottomY": -1.48,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
         "exitDoor": true
     },
     {
@@ -2345,9 +2361,108 @@ registerLevel("Forest", [
         "x": 10,
         "y": 0,
         "z": 22,
-        "bottomY": 0,
-        "scale": { "x": 1, "y": 1, "z": 1 },
-        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "bottomY": -1.48,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
         "exitDoor": true
+    },
+    {
+        "id": "bush_129",
+        "model": "bush",
+        "x": 11.76,
+        "y": 0.04,
+        "z": 26.44,
+        "bottomY": -0.01,
+        "scale": {
+            "x": 1.36,
+            "y": 1.36,
+            "z": 1.36
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "hideSpot": false
+    },
+    {
+        "id": "wall_134",
+        "model": "wall",
+        "x": 21.07,
+        "y": 6.95,
+        "z": 41.76,
+        "bottomY": 6.78,
+        "scale": {
+            "x": 5.5,
+            "y": 0.35,
+            "z": 6.73
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_135",
+        "model": "wall",
+        "x": 13.79,
+        "y": 3.39,
+        "z": 41.8,
+        "bottomY": -0.35,
+        "scale": {
+            "x": 11.74,
+            "y": 0.35,
+            "z": 6.73
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 37.9
+        }
+    },
+    {
+        "id": "wall_136",
+        "model": "wall",
+        "x": 32.57,
+        "y": 19.07,
+        "z": 42.05,
+        "bottomY": 18.89,
+        "scale": {
+            "x": 20.48,
+            "y": 0.35,
+            "z": 6.73
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_137",
+        "model": "wall",
+        "x": 33.26,
+        "y": 11.83,
+        "z": 41.54,
+        "bottomY": 11.65,
+        "scale": {
+            "x": 19.2,
+            "y": 0.35,
+            "z": 7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
     }
 ]);

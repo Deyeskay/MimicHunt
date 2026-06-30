@@ -524,6 +524,32 @@ const Mechanics = {
             const c = pieces[i];
             if (!(pBottom < c.yMax && pTop > c.yMin)) continue;   // vertical band
             if (c.shape === 'box') {
+                // RAMP support: a TILTED slab's top surface sits BELOW its conservative
+                // world-AABB ceiling c.yMax, so a player standing on the slope is inside
+                // the band and would be wedged solid. Cast straight down onto the slab —
+                // if the player's feet are on/above the actual surface under them, it
+                // doesn't block (they're walking on it). Gated to tilted boxes so upright
+                // walls/rocks/trees keep the exact validated behaviour (and skip the ray).
+                if (Math.abs(c.ay[1]) <= 0.999) {
+                    const sY = c.yMax + 10;
+                    // Sample the player's centre plus a ring at myRadius AND half-myRadius
+                    // (8 compass dirs each): at the ramp's LOW leading edge the centre
+                    // column is still just off the footprint (the centre ray misses) while
+                    // the player's body already overlaps the wedge, so a coarse test would
+                    // block you from ever stepping on. The half-radius samples catch the low
+                    // edge before the slope has risen out of reach. If any sample finds
+                    // slope surface at/below the feet, you're mounting/walking it.
+                    const r = myRadius, h = myRadius * 0.5, d = myRadius * 0.7071, e = h * 0.7071;
+                    const offs = [[0, 0],
+                        [r, 0], [-r, 0], [0, r], [0, -r], [d, d], [d, -d], [-d, d], [-d, -d],
+                        [h, 0], [-h, 0], [0, h], [0, -h], [e, e], [e, -e], [-e, e], [-e, -e]];
+                    let onSlope = false;
+                    for (let k = 0; k < offs.length; k++) {
+                        const td = PropLevel.rayBox(x + offs[k][0], sY, z + offs[k][1], 0, -1, 0, c);
+                        if (isFinite(td) && pBottom >= (sY - td) - 0.3) { onSlope = true; break; }
+                    }
+                    if (onSlope) continue;
+                }
                 // The player is a vertical capsule (circle of myRadius over the band).
                 // Sample its column where it overlaps the box's world-AABB band and
                 // test each point against the ORIENTED box; blocked if any sample is
@@ -554,20 +580,30 @@ const Mechanics = {
         for (let i = 0; i < pieces.length; i++) {
             const c = pieces[i];
             if (c.shape === 'box') {
-                // Support the player wherever the box would BLOCK them — the SAME rounded
-                // footprint _propBlocks uses (pointBoxDist2, corners included) — not the
-                // old cardinal-ray "plus" that missed the diagonal corners and dropped you
-                // into the box. Stand at the prop's MESH top (propTop = getPropTop),
-                // exactly like the cylinder branch below — NOT the box collider's own top.
-                // A box's collision band ceiling is its CONSERVATIVE world-AABB top c.yMax,
-                // which sits a hair ABOVE its actual ray-hit top for any micro-tilted box
-                // (rocks/trees all carry tiny tilts), so landing the player on the collider
-                // top left their feet inside the band (pBottom < c.yMax) → blocked in EVERY
-                // direction (the rock/tree "sink in and get stuck"). The mesh top clears
-                // c.yMax with margin, so you stand flush on the visual surface and stay
-                // free to move. Cylinders never hit this — they already stand at propTop.
-                if (PropLevel.pointBoxDist2(localPos.x, c.yMax, localPos.z, c) < myRadius * myRadius) {
-                    if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
+                if (Math.abs(c.ay[1]) > 0.999) {
+                    // UPRIGHT box. Support wherever the box would BLOCK you — the SAME
+                    // rounded footprint _propBlocks uses (pointBoxDist2, corners included)
+                    // — and stand at the prop's MESH top (propTop = getPropTop), exactly
+                    // like the cylinder branch, NOT the box collider's own top. A box's
+                    // band ceiling is its CONSERVATIVE world-AABB top c.yMax, a hair ABOVE
+                    // its ray-hit top for any micro-tilted box, so standing on the collider
+                    // top left the feet inside the band (pBottom < c.yMax) → blocked every
+                    // direction (the rock/tree "sink in and get stuck"). The mesh top clears
+                    // c.yMax with margin → flush, free to move.
+                    if (PropLevel.pointBoxDist2(localPos.x, c.yMax, localPos.z, c) < myRadius * myRadius) {
+                        if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
+                    }
+                } else {
+                    // TILTED box (ramp): stand on the ACTUAL slope under the player so you
+                    // can walk UP it — cast straight down onto the slab and use that point.
+                    // Paired with the ramp bypass in _propBlocks so you're not wedged in
+                    // the AABB band while on the slope.
+                    const sY = c.yMax + 10;
+                    const t = PropLevel.rayBox(localPos.x, sY, localPos.z, 0, -1, 0, c);
+                    if (isFinite(t)) {
+                        const surf = (sY - t) + baseHeight;
+                        if (localPos.y >= surf - 0.3 && surf > best) best = surf;
+                    }
                 }
             } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
                 if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
