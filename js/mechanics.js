@@ -3,6 +3,7 @@ const Mechanics = {
         window.addEventListener('keydown', (e) => {
             keys[e.key.toLowerCase()] = true;
             if (e.key.toLowerCase() === 'f') this.handleDisguiseSwap();
+            if (e.key.toLowerCase() === 'e') this.activatePower();   // use held airdrop power (hider)
             if (e.key.toLowerCase() === 'g') Level.setDeveloper(!developer);   // dev: toggle collider gizmos
             if (e.key === ' ' && isGrounded) this.jump();
         });
@@ -77,6 +78,8 @@ const Mechanics = {
 
         document.getElementById('btn-action-disguise').addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); this.handleDisguiseSwap(); });
         document.getElementById('btn-action-jump').addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); if (isGrounded) this.jump(); });
+        const powerBtn = document.getElementById('btn-action-power');
+        if (powerBtn) powerBtn.addEventListener('touchstart', (e) => { if (isEditingLayout) return; e.preventDefault(); this.activatePower(); });
         // --- Shoot button (PUBG fire button): press-and-hold = fire continuously
         // (fireShot self-gates to the fire rate); slide the SAME finger off the
         // button to orbit the camera, using its own shootDragSensitivity. Bound to
@@ -446,6 +449,16 @@ const Mechanics = {
     // True if the local hider is currently disguised as a prop (not its own form).
     isDisguised: function() {
         return localDisguise.type !== 'player';
+    },
+
+    // Use the held airdrop power (E key / mobile power button). Only hiders hold a
+    // power to activate manually — seekers' powers apply instantly on pickup. The
+    // host validates + applies authoritatively; clients ask the host.
+    activatePower: function() {
+        const pData = gameState.players[myId];
+        if (!pData || pData.role !== 'Hider' || pData.isCaught || !pData.heldPower) return;
+        if (isHost) Network.handleActivate(myId);
+        else Network.sendToHost({ type: 'activatePower' });
     },
 
     handleDisguiseSwap: function() {

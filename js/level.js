@@ -323,6 +323,12 @@ const Level = {
         mapProps3D = JSON.parse(JSON.stringify(props || []));
         mapProps3D.forEach(prop => this.spawnProp(prop));
 
+        // Clear any airdrop beams / scan markers / dropped keys from a previous round
+        // and (re)build the level's exit-door goal portals.
+        this.clearBeams();
+        this.clearDroppedKeys();
+        this.buildDoors();
+
         this.buildColliderGizmos();
     },
 
@@ -405,6 +411,9 @@ const Level = {
         // mesh and are never rendered or collided with. Still resolve their
         // gameplay flags from the prefab (so collision=false is concrete).
         if (prop.model === 'spawn') { PropLevel.resolveGameplay(prop); return; }
+        // Exit-door markers have no GLB mesh — the goal glow is drawn by
+        // Level.buildDoors() from getDoorPositions. Resolve flags and skip the mesh.
+        if (prop.model === 'door') { PropLevel.resolveGameplay(prop); return; }
 
         const mesh = PropLevel.createPropMesh(prop, modelLibrary);
         if (!mesh) {
@@ -931,6 +940,446 @@ const Level = {
         }
     },
 
+    // =====================================================================
+    // AIRDROP BEAMS (gold/purple pillars of light) + SCAN MARKERS
+    // Purely cosmetic — the host owns spawn/collect (Network.tickBeams). Each
+    // peer renders identical beams from the broadcast x/z. A beam "arms" for
+    // armMs (dimmer, no orb), then activates (bright, bobbing orb).
+    // =====================================================================
+    spawnBeam: function(id, kind, x, z, armMs) {
+        if (!scene) return;
+        this._beams3D = this._beams3D || {};
+        if (this._beams3D[id]) return;                 // already shown
+        const col = kind === 'purple' ? 0xa64dff : 0xffd700;
+        const H = 60;
+        const R = (typeof BEAM_RADIUS !== 'undefined' ? BEAM_RADIUS : 3);
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+        const mkCyl = (r, op) => {
+            const geo = new THREE.CylinderGeometry(r, r, H, 24, 1, true);
+            const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: op,
+                side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+            mat.toneMapped = false;
+            const m = new THREE.Mesh(geo, mat);
+            m.position.y = H / 2;
+            return m;
+        };
+        const outer = mkCyl(R * 0.9, 0.18);
+        const core  = mkCyl(R * 0.35, 0.4);
+        group.add(outer); group.add(core);
+        const ringGeo = new THREE.RingGeometry(R * 0.8, R, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.5,
+            side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+        ringMat.toneMapped = false;
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = -Math.PI / 2; ring.position.y = 0.06;
+        group.add(ring);
+        const orbGeo = new THREE.IcosahedronGeometry(0.6, 0);
+        const orbMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.95 });
+        orbMat.toneMapped = false;
+        const orb = new THREE.Mesh(orbGeo, orbMat);
+        orb.position.y = 2;
+        group.add(orb);
+        scene.add(group);
+        this._beams3D[id] = { id, kind, group, outer, core, ring, orb,
+            spawnAt: Network.now(), armMs: armMs || 0, fade: 1, dead: false };
+    },
+
+    // Begin a beam's fade-out (collected or expired). A collectorId means someone
+    // walked through it → spawn a pickup flash.
+    removeBeam: function(id, collectorId) {
+        const b = this._beams3D && this._beams3D[id];
+        if (!b) return;
+        b.dead = true;
+        if (collectorId) this.spawnImpact(b.group.position.x, 1.6, b.group.position.z);
+    },
+
+    // Remove every beam + scan marker immediately (called on level (re)load).
+    clearBeams: function() {
+        if (this._beams3D) {
+            for (const id in this._beams3D) {
+                const b = this._beams3D[id];
+                scene.remove(b.group);
+                b.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+            }
+            this._beams3D = {};
+        }
+        if (this._scanMarkers) {
+            for (const id in this._scanMarkers) {
+                const m = this._scanMarkers[id];
+                scene.remove(m);
+                if (m.userData.tex) m.userData.tex.dispose();
+                if (m.material) m.material.dispose();
+            }
+            this._scanMarkers = {};
+        }
+    },
+
+    // Per-frame beam animation (rotate orb/ring, pulse, fade-out).
+    updateBeams: function(dt) {
+        const map = this._beams3D;
+        if (!map) return;
+        const now = Network.now();
+        for (const id in map) {
+            const b = map[id];
+            const active = now >= b.spawnAt + b.armMs;
+            b.orb.rotation.y += dt * 1.6; b.orb.rotation.x += dt * 0.8;
+            b.orb.position.y = 2 + Math.sin(now / 300) * 0.3;
+            b.ring.rotation.z += dt * 0.6;
+            const pulse = 0.85 + Math.sin(now / 200) * 0.15;
+            if (b.dead) {
+                b.fade -= dt * 3;
+                if (b.fade <= 0) {
+                    scene.remove(b.group);
+                    b.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+                    delete map[id];
+                    continue;
+                }
+            }
+            const f = b.fade * (active ? 1 : 0.4) * pulse;   // dimmer while arming
+            b.outer.material.opacity = 0.18 * f;
+            b.core.material.opacity  = 0.4 * f;
+            b.ring.material.opacity  = 0.5 * f;
+            b.orb.visible = active && b.fade > 0.5;
+            b.orb.material.opacity = 0.95 * b.fade;
+        }
+    },
+
+    // A small orange through-wall locator dot used by the seeker's Scan power
+    // (matches the orange silhouette glow painted on the hider mesh).
+    makeScanMarker: function() {
+        const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+        const ctx = c.getContext('2d');
+        ctx.clearRect(0, 0, 64, 64);
+        ctx.beginPath(); ctx.arc(32, 32, 15, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,122,26,0.95)'; ctx.fill();
+        ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(255,255,255,0.95)'; ctx.stroke();
+        const tex = new THREE.CanvasTexture(c);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false,
+            depthWrite: false, fog: false, sizeAttenuation: false });
+        const s = new THREE.Sprite(mat);
+        s.scale.set(0.05, 0.05, 1); s.renderOrder = 1002;
+        s.userData.tex = tex;
+        return s;
+    },
+
+    // --- "Scanned" silhouette shaders (Last-of-Us "listen mode" x-ray) ---------
+    // A dark body cutout + a soft fresnel rim halo, both drawn through walls. The
+    // vertex stage optionally pushes verts OUT along their normal by uPush (object
+    // units) so the glow hull sits slightly proud of the body, and exports a fresnel
+    // term `vFres = 1 - |N·V|` (0 face-on, 1 at the silhouette edge) for the glow's
+    // soft feathered falloff. Three's skinning chunks (guarded by USE_SKINNING,
+    // injected when material.skinning === true) deform a SkinnedMesh shell with the
+    // LIVE skeletal pose — a walking, undisguised hider's silhouette animates.
+    _silVert: `
+        #include <common>
+        #include <skinning_pars_vertex>
+        uniform float uPush;
+        varying float vFres;
+        void main() {
+            #include <beginnormal_vertex>
+            #include <skinbase_vertex>
+            #include <skinnormal_vertex>
+            #include <begin_vertex>
+            transformed += normal * uPush;
+            #include <skinning_vertex>
+            vec4 mvPos = modelViewMatrix * vec4( transformed, 1.0 );
+            vec3 N = normalize( normalMatrix * objectNormal );
+            vec3 Vd = normalize( -mvPos.xyz );
+            vFres = 1.0 - abs( dot( N, Vd ) );
+            gl_Position = projectionMatrix * mvPos;
+        }`,
+    // Solid dark interior — the shadow "body" of the listen-mode silhouette.
+    _fillFrag: `
+        uniform vec3 uColor;
+        uniform float uAlpha;
+        varying float vFres;
+        void main() { gl_FragColor = vec4( uColor, uAlpha ); }`,
+    // Soft warm rim halo — bright at the silhouette edge, feathering away (additive).
+    _glowFrag: `
+        uniform vec3 uColor;
+        uniform float uAlpha;
+        uniform float uPower;
+        varying float vFres;
+        void main() {
+            float r = pow( clamp( vFres, 0.0, 1.0 ), uPower );
+            gl_FragColor = vec4( uColor * r, r * uAlpha );
+        }`,
+
+    // Tunable silhouette look — the SHIPPED defaults. These are read by
+    // makeScanSilhouette (new overlays) and updateScanMarkers (the rim pulse). For
+    // dev tuning, `testing/silhouette-tuner.js` edits this object live and calls
+    // Level.applySilTune() to push changes into already-built overlays.
+    _silTune: {
+        fillColor:  0x4b3207,   // dark body cutout
+        fillAlpha:  0.03,       // body opacity (0 = invisible, 1 = solid black)
+        glowColor:  0xff8000,   // warm rim halo
+        glowAlpha:  0.4,       // rim base brightness (the pulse adds on top)
+        pulseAmp:   1.07,       // rim shimmer amplitude
+        pulseSpeed: 150,        // rim shimmer period divisor (ms); larger = slower
+        glowPush:   0.03,       // how far the glow hull grows along normals (object units)
+        glowPower:  0.8         // fresnel exponent (higher = tighter, crisper rim)
+    },
+
+    // Push the current _silTune values into every LIVE scan overlay (dev tuner hook,
+    // so slider edits show instantly without waiting for a mesh rebuild).
+    applySilTune: function() {
+        const t = this._silTune;
+        if (!this._scanSil) return;
+        for (const id in this._scanSil) {
+            const ud = this._scanSil[id].overlay.userData;
+            if (ud.fillU) { ud.fillU.uColor.value.set(t.fillColor); ud.fillU.uAlpha.value = t.fillAlpha; }
+            if (ud.glowU) {
+                ud.glowU.uColor.value.set(t.glowColor);
+                ud.glowU.uAlpha.value = t.glowAlpha;
+                ud.glowU.uPush.value  = t.glowPush;
+                ud.glowU.uPower.value = t.glowPower;
+            }
+        }
+    },
+
+    // Listen-mode see-through silhouette: a DARK translucent body cutout wrapped in a
+    // SOFT warm rim halo (a slightly-grown, back-faced fresnel glow). Built from the
+    // hider's live mesh geometry, reusing the geometry buffers (so we dispose the
+    // materials, never the shared geometry). The overlay lives in a dedicated
+    // `_silScene` that Level.render() draws in a SECOND pass with a cleared depth
+    // buffer: that makes the silhouette appear THROUGH walls/props, while the fill +
+    // glow still self-occlude correctly (dark body, feathered glowing edge).
+    //
+    // Each shell carries its source child's WORLD matrix directly (overlay stays at
+    // identity) — Level.render() copies `o.matrixWorld` into the shell every frame, so
+    // there's no fragile inverse math and the shells track the hider exactly.
+    //
+    // We deliberately do NOT use srcMesh.clone() — Object3D.copy() deep-copies userData
+    // via JSON.stringify, which THROWS on an animated character (its userData.mixer has
+    // circular refs) and would abort the whole render loop. A SkinnedMesh source → a
+    // SkinnedMesh shell bound to the SAME skeleton/bindMatrix, so it deforms with the
+    // live animation rather than freezing in bind/T-pose.
+    makeScanSilhouette: function(srcMesh) {
+        const sil = this._silScene || (this._silScene = new THREE.Scene());
+        // Listen-mode palette: a near-black body + a warm rim glow. Values come from
+        // the tunable _silTune config (dev-adjustable at runtime — see applySilTune).
+        const t = this._silTune;
+        const fillU = { uColor: { value: new THREE.Color(t.fillColor) }, uAlpha: { value: t.fillAlpha }, uPush: { value: 0.0 } };
+        const glowU = { uColor: { value: new THREE.Color(t.glowColor) }, uAlpha: { value: t.glowAlpha }, uPush: { value: t.glowPush }, uPower: { value: t.glowPower } };
+        const mats = {};
+        const getMat = (which, skinned) => {
+            const key = which + (skinned ? 'S' : 'F');
+            if (mats[key]) return mats[key];
+            const isGlow = which === 'glow';
+            const m = new THREE.ShaderMaterial({
+                uniforms: isGlow ? glowU : fillU,
+                vertexShader: this._silVert,
+                fragmentShader: isGlow ? this._glowFrag : this._fillFrag,
+                transparent: true, depthTest: true,
+                depthWrite: !isGlow,                          // the glow never occludes
+                side: isGlow ? THREE.BackSide : THREE.FrontSide,
+                blending: isGlow ? THREE.AdditiveBlending : THREE.NormalBlending,
+                fog: false });
+            m.toneMapped = false;
+            if (skinned) m.skinning = true;   // → three injects #define USE_SKINNING
+            mats[key] = m;
+            return m;
+        };
+
+        const overlay = new THREE.Group();
+        overlay.matrixAutoUpdate = false;     // stays at identity; shells carry world matrices
+        const pairs = [];
+        srcMesh.traverse(o => {
+            if (!(o.isMesh || o.isSkinnedMesh) || !o.geometry) return;
+            const skinned = !!(o.isSkinnedMesh && o.skeleton);
+            // glow first (renderOrder 0, BackSide halo), then dark fill on top (1).
+            [['glow', 0], ['fill', 1]].forEach(([which, ro]) => {
+                let shell;
+                if (skinned) {
+                    shell = new THREE.SkinnedMesh(o.geometry, getMat(which, true));
+                    shell.bind(o.skeleton, o.bindMatrix);    // share the live skeleton
+                } else {
+                    shell = new THREE.Mesh(o.geometry, getMat(which, false));
+                }
+                shell.matrixAutoUpdate = false;              // world matrix copied from `o` each frame
+                shell.renderOrder = ro;
+                shell.frustumCulled = false;
+                overlay.add(shell);
+                pairs.push({ shell: shell, src: o });
+            });
+        });
+        overlay.userData.fillU = fillU;
+        overlay.userData.glowU = glowU;
+        overlay.userData.pairs = pairs;
+        overlay.userData.mats = Object.values(mats);
+        sil.add(overlay);
+        return overlay;
+    },
+
+    // Tear down a hider's scan silhouette (materials only — geometry is shared).
+    _disposeSil: function(id) {
+        const cur = this._scanSil && this._scanSil[id];
+        if (!cur) return;
+        if (this._silScene) this._silScene.remove(cur.overlay);
+        (cur.overlay.userData.mats || []).forEach(m => m.dispose());
+        delete this._scanSil[id];
+    },
+
+    // Seeker Scan power: while active, show a through-wall blip over every living
+    // hider within POWER_SCAN_RANGE (even invisible ones — scan beats invis). The
+    // markers are standalone scene sprites so they show even when a hider mesh is
+    // hidden by invisibility.
+    updateScanMarkers: function() {
+        this._scanMarkers = this._scanMarkers || {};
+        this._scanSil = this._scanSil || {};
+        const me = gameState.players[myId];
+        const range = (typeof POWER_SCAN_RANGE !== 'undefined' ? POWER_SCAN_RANGE : 20);
+        const now = Network.now();
+        const active = me && me.role === 'Seeker' && !me.isCaught
+            && gameState.phase !== 'LOBBY' && me.scanUntil > now;
+        // Shared "scanned" shimmer — pulses the rim GLOW (the dark body stays steady)
+        // so the silhouette breathes like a sonar ping without flickering its shape.
+        // Base/amplitude/speed are tunable via _silTune (dev tuner).
+        const t = this._silTune;
+        const glowPulse = t.glowAlpha + t.pulseAmp * (0.5 + 0.5 * Math.sin(now / t.pulseSpeed));
+        const keep = {};
+        if (active) {
+            for (const id in gameState.players) {
+                const h = gameState.players[id];
+                if (h.role !== 'Hider' || h.isCaught) continue;
+                const mesh = playerMeshes[id];
+                if (!mesh) continue;
+                if (Math.hypot(mesh.position.x - localPos.x, mesh.position.z - localPos.z) > range) continue;
+                // Locator dot above the head.
+                let m = this._scanMarkers[id];
+                if (!m) { m = this.makeScanMarker(); scene.add(m); this._scanMarkers[id] = m; }
+                m.position.set(mesh.position.x, mesh.position.y + 3.6, mesh.position.z);
+                // Orange see-through silhouette glow on the hider's body/prop.
+                // Rebuild if the mesh was swapped (e.g. the hider re-disguised).
+                const cur = this._scanSil[id];
+                if (!cur || cur.src !== mesh) {
+                    if (cur) this._disposeSil(id);
+                    this._scanSil[id] = { src: mesh, overlay: this.makeScanSilhouette(mesh) };
+                }
+                const ud = this._scanSil[id].overlay.userData;
+                if (ud.glowU) ud.glowU.uAlpha.value = glowPulse;
+                keep[id] = true;
+            }
+        }
+        for (const id in this._scanMarkers) {
+            if (!keep[id]) {
+                const m = this._scanMarkers[id];
+                scene.remove(m);
+                if (m.userData.tex) m.userData.tex.dispose();
+                if (m.material) m.material.dispose();
+                delete this._scanMarkers[id];
+            }
+        }
+        for (const id in this._scanSil) {
+            if (!keep[id]) this._disposeSil(id);
+        }
+    },
+
+    // =====================================================================
+    // EXIT DOORS + DROPPED KEYS (Phase 2 key objective)
+    // Doors are persistent green goal portals built from the level's `door`
+    // markers (PropLevel.getDoorPositions); their "EXIT" label draws through
+    // walls so hiders can find them. Dropped keys are gold pickups left by a
+    // killed carrier (created/removed by host key events).
+    // =====================================================================
+    buildDoors: function() {
+        if (!scene) return;
+        // Clear any doors from a previous level.
+        if (this._doors) {
+            this._doors.forEach(d => {
+                scene.remove(d.group);
+                d.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+            });
+        }
+        this._doors = [];
+        const pts = (typeof PropLevel !== 'undefined' && PropLevel.getDoorPositions)
+            ? PropLevel.getDoorPositions(mapProps3D) : [];
+        const col = 0x00e5a0;
+        const R = (typeof DOOR_RADIUS !== 'undefined' ? DOOR_RADIUS : 3.5);
+        pts.forEach(pt => {
+            const group = new THREE.Group();
+            group.position.set(pt.x, 0, pt.z);
+            const ringMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.85,
+                blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+            ringMat.toneMapped = false;
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(2, 0.18, 12, 36), ringMat);
+            ring.position.y = 2.1;
+            group.add(ring);
+            const discMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.4,
+                side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+            discMat.toneMapped = false;
+            const disc = new THREE.Mesh(new THREE.RingGeometry(R * 0.6, R, 36), discMat);
+            disc.rotation.x = -Math.PI / 2; disc.position.y = 0.06;
+            group.add(disc);
+            const label = this.makeNameSprite('EXIT', '#7CFFD8');   // through-wall goal label
+            label.position.set(0, 4.4, 0);
+            group.add(label);
+            // Exit doors stay HIDDEN until they OPEN (last key drop + delay). updateDoors
+            // reveals them once gameState.doorsActivateAt has passed.
+            group.visible = false;
+            scene.add(group);
+            this._doors.push({ group, ring, disc });
+        });
+    },
+
+    updateDoors: function(dt) {
+        if (!this._doors || !this._doors.length) return;
+        // Gate visibility on the host-scheduled open time (synced via 'doorsSchedule').
+        const actAt = (typeof gameState !== 'undefined' && gameState) ? gameState.doorsActivateAt : null;
+        const open = actAt && Network.now() >= actAt;
+        const pulse = 0.7 + Math.sin(Network.now() / 300) * 0.3;
+        this._doors.forEach(d => {
+            d.group.visible = !!open;
+            if (!open) return;
+            d.ring.rotation.z += dt * 0.5;
+            d.ring.material.opacity = 0.85 * pulse;
+            d.disc.material.opacity = 0.4 * pulse;
+        });
+    },
+
+    spawnDroppedKey: function(id, x, z, count) {
+        if (!scene) return;
+        this._dropKeys = this._dropKeys || {};
+        if (this._dropKeys[id]) return;
+        const group = new THREE.Group();
+        group.position.set(x, 0, z);
+        const mat = new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.95 });
+        mat.toneMapped = false;
+        const orb = new THREE.Mesh(new THREE.OctahedronGeometry(0.5, 0), mat);
+        orb.position.y = 1.2;
+        group.add(orb);
+        const label = this.makeNameSprite(count > 1 ? '🔑×' + count : '🔑', '#FFE98A');
+        label.position.set(0, 2.4, 0);
+        group.add(label);
+        scene.add(group);
+        this._dropKeys[id] = { group, orb };
+    },
+
+    removeDroppedKey: function(id) {
+        const k = this._dropKeys && this._dropKeys[id];
+        if (!k) return;
+        scene.remove(k.group);
+        k.group.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+        delete this._dropKeys[id];
+    },
+
+    clearDroppedKeys: function() {
+        if (!this._dropKeys) return;
+        for (const id in this._dropKeys) this.removeDroppedKey(id);
+        this._dropKeys = {};
+    },
+
+    updateDroppedKeys: function(dt) {
+        if (!this._dropKeys) return;
+        const now = Network.now();
+        for (const id in this._dropKeys) {
+            const k = this._dropKeys[id];
+            k.orb.rotation.y += dt * 2;
+            k.orb.position.y = 1.2 + Math.sin(now / 300) * 0.2;
+        }
+    },
+
     // Blink the (per-instance) foot ring red while a hider is "revealed" after a
     // hit. Restores the base color once the reveal window ends. Caught/eliminated
     // players keep their grey ring (handled in updateCharacterAnim).
@@ -946,6 +1395,165 @@ const Level = {
         } else if (mesh.userData._wasRevealed) {
             ring.material.color.setHex(p.isCaught ? 0x333333 : (p.role === 'Seeker' ? 0xff4757 : 0x2ed573));
             mesh.userData._wasRevealed = false;
+        }
+    },
+
+    // Tunable invisibility-ghost look — the SHIPPED defaults. Read by _ghostMat (body
+    // translucency), _buildGhostRim (the rim shells) and _setInvisGhost (the shimmer);
+    // the dev shader tuner (testing/shader-tuner.js) edits this live and calls
+    // applyGhostTune() to push changes into already-built ghosts.
+    _ghostTune: {
+        bodyAlpha: 0.25,         // translucent body opacity (0 = see-through, 1 = solid)
+        rimColor:  0xffffff,    // glowing boundary colour
+        rimAlpha:  0.54,        // rim base brightness (the shimmer modulates this)
+        rimPulse:  0.3,         // rim shimmer amplitude
+        rimSpeed:  190,         // rim shimmer period divisor (ms); larger = slower
+        rimPush:   0.010,        // how far the rim hull grows past the body (object units)
+        rimPower:  0.80          // fresnel exponent (higher = tighter, crisper rim)
+    },
+
+    // Push the current _ghostTune values into every LIVE ghost (dev tuner hook).
+    applyGhostTune: function() {
+        const t = this._ghostTune;
+        if (typeof playerMeshes === 'undefined') return;
+        for (const id in playerMeshes) {
+            const ud = playerMeshes[id].userData;
+            if (!ud._ghostOn) continue;
+            (ud._ghostSwaps || []).forEach(s => {
+                const cur = s.o.material;
+                (Array.isArray(cur) ? cur : [cur]).forEach(m => { if (m) m.opacity = t.bodyAlpha; });
+            });
+            if (ud._ghostRimU) {
+                ud._ghostRimU.uColor.value.set(t.rimColor);
+                ud._ghostRimU.uAlpha.value = t.rimAlpha;
+                ud._ghostRimU.uPush.value  = t.rimPush;
+                ud._ghostRimU.uPower.value = t.rimPower;
+            }
+        }
+    },
+
+    // ───────────────────────────────────────────────────────────────────────
+    // Invisibility look. A hider with an active invis window is:
+    //   • COMPLETELY hidden from seekers (mesh.visible = false — they instead get
+    //     a Scan blip elsewhere, never the mesh), and
+    //   • shown to ITSELF + other hiders as a "ghost": the real character / prop
+    //     rendered faintly translucent and wrapped in a glowing WHITE fresnel rim,
+    //     so you can tell you're invisible without losing track of yourself.
+    // Called every frame per player mesh (replaces the old one-line visible gate).
+    // ───────────────────────────────────────────────────────────────────────
+    applyInvisGhost: function(mesh, p, id) {
+        const viewer = gameState.players[myId];
+        const invisible = p.role === 'Hider' && (p.invisUntil || 0) > Network.now();
+        const hiddenFromSeeker = invisible && viewer && viewer.role === 'Seeker' && id !== myId;
+        mesh.visible = !hiddenFromSeeker;
+        // Self + other hiders see the ghost; seekers (for whom it's hidden) don't.
+        this._setInvisGhost(mesh, invisible && !hiddenFromSeeker);
+    },
+
+    // Make a translucent per-instance copy of a source material (character/prop
+    // materials are SHARED across meshes — we must never mutate them in place or
+    // every player goes see-through). Texture maps are shared by the clone (cheap);
+    // material.dispose() on the clone leaves them intact.
+    _ghostMat: function(orig) {
+        const m = orig.clone();
+        m.transparent = true;
+        m.opacity = this._ghostTune.bodyAlpha;
+        m.depthWrite = false;   // see grass/props through the body
+        return m;
+    },
+
+    // Build the white fresnel rim once for a mesh: one BackSide, normal-pushed glow
+    // shell per body child, parented as a SIBLING of its source (so it inherits the
+    // exact transform — and, for skinned children, binds to the LIVE skeleton so the
+    // rim deforms with the animation). Reuses the scan silhouette's vertex shader +
+    // glow fragment (fresnel = bright at the edge, feathering inward). Geometry buffers
+    // are SHARED (never disposed here); only our ShaderMaterials are owned.
+    _buildGhostRim: function(mesh) {
+        const ud = mesh.userData;
+        const t = this._ghostTune;
+        const uni = {
+            uColor: { value: new THREE.Color(t.rimColor) },
+            uAlpha: { value: t.rimAlpha },
+            uPush:  { value: t.rimPush },   // how far the halo grows past the body (object units)
+            uPower: { value: t.rimPower }   // fresnel exponent — higher = tighter, crisper rim
+        };
+        const mats = {};
+        const getMat = (skinned) => {
+            const key = skinned ? 'S' : 'F';
+            if (mats[key]) return mats[key];
+            const m = new THREE.ShaderMaterial({
+                uniforms: uni,
+                vertexShader: this._silVert,
+                fragmentShader: this._glowFrag,
+                transparent: true, depthTest: true, depthWrite: false,
+                side: THREE.BackSide, blending: THREE.AdditiveBlending, fog: false
+            });
+            m.toneMapped = false;
+            if (skinned) m.skinning = true;   // → three injects #define USE_SKINNING
+            mats[key] = m;
+            return m;
+        };
+        // Collect sources first (adding sibling shells mid-traverse would re-visit them).
+        const sources = [];
+        mesh.traverse(o => {
+            if (o === ud.ring || o.isSprite || o.userData._ghostShell) return;
+            if ((o.isMesh || o.isSkinnedMesh) && o.geometry) sources.push(o);
+        });
+        const shells = [];
+        sources.forEach(o => {
+            const skinned = !!(o.isSkinnedMesh && o.skeleton);
+            let shell;
+            if (skinned) { shell = new THREE.SkinnedMesh(o.geometry, getMat(true)); shell.bind(o.skeleton, o.bindMatrix); }
+            else { shell = new THREE.Mesh(o.geometry, getMat(false)); }
+            shell.userData._ghostShell = true;
+            shell.frustumCulled = false;
+            shell.renderOrder = 2;
+            shell.visible = false;
+            o.parent.add(shell);                 // sibling → same world transform as `o`
+            shell.position.copy(o.position);
+            shell.quaternion.copy(o.quaternion);
+            shell.scale.copy(o.scale);
+            shells.push(shell);
+        });
+        ud._ghostShells = shells;
+        ud._ghostMats = mats;
+        ud._ghostRimU = uni;
+    },
+
+    // Toggle the ghost look on a mesh (idempotent). Swaps body materials → translucent
+    // clones (restoring + disposing them on the way out) and shows/hides the rim shells.
+    _setInvisGhost: function(mesh, on) {
+        const ud = mesh.userData;
+        on = !!on;
+        if (on) {
+            if (!ud._ghostOn) {
+                const swaps = [];
+                mesh.traverse(o => {
+                    if (o === ud.ring || o.isSprite || o.userData._ghostShell) return;
+                    if (!(o.isMesh || o.isSkinnedMesh) || !o.material) return;
+                    const orig = o.material;
+                    o.material = Array.isArray(orig) ? orig.map(m => this._ghostMat(m)) : this._ghostMat(orig);
+                    swaps.push({ o: o, orig: orig });
+                });
+                ud._ghostSwaps = swaps;
+                if (!ud._ghostShells) this._buildGhostRim(mesh);
+                (ud._ghostShells || []).forEach(s => { s.visible = true; });
+                ud._ghostOn = true;
+            }
+            // Gentle sonar-style shimmer on the rim brightness.
+            if (ud._ghostRimU) {
+                const t = this._ghostTune;
+                ud._ghostRimU.uAlpha.value = t.rimAlpha + t.rimPulse * Math.sin(Network.now() / t.rimSpeed);
+            }
+        } else if (ud._ghostOn) {
+            (ud._ghostSwaps || []).forEach(s => {
+                const cur = s.o.material;
+                (Array.isArray(cur) ? cur : [cur]).forEach(m => { if (m && m.dispose) m.dispose(); });
+                s.o.material = s.orig;
+            });
+            ud._ghostSwaps = null;
+            (ud._ghostShells || []).forEach(s => { s.visible = false; });
+            ud._ghostOn = false;
         }
     },
 
@@ -1089,8 +1697,12 @@ const Level = {
                 );
                 // Footsteps for OTHER players, derived from their rendered motion
                 // (no network event). Runs for prop-disguised hiders too, so a
-                // moving prop gives itself away.
-                this.tickRemoteFootstep(mesh, p, dt);
+                // moving prop gives itself away — EXCEPT an invisible hider is also
+                // silent to seekers (so invis isn't given away by footsteps).
+                const viewer0 = gameState.players[myId];
+                const silentInvis = p.role === 'Hider' && (p.invisUntil || 0) > Network.now()
+                    && viewer0 && viewer0.role === 'Seeker';
+                if (!silentInvis) this.tickRemoteFootstep(mesh, p, dt);
             }
 
             // Drive the character animation from its rendered movement.
@@ -1099,10 +1711,20 @@ const Level = {
             this.applyRevealBlink(mesh, p);
             // Name tag above the head (seeker=green to all, hider=red to hiders).
             this.applyNameLabel(mesh, p, id);
+
+            // Invisibility power: hidden from SEEKERS entirely; shown to SELF + other
+            // hiders as a translucent, white-rim "ghost" (see applyInvisGhost).
+            this.applyInvisGhost(mesh, p, id);
         }
 
         // Advance energy-pulse projectiles.
         this.updateProjectiles(dt);
+        // Airdrop beams + seeker scan blips.
+        this.updateBeams(dt);
+        this.updateScanMarkers();
+        // Exit-door goal portals + dropped-key pickups (Phase 2 keys).
+        this.updateDoors(dt);
+        this.updateDroppedKeys(dt);
 
         // Developer: outline the local player's own collision radius (cyan) so
         // you can see why you wedge in tight spaces — myRadius (1 for player,
@@ -1236,5 +1858,29 @@ const Level = {
 
         if (this._useComposer && this._composer) this._composer.render();
         else renderer.render(scene, camera);
+
+        // --- Scan silhouette pass (x-ray) -------------------------------------
+        // Draw the seeker's scan silhouettes AFTER the main image with the depth
+        // buffer cleared: they appear THROUGH walls/props (nothing to occlude them)
+        // while their own fill + inverted-hull outline still self-occlude via depth
+        // (light interior, solid orange edge). The overlays live in `_silScene`; we
+        // sync each to its hider's now-current world matrix before rendering.
+        if (this._silScene && this._silScene.children.length && this._scanSil) {
+            for (const id in this._scanSil) {
+                const s = this._scanSil[id];
+                if (!s.src) continue;
+                s.src.updateWorldMatrix(true, true);     // refresh the hider's subtree
+                const pairs = s.overlay.userData.pairs || [];
+                for (let i = 0; i < pairs.length; i++) {
+                    pairs[i].shell.matrix.copy(pairs[i].src.matrixWorld);
+                }
+                s.overlay.matrixWorldNeedsUpdate = true;  // force shells' matrixWorld recompute
+            }
+            const prevAutoClear = renderer.autoClear;
+            renderer.autoClear = false;
+            renderer.clearDepth();
+            renderer.render(this._silScene, camera);
+            renderer.autoClear = prevAutoClear;
+        }
     }
 };

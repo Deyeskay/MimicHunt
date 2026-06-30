@@ -82,16 +82,20 @@ const PropLevel = {
         }
     },
 
-    // Apply transformation to a prop mesh using precomputed bounds exported from the editor.
-    // The editor now provides bottomY, topY, centerX, centerZ, height, radius.
-    // Position the mesh so that its bottom aligns with the ground (groundY = 0).
+    // Apply transformation to a prop mesh using the transform exported from the editor.
+    // Vertical placement uses the authored `y` (the editor's WYSIWYG center position)
+    // so ELEVATED props — raised platforms / multi-level floors — render at the same
+    // height the editor shows. The old `-bottomY` "drop bottom to ground" convention
+    // sank anything not resting on the ground (its world-space bottomY also encodes y),
+    // which made floating platforms vanish far below the floor. enrichProp() recomputes
+    // bottomY/topY/colliders from the placed mesh, so collision stays consistent.
+    // Legacy levels that stored only bottomY (origin-at-ground) still ground via fallback.
     applyPropTransform: function(mesh, prop) {
         // Horizontal placement uses the original x/z coordinates.
         const x = prop.x;
         const z = prop.z;
-        // Vertical placement uses the exported bottomY to offset the mesh.
-        // groundY is assumed to be 0 (the ground plane's y position).
-        const y = (prop.bottomY !== undefined) ? -prop.bottomY : (prop.y || 0);
+        const y = (prop.y !== undefined) ? prop.y
+                : (prop.bottomY !== undefined ? -prop.bottomY : 0);
         mesh.position.set(x, y, z);
 
         this.applyScale(mesh, prop.scale);
@@ -456,6 +460,15 @@ const PropLevel = {
         };
     },
 
+    // Exit-door submit zones (Phase 2 keys): any prop placed as a `door` marker, or
+    // an existing prop flagged `exitDoor`. Returns [{x,z}] centres for the deposit
+    // check (Network.tickKeys) and the door glow render (Level.buildDoors).
+    getDoorPositions: function(props) {
+        return (props || [])
+            .filter(p => p.model === 'door' || p.exitDoor)
+            .map(p => { const c = this.getPropCenter(p); return { x: c.x, z: c.z }; });
+    },
+
     pickSpawn: function(candidates, usedPositions) {
         if (!candidates.length) {
             return {
@@ -527,6 +540,7 @@ const PropLevel = {
         if (data.spawnPoint) out.spawnPoint = true;
         if (data.seekerSpawn) out.seekerSpawn = true;
         if (data.hiderSpawn) out.hiderSpawn = true;
+        if (data.exitDoor) out.exitDoor = true;
 
         return out;
     },

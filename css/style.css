@@ -377,6 +377,19 @@ button.leave {
 }
 .hud-stat .hud-ic { font-size: 1.15rem; opacity: 0.95; }
 .hud-div { width: 1px; height: 22px; background: rgba(255,255,255,0.25); }
+
+/* Next-airdrop countdown pill (top-right): a softly-blinking bell + countdown.
+   Gold-tinted to match the airdrop beams. Goes "imminent" (faster, brighter) at ≤10s. */
+#next-drop {
+    padding: 4px 12px; border-radius: 16px; font-size: 0.92rem; white-space: nowrap;
+    background: rgba(26,26,36,0.78); border: 1px solid rgba(255,215,0,0.65);
+    color: #ffe98a; box-shadow: 0 0 12px rgba(255,215,0,0.22);
+}
+#next-drop .nd-ic { display: inline-block; animation: nd-blink 1.6s ease-in-out infinite; }
+#next-drop #next-drop-time { font-family: monospace; color: #fff; }
+#next-drop.imminent { border-color: #ffd700; box-shadow: 0 0 16px rgba(255,215,0,0.5); }
+#next-drop.imminent .nd-ic { animation-duration: 0.6s; }
+@keyframes nd-blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 .hud-icon-btn {
     width: 40px; height: 40px; padding: 0; border: none; background: transparent;
     color: #fff; font-size: 1.35rem; line-height: 1; cursor: pointer; border-radius: 10px;
@@ -426,6 +439,47 @@ button.leave {
 #disguise-cd-text { font-family: monospace; color: #ffa502; }
 .dcd-track { width: 160px; height: 6px; background: rgba(255,255,255,0.18); border-radius: 3px; overflow: hidden; }
 .dcd-bar { height: 100%; width: 100%; background: var(--accent-red); transition: width .1s linear; }
+
+/* Airdrop power-up status chip — sits just to the RIGHT of the bottom-center
+   health bar (hider) / ammo pill (seeker). Compact: icon + small label. */
+#power-pill {
+    position: absolute; bottom: 28px; left: calc(50% + 150px);
+    z-index: 12; pointer-events: none;
+    background: rgba(26, 26, 36, 0.85); padding: 6px 13px; border-radius: 22px;
+    border: 1px solid #ffd700; color: #ffe98a; font-weight: 700;
+    display: flex; align-items: center; gap: 6px; white-space: nowrap;
+    font-size: 0.8rem; letter-spacing: 0.5px;
+    box-shadow: 0 0 14px rgba(255,215,0,0.28);
+}
+#power-pill .pp-ic { font-size: 1.15rem; line-height: 1; }
+
+/* Persistent objective pill (top-left, directly under the role card). Teal = goal theme.
+   Sits above #keys-hud so the two top-left pills stack without overlapping. */
+#objective-hud {
+    position: absolute; top: 52px; left: 12px; z-index: 13; pointer-events: none;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(20,30,30,0.85); padding: 5px 13px; border-radius: 16px;
+    border: 1px solid #00e5a0; color: #b6ffe6; font-weight: 700; font-size: 0.92rem;
+    white-space: nowrap; box-shadow: 0 0 12px rgba(0,229,160,0.25);
+}
+
+/* Team key objective pill (top-left, below the objective pill). Purple = key theme. */
+#keys-hud {
+    position: absolute; top: 88px; left: 12px; z-index: 13; pointer-events: none;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(26,26,36,0.85); padding: 5px 13px; border-radius: 16px;
+    border: 1px solid #a64dff; color: #e0c8ff; font-weight: 700; font-size: 0.92rem;
+    white-space: nowrap; box-shadow: 0 0 12px rgba(166,77,255,0.25);
+}
+
+/* Hider "use power" action button (mobile) — gold-ringed, matches .action-btn sizing. */
+.action-btn.power-btn {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.5), inset 0 0 16px rgba(255,215,0,0.2);
+}
+.power-btn .pb-icon  { font-size: 2rem; line-height: 1; }
+.power-btn .pb-label { font-size: 0.74rem; font-weight: 700; letter-spacing: 1px; color: #ffe98a; }
+.power-btn:active:not(:disabled) { transform: scale(0.95); }
 
 /* Event toasts — stacked bottom-center, just above the health/reload row. */
 #toast-container {
@@ -646,6 +700,13 @@ body.layout-editing #btn-action-shoot {
     #reload-indicator { bottom: 56px; }
     #disguise-cd { top: 48px; padding: 5px 12px; font-size: 0.78rem; gap: 4px; }
     #disguise-cd .dcd-track { width: 130px; height: 5px; }
+    #power-pill { bottom: 16px; left: calc(50% + 104px); padding: 4px 10px; font-size: 0.7rem; }
+    #power-pill .pp-ic { font-size: 1rem; }
+    #keys-hud { top: 40px; left: 8px; padding: 3px 10px; font-size: 0.76rem; }
+    .hud-right { gap: 8px; }
+    #next-drop { padding: 3px 9px; font-size: 0.74rem; }
+    .power-btn .pb-icon { font-size: 1.6rem; }
+    .power-btn .pb-label { font-size: 0.62rem; }
     button.leave { padding: 5px 11px; font-size: 0.78rem; }
 
     #joystick-zone { width: 96px; height: 96px; }

@@ -26,6 +26,7 @@ state + events. All in `js/network.js`.
 | `roleChange` | Hider/Seeker toggle | `{role}` | set role+color; `lobbySync` |
 | `clientPing` | 2 Hz in lobby | `{}` | liveness only (resets `_lastSeen`) |
 | `leave` | graceful exit | `{}` | remove player; `lobbySync`; `checkHostAlone` |
+| `activatePower` | hider presses E / power button | `{}` | `handleActivate(conn.peer)` — apply held power, broadcast `powerUse` |
 | `rejoin` | after host migration | `{id}` | re-map existing record; send `rejoinAck` |
 
 > Any client packet refreshes `conn._lastSeen` (host watchdog / ghost sweep).
@@ -40,7 +41,16 @@ state + events. All in `js/network.js`.
 | `shot` | a seeker fired (hit or miss) | see below | update health/score/reveal/lock/elim; spawn bolt+impact; sounds; hit-marker |
 | `jump` | a player jumped | `{id}` | stamp `players[id].jumpAt=now` (skip self) |
 | `caught` | (legacy) | `{id}` | set `isCaught` (superseded by `shot.eliminated`) |
-| `notice` | event toast | `{text}` | `UI.toast(text)` — player left/eliminated/disconnected (host also shows locally via `Network.notify`) |
+| `notice` | event toast | `{text,audience?,toastMs?}` | `UI.toast(text,{duration})`; `audience` (`all`/`hiders`/`seekers`) restricts who shows it, `toastMs` lengthens it. Host shows locally honoring its own role via `Network.notify(text,opts)` |
+| `beamSpawn` | host airdrop beam appears | `{beamId,kind,x,z,armMs}` | `Level.spawnBeam` (arms `armMs`, then active) + `Sound.beam` |
+| `beamGone` | beam collected/expired | `{beamId,collectorId?}` | `Level.removeBeam` (flash if collected) |
+| `powerGain` | a player picked up a power | `{playerId,role,heldPower?,invisMs?,power?,scanMs?,killMs?,jamIds?,jamMs?}` | `applyPowerGain` → ms→local deadlines; hider holds `heldPower`, seeker power applied instantly |
+| `powerUse` | hider activated held power | `{playerId,power,healTo?,invisMs?,shield?}` | `applyPowerUse` |
+| `keyGain` | hider collected/recovered a key | `{playerId,carried}` | `applyKeyGain` (set carriedKeys) |
+| `keyDeposit` | hider deposited keys at a door | `{playerId,carried,submitted}` | `applyKeyDeposit` (team count) |
+| `keyDrop` | killed carrier's keys hit the ground | `{keyId,x,z,count}` | `Level.spawnDroppedKey` |
+| `keyDropGone` | dropped-key bundle recovered | `{keyId}` | `Level.removeDroppedKey` |
+| `doorsSchedule` | when exit doors open (sent at HUNTING start) | `{activateInMs}` | client sets `gameState.doorsActivateAt = now()+activateInMs` (null ⇒ doors never open). Gates door render (`Level.updateDoors`) + deposits (`tickKeys`) |
 | `ping` | 1 Hz all phases | `{}` | resets client watchdog (`_lastHostMsgTime`) |
 | `gameOver` | win/timeout | `{title,message}` | `sessionEnding=true`; modal → cleanup |
 | `hidersWin` | 0-seeker migration result | `{title,message}` | informational modal |
@@ -56,7 +66,8 @@ state + events. All in `js/network.js`.
   hit, targetId, health, score, // result: was a hider hit; their new HP; shooter score
   impactDist,                   // distance along the ray where the bolt stops (hider/prop/range)
   revealMs, lockMs, shootMs,    // DURATIONS — each peer stamps its own deadline
-  eliminated, forcedOut }        // HP→0; hit knocked the hider out of disguise
+  eliminated, forcedOut,         // HP→0; hit knocked the hider out of disguise
+  shielded }                     // disguise-shield absorbed the hit (no damage/reveal/lock)
 ```
 - The **shooter** drew its own bolt locally in `fireShot`; on the echo it skips the
   visual (`shooterId === myId`) but still applies target state. Other peers spawn

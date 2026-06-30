@@ -5,6 +5,207 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-06-30
 
+- **Invisibility "ghost" look for hiders.** File: `js/level.js`. Previously an invisible
+  hider was hidden from seekers but rendered **fully normal** to itself and other hiders —
+  no visual cue you were invisible. Now an active invis window shows a **ghost** to
+  self + other hiders: the real character/prop rendered **faintly translucent** (per-
+  instance material clones at 0.4 alpha, `depthWrite:false`) wrapped in a glowing **white
+  fresnel rim** (a BackSide, normal-pushed glow shell per body child, reusing the scan
+  silhouette's `_silVert` + `_glowFrag`; skinned children bind to the **live skeleton** so
+  the rim deforms with the animation). Seekers still see **nothing** (the mesh stays
+  `visible=false`). New `Level.applyInvisGhost` (called per mesh each frame, replacing the
+  old one-line visible gate) + helpers `_setInvisGhost` / `_buildGhostRim` / `_ghostMat`.
+  - **Shared-material safety:** character/prop materials are shared across meshes, so the
+    body translucency **clones** each material per-instance (never mutates the shared
+    original) and restores + disposes the clone when invis ends. Rim shells reuse the
+    **shared geometry buffers** (disposed never; only our ShaderMaterials are owned) and
+    are parented as **siblings** of each source child so they inherit its exact transform.
+  - The foot ring + name tag are excluded from the ghost (stay fully visible).
+  - **Tunable:** the look is centralized in `Level._ghostTune` (body alpha, rim
+    colour/base/pulse/speed/push/power); `Level.applyGhostTune()` pushes live edits into
+    active ghosts. The dev **Shaders** dropdown (`testing/shader-tuner.js`, a generic
+    registry that superseded the single-purpose silhouette tuner) exposes it alongside the
+    Scan silhouette for slider tuning + a paste-ready snippet.
+
+- **Dev harness: six "live game logic" ability scenarios** (dev-only, `testing/` is
+  git-ignored — **no shipped game code changed**). The Dev Harness scenario dropdown
+  gained an **"Abilities (live game logic)"** group that boots the game as a solo host
+  mid-HUNT and runs the **real** host-authoritative paths (`startHostLoops`, `processShot`,
+  `handleActivate`, `tickBeams`): **Scan** (≤20m silhouette vs. far none), **One-shot
+  Kill** (playable; hit → 0 HP), **Jammer** (persistent DISGUISE LOCKED, disguise blocked),
+  **Full-Health** (E heals 2→5, pill consumed), **Disguise Shield** (shot 1 absorbed, shot
+  2 breaks disguise −1 HP, with Replay/Reset), and **Beam → invisible** (play the hider,
+  walk into the gold beam → `grantPower` grants 5s `invisUntil` + a held power; verify via
+  the 👻 countdown in the power pill, since a hider always sees its own mesh and invis only
+  hides it from seekers). Each frames the camera on the relevant actor and shows a dev
+  panel. **All six verified against the live
+  logic — no core mechanics needed fixing.** Also added a re-injection **teardown**
+  (`window.__devTeardown`) so re-staging no longer orphans the previous scenario's
+  `requestAnimationFrame` loops. Details: `testing/README.md`.
+
+- **Scan power: "listen-mode" see-through silhouette on hiders.** File: `js/level.js`.
+  The Scan reveal was just a tiny red dot floating above each hider — easy to miss and it
+  never highlighted the disguise itself. Replaced with a **Last-of-Us "listen mode"
+  silhouette** (a *dark body cutout wrapped in a soft glowing rim*) painted on the
+  hider's actual body/prop, drawn **through walls**, plus the head dot (recolored
+  red→orange). New `Level.makeScanSilhouette(srcMesh)` builds a per-hider overlay into a
+  dedicated `Level._silScene`; for each mesh in the model it adds **two shells** that
+  reuse the source geometry buffers (so we dispose **materials only**, never the shared
+  geometry):
+  - **Glow** — `BackSide` shell pushed out along normals (`uPush`), fresnel-shaded
+    (`1 − |N·V|` → bright rim, feathered falloff), `AdditiveBlending`, `depthWrite:false`.
+    Drawn first.
+  - **Fill** — `FrontSide` dark body at translucent alpha, `NormalBlending`, drawn on top
+    so it darkens the interior and leaves the glow only at the edge.
+
+  The look is centralized in a tunable `Level._silTune` config (fill/glow color + alpha,
+  fresnel push/power, pulse amp/speed); `Level.applySilTune()` pushes edits into live
+  overlays. **Shipped defaults (dev-tuned):** fill `0x4b3207` @ 0.71, glow `0xff8000` @
+  0.35 base + 1.07 pulse (period 150), push 0.03, power 0.8 — a warm brown body with a
+  soft broad orange halo. A dev-only runtime tuner (`testing/silhouette-tuner.js`, not
+  shipped) edits `_silTune` live with sliders + a Save that emits the snippet; see
+  `testing/README.md`.
+
+  `Level.render()` draws `_silScene` in a **second pass after the main image with the
+  depth buffer cleared** (`renderer.clearDepth()`, `autoClear=false`): the silhouette
+  appears *through* walls/props yet still self-occludes internally. Each shell carries its
+  source child's **world matrix** directly (the overlay group stays at identity);
+  `render()` copies `o.matrixWorld` into each shell every frame — and **skinned** sources
+  get a `SkinnedMesh` shell `.bind()`-ed to the **live skeleton/bindMatrix**, so an
+  undisguised hider's silhouette follows the **real animated pose** (idle/walk/run), not a
+  frozen T-pose. The two custom shaders (`_silVert`/`_glowFrag`/`_fillFrag`) use three's
+  skinning chunks (`material.skinning=true` → `#define USE_SKINNING`).
+  `updateScanMarkers` builds/pulses (rim-glow sonar shimmer)/cleans up the silhouettes via
+  `_disposeSil`, rebuilding when a hider re-disguises (mesh swap). Range (20m) and 10s
+  duration unchanged; trigger path (`grantPower`/`applyPowerGain` → `scanUntil`) was
+  already working.
+  - **Earlier solid-orange attempt (superseded):** first tried one flat-orange
+    `MeshBasicMaterial` overlay (`depthTest:false`), then a light-fill + hard
+    inverted-hull outline. Both were dropped in favor of the dark-body + soft-rim
+    listen-mode look the user asked for (closer to the reference). Additive *orange*
+    washed out to near-white against the level's bright candy walls — the **dark fill** is
+    what makes the silhouette read cleanly on any background.
+  - **Gotcha (NaN matrices):** the silhouette shells inherit transforms from the hider
+    mesh; if the hider's transform is NaN (e.g. an `undefined` `rotY` →
+    `rotation.set(0, undefined, 0)`, or a missing `propScale`) the whole subtree's
+    `matrixWorld` is NaN and **nothing renders**. Surfaced while single-window
+    screenshot-testing — the staging player records must set `rotY` + the prop fields.
+  - **Gotcha (clone):** shells are built by walking `srcMesh`, NOT via `srcMesh.clone()`
+    — `Object3D.copy()` deep-copies `userData` with `JSON.stringify`, which throws
+    ("circular structure") on an animated character (its `userData.mixer` is circular) and
+    would abort the seeker's render loop every frame.
+
+- **Messaging overhaul + coin SFX + seeker-ability alerts + gated exit doors.** Files:
+  `js/ui.js`, `index.html`, `css/style.css`, `js/globals.js`, `js/network.js`, `js/level.js`.
+  - **Two message types.** `UI.toast(text, {duration})` now takes an optional duration
+    (default 4.1s; the fade-out is re-keyed inline for longer toasts). New persistent
+    **Objective pill** (`#objective-hud`, teal) anchored **top-left under the role card**
+    (`#keys-hud` pushed to `top:88px` so they stack). `UI.objective(text)` /
+    `UI.clearObjective()` drive a single replace-on-change slot; `UI.updateObjective()`
+    (called each tick from `updateHUD`) computes it from local state by priority:
+    exits-open → `🚪 EXITS OPEN`/`Deposit your key at an EXIT`; HUNTING pre-open →
+    live `⏳ Exits unlock in M:SS` (carrier: `🔑 Key secured — …`); HUNTING w/o schedule →
+    role goal; HIDING → `🫥 Hide…` / `⏳ Hunt begins…`.
+  - **`notice` packets** gained optional `audience` (`all`/`hiders`/`seekers`) and `toastMs`;
+    `Network.notify(text, opts)` honors them locally (host's own role) and on clients.
+  - **Coin pickup SFX.** New `Sound.coin()` (WebAudio, Mario-like B5→E6 blip) plays for the
+    local picker on key (`applyKeyGain`) and power (`applyPowerGain`) pickup.
+  - **Seeker-ability alert to hiders.** When a seeker collects Scan/Jammer/Kill, the host
+    broadcasts `⚠️ Seeker activated <X>!` to **hiders** (5s). The `keys dropped — grab them!`
+    warning is now a 5s hider notice (shows on host too); a `👻 Invisible for 5s` pickup-grace
+    toast was added for the local hider.
+  - **Gated exit doors (#4).** Doors stay **hidden + non-depositable** until
+    `EXIT_ACTIVATE_DELAY_MS` (60s) after the **last purple key beam that actually fires** in
+    the hunt. Host computes `gameState.doorsActivateAt` at the HIDING→HUNTING transition and
+    broadcasts a relative `doorsSchedule { activateInMs }`; clients convert to a local deadline
+    (same convention as `shot`). `Level.buildDoors` builds doors `visible=false`; `updateDoors`
+    reveals them at the deadline; `tickKeys` rejects deposits until then. **Caveat:** if the
+    hunt is too short for any purple beam to drop (first at 180s; full set needs ≈12 min),
+    doors never open and the key-win path is unavailable — set a long Hunting time.
+
+- **Fix: elevated props (raised platforms / multi-level floors) vanished in-game.**
+  `PropLevel.applyPropTransform` placed every static prop at `y = -prop.bottomY`
+  (an old "drop the bottom onto the ground" convention), while the **editor** places
+  props at their authored `prop.y`. Because the exported `bottomY` is the prop's
+  *world-space* bottom (it already includes `y`), the two only agree for props
+  resting on the ground — any elevated prop got sunk by `(y + bottomY)`, dropping the
+  Forest center multi-level floor (`wall_114/122/124/125–130`, `rock_131–133`) 15–34
+  units underground where it was invisible. Now positions props at `prop.y` to match
+  the editor (WYSIWYG); `enrichProp` still recomputes `bottomY/topY`/colliders from
+  the placed mesh, so collision stays consistent. File: `js/props.js`.
+
+- **Keys & exit doors (Phase 2: PURPLE beam + hider key-win).** The second win path.
+  Files: `globals.js`, `network.js`, `props.js`, `prefabs.js`, `level.js`, `ui.js`,
+  `index.html`, `css/style.css`, `editor.html`, `js/levels/forest.js`.
+  - **Purple key beams** reuse the whole beam infra (`kind:'purple'`): scheduled at
+    `PURPLE_BEAM_TIMES = [180, 420, 660]` s into hunting (merged into the host
+    `_beamSched`), audible `Sound.beam('purple')`, purple visual. **Hider-only** —
+    `tickBeams` skips non-hiders for purple pickups (seekers gain nothing).
+  - **Carry & deposit (team).** A purple pickup gives the hider a carried key
+    (`grantKey` → `carriedKeys++`). `Network.tickKeys` (host) detects a carrier within
+    `DOOR_RADIUS` of any **exit door** → deposits all carried into the team
+    `gameState.submittedKeys`; reaching `KEYS_TO_WIN` (3) ends the match
+    (`finishMatch` "Keys Secured! Hiders Win!").
+  - **Dropped keys.** A carrier killed before depositing **drops** its keys
+    (`dropCarriedKeys` in `processShot`) as a gold ground bundle any hider can recover
+    (`tickKeys` pickup; `keyDrop`/`keyDropGone` events; `Level.spawnDroppedKey`).
+  - **Exit doors** are a new non-colliding `door` marker (prefab + `PrefabLibrary`).
+    The game reads door positions via `PropLevel.getDoorPositions` (props with
+    `model:'door'` or an `exitDoor` flag) and renders a green goal **portal** with a
+    through-wall "EXIT" label (`Level.buildDoors`/`updateDoors`). Placeable in the
+    **editor** ("Exit Door" button → green ring marker; flag persists through
+    place/duplicate/undo/save/load). 3 example doors seeded in `forest.js`.
+  - **Net events** (host→client): `keyGain`, `keyDeposit`, `keyDrop`, `keyDropGone`.
+    New player field `carriedKeys`; team `gameState.submittedKeys` (synced via
+    `gameStart`). No new client→host input (host detects deposits/pickups from
+    positions).
+  - **HUD**: top-left team key pill (`#keys-hud`, `UI.updateKeysHUD`) shows
+    `🔑 deposited/3` to everyone + the local hider's `🎒 carried`. The top-right
+    **Next Drop** countdown now also counts purple beams (turns 🟣 when a key beam is next).
+
+- **Airdrop beams & power-ups (Phase 1: GOLD beam).** A PUBG-style airdrop layer.
+  Timed **gold beams of light** rise at random spawn points during HUNTING; walking
+  through an *active* beam grants a power. Host-authoritative throughout (schedule,
+  location, pickup detection, effects), mirroring the `shot` packet's "ms duration →
+  local deadline" convention. Files: `globals.js`, `network.js`, `mechanics.js`,
+  `ui.js`, `level.js`, `index.html`, `css/style.css`, `layout.js`.
+  - **Schedule** (`Network.tickBeams`, host physics loop): anchored to HUNTING start
+    (`gameState.huntStartT`). `GOLD_BEAM_TIMES = [120, 360, 600]` s into hunting; only
+    times `< huntingTime` fire, so the host should raise Hunting time (≥10 min) to see
+    them all. Each beam **arms 5s** (`BEAM_ARM_MS`, dimmer, no orb) → **activates**
+    (walkable) → despawns if uncollected after `BEAM_LIFETIME_MS` (30s).
+  - **Pickup** is detected host-side from synced positions (first player within
+    `BEAM_RADIUS=3` wins). `grantPower` rolls a random power by role.
+  - **Hider** pickup → auto-**invisible 5s** (`PICKUP_INVIS_MS`) + **holds one** random
+    power to activate manually with **E / a new mobile power button**: ❤️ Full-health,
+    👻 Invisible 10s, 🛡️ Disguise-shield (absorb 1 hit while disguised, no break/damage;
+    consumed next hit).
+  - **Seeker** pickup → power applied **instantly**: 📡 Scan (all hiders ≤20m shown
+    through walls 10s, beats invis), 🚫 Jammer (undisguised hiders can't disguise 10s —
+    reuses each hider's `disguiseLockUntil`, so the existing "DISGUISE LOCKED" pill
+    shows it), 🎯 Kill (one-shot direct kill 10s).
+  - **Combat** (`processShot`): invisible hiders are **untargetable**; a disguise-shield
+    **fully negates** one hit (`shielded` flag on the `shot` packet); one-shot-kill sends
+    HP straight to 0.
+  - **Net events**: `beamSpawn` / `beamGone` / `powerGain` / `powerUse` (host→client) and
+    `activatePower` (client→host). New player fields `heldPower`, `invisUntil`,
+    `shieldArmed`, `scanUntil`, `killUntil` (jammer reuses `disguiseLockUntil`).
+  - **Power HUD** (`UI.updatePowerHUD`): a compact **icon + small label** chip
+    (`#power-pill`) sits **beside the bottom health bar** (hider) / **ammo pill** (seeker)
+    — shows the held power (`[E]`) or an active effect's countdown. Plus the hider's
+    circular mobile power button (`#btn-action-power`).
+  - **Rendering** (`level.js`): gold/purple additive beam pillar + ground ring + bobbing
+    orb (`spawnBeam`/`updateBeams`/`removeBeam`/`clearBeams`); per-viewer invisibility
+    gate (hidden from seekers only; invisible hiders are also silent to seekers); seeker
+    Scan blips (`updateScanMarkers`, through-wall sprites). New `Sound.beam(kind)` cue.
+  - **Next-drop HUD pill** (`#next-drop`, top-right): a softly-blinking 🔔 + "Next Drop
+    M:SS". Each peer derives the countdown locally as `elapsed = huntingTime − timer`
+    against `GOLD_BEAM_TIMES` (`UI.updateNextDrop`). Uses the **host's** hunting length,
+    now synced as `gameState.huntingTime` (set in `startGameBroadcast`, adopted by the
+    `gameStart` `Object.assign`) — a client's own `GAME_SETTINGS.huntingTime` may differ,
+    which otherwise made its countdown wrong. Goes brighter + blinks faster at ≤10s.
+  - **Phase 2 (not yet built):** PURPLE key beam, keys, 3 doors, key-submission win.
+
 - **In-game PLAYERS roster aligned into columns.** The 👥 roster modal
   (`#players-modal`) now lays each row out as tidy columns — name flexes, the role
   chip and ALIVE/ELIMINATED status get fixed widths so they line up vertically across

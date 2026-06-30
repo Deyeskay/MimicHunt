@@ -73,6 +73,7 @@
             <div class="hud-card" id="role-card"><span id="role-badge">Spectator</span></div>
             <div class="hud-card" id="timer-card" style="border-color: #ffa502;">⏱️ <span id="timer-display">00:00</span></div>
             <div class="hud-right">
+                <span class="hud-stat" id="next-drop" title="Next airdrop" style="display:none;"><span class="nd-ic">🔔</span> Next Drop <span id="next-drop-time">--:--</span></span>
                 <span class="hud-stat interactive" id="player-count-card" title="Players" style="cursor:pointer;"><span class="hud-ic">👥</span><span id="player-count">1</span></span>
                 <span class="hud-div"></span>
                 <button id="btn-fullscreen" class="interactive hud-icon-btn fs-toggle" title="Fullscreen">⛶</button>
@@ -135,6 +136,18 @@
             <div class="dcd-track"><div id="disguise-cd-bar" class="dcd-bar"></div></div>
         </div>
 
+        <!-- Airdrop power-up status chip (beside the bottom health/ammo bar): an icon
+             + small label for a held power ([E]) or an active timed effect's countdown. -->
+        <div id="power-pill" style="display:none;"><span class="pp-ic" id="power-pill-icon">⚡</span><span id="power-pill-text"></span></div>
+
+        <!-- Persistent objective pill (top-left, under the role card): current goal /
+             phase-role state + live exit-unlock countdown. Driven by UI.updateObjective(). -->
+        <div id="objective-hud" style="display:none;"><span id="objective-text"></span></div>
+
+        <!-- Team key objective (top-left, all players during HUNTING): deposited count
+             toward the hider win, plus the local hider's carried (un-deposited) keys. -->
+        <div id="keys-hud" style="display:none;"><span id="keys-hud-text">🔑 0/3</span></div>
+
         <!-- Bottom-center HUD: hider health bar / seeker reload indicator. -->
         <div id="health-hud" class="bottom-center-hud" style="display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
         <!-- Seeker ammo/score pill: bottom-center, mirrors the hider health bar. -->
@@ -168,6 +181,11 @@
                     <span class="db-label" id="db-label">PROP</span>
                 </button>
                 <button class="action-btn icon-btn" id="btn-action-shoot" title="Shoot" style="background: rgba(73,182,255,0.6); border-color: var(--accent-blue); display:none;"><img class="btn-icon-img" src="assets/icons/bullet.png" alt="Shoot"></button>
+                <!-- Hider-only "use power" button — shown only while holding an airdrop power. -->
+                <button class="action-btn power-btn" id="btn-action-power" title="Use Power" style="display:none;">
+                    <span class="pb-icon" id="pb-icon">⚡</span>
+                    <span class="pb-label" id="pb-label">POWER</span>
+                </button>
             </div>
         </div>
     </div>

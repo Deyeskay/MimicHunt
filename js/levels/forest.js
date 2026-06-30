@@ -78,7 +78,7 @@ registerLevel("Forest", [
         "model": "rock",
         "x": -41.69,
         "y": -0.01,
-        "z": -0.8,
+        "z": -3.63,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -152,7 +152,7 @@ registerLevel("Forest", [
     {
         "id": "bush_9",
         "model": "bush",
-        "x": -18.8,
+        "x": -18.28,
         "y": 0.04,
         "z": 15.61,
         "bottomY": -0.02,
@@ -190,9 +190,9 @@ registerLevel("Forest", [
     {
         "id": "tree_11",
         "model": "tree",
-        "x": -40.48,
+        "x": -40.58,
         "y": 0.04,
-        "z": -1.44,
+        "z": -3.27,
         "bottomY": -0.04,
         "scale": {
             "x": 1.81,
@@ -488,7 +488,7 @@ registerLevel("Forest", [
     {
         "id": "wall_31",
         "model": "wall",
-        "x": -34.28,
+        "x": -34.36,
         "y": 3.74,
         "z": 22.27,
         "bottomY": -0.2,
@@ -560,12 +560,12 @@ registerLevel("Forest", [
     {
         "id": "wall_37",
         "model": "wall",
-        "x": -4.3,
+        "x": -6.04,
         "y": 3.74,
-        "z": 15.44,
+        "z": 15.28,
         "bottomY": -0.2,
         "scale": {
-            "x": 16.62,
+            "x": 17.3,
             "y": 7.88,
             "z": 0.3
         },
@@ -670,10 +670,10 @@ registerLevel("Forest", [
         "model": "wall",
         "x": -42.11,
         "y": 3.74,
-        "z": 7.44,
+        "z": 7.91,
         "bottomY": -0.2,
         "scale": {
-            "x": 10.42,
+            "x": 9.32,
             "y": 7.88,
             "z": 0.48
         },
@@ -1782,7 +1782,7 @@ registerLevel("Forest", [
         "model": "rock",
         "x": -38.35,
         "y": -0.01,
-        "z": -2.23,
+        "z": -2.95,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -2097,5 +2097,257 @@ registerLevel("Forest", [
             "y": 0,
             "z": -180
         }
+    },
+    {
+        "id": "wall_114",
+        "model": "wall",
+        "x": -1.5,
+        "y": 7.52,
+        "z": 22.48,
+        "bottomY": 7.35,
+        "scale": {
+            "x": 8.81,
+            "y": 0.35,
+            "z": 14.81
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_122",
+        "model": "wall",
+        "x": 0.33,
+        "y": 9.96,
+        "z": 17.44,
+        "bottomY": 7.52,
+        "scale": {
+            "x": 4,
+            "y": 4.88,
+            "z": 3.98
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_124",
+        "model": "wall",
+        "x": -7.55,
+        "y": 16.68,
+        "z": 22.59,
+        "bottomY": 16.5,
+        "scale": {
+            "x": 20.48,
+            "y": 0.35,
+            "z": 6.73
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_125",
+        "model": "wall",
+        "x": -17.79,
+        "y": 13.04,
+        "z": 19.18,
+        "bottomY": 7.64,
+        "scale": {
+            "x": 0.25,
+            "y": 10.79,
+            "z": 0.31
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_126",
+        "model": "wall",
+        "x": -17.79,
+        "y": 13.04,
+        "z": 25.97,
+        "bottomY": 7.64,
+        "scale": {
+            "x": 0.25,
+            "y": 10.79,
+            "z": 0.31
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_127",
+        "model": "wall",
+        "x": -19.54,
+        "y": 2.24,
+        "z": 16.39,
+        "bottomY": -3.15,
+        "scale": {
+            "x": 0.25,
+            "y": 10.79,
+            "z": 0.31
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_128",
+        "model": "wall",
+        "x": 2.71,
+        "y": 13.04,
+        "z": 19.32,
+        "bottomY": 7.64,
+        "scale": {
+            "x": 0.25,
+            "y": 10.79,
+            "z": 0.31
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_129",
+        "model": "wall",
+        "x": 2.75,
+        "y": 13.04,
+        "z": 25.9,
+        "bottomY": 7.64,
+        "scale": {
+            "x": 0.25,
+            "y": 10.79,
+            "z": 0.31
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_130",
+        "model": "wall",
+        "x": -17.48,
+        "y": 7.52,
+        "z": 22.48,
+        "bottomY": 7.35,
+        "scale": {
+            "x": 5.99,
+            "y": 0.35,
+            "z": 14.81
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_131",
+        "model": "rock",
+        "x": -18.07,
+        "y": 7.89,
+        "z": 18.39,
+        "bottomY": 7.9,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "hideSpot": false
+    },
+    {
+        "id": "rock_132",
+        "model": "rock",
+        "x": -2.52,
+        "y": 7.89,
+        "z": 29.03,
+        "bottomY": 7.9,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "hideSpot": false
+    },
+    {
+        "id": "rock_133",
+        "model": "rock",
+        "x": 1.34,
+        "y": 16.89,
+        "z": 24.5,
+        "bottomY": 16.9,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "hideSpot": false
+    },
+    {
+        "id": "door_1",
+        "model": "door",
+        "x": -14.46,
+        "y": 0,
+        "z": 13.79,
+        "bottomY": 0,
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "exitDoor": true
+    },
+    {
+        "id": "door_2",
+        "model": "door",
+        "x": -3.41,
+        "y": 0,
+        "z": 8.62,
+        "bottomY": 0,
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "exitDoor": true
+    },
+    {
+        "id": "door_3",
+        "model": "door",
+        "x": 10,
+        "y": 0,
+        "z": 22,
+        "bottomY": 0,
+        "scale": { "x": 1, "y": 1, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "exitDoor": true
     }
 ]);

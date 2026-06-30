@@ -110,6 +110,12 @@ const PrefabLibrary = {
         "climbable": false,
         "hideSpot": false,
         "canDisguise": false
+    },
+    "door": {
+        "collision": false,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false
     }
 };
 

@@ -410,6 +410,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
             <button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
             <button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
             <button class="propBtn" onclick="selectModel('spawn',this)">Spawn</button>
+            <button class="propBtn" onclick="selectModel('door',this)">Exit Door</button>
         </div>
     </div>
 
@@ -2166,7 +2167,8 @@ window.addEventListener(
         PropLevel.groundObject(clone, groundHit[0].point.y);
 
         // Gameplay defaults come from the prefab for this model. Spawn markers
-        // additionally default to being a generic spawn point.
+        // additionally default to being a generic spawn point; door markers flag
+        // themselves as an exit door.
         const isSpawn = selectedModel === "spawn";
         const def = PropLevel.getPrefab(selectedModel);
 
@@ -2190,7 +2192,9 @@ window.addEventListener(
 
                     seekerSpawn:false,
 
-                    hiderSpawn:false
+                    hiderSpawn:false,
+
+                    exitDoor:selectedModel === "door"
                 }
         };
 
@@ -2538,7 +2542,8 @@ function duplicateSelected()
                 hideSpot:source.hideSpot,
                 spawnPoint:source.spawnPoint,
                 seekerSpawn:source.seekerSpawn,
-                hiderSpawn:source.hiderSpawn
+                hiderSpawn:source.hiderSpawn,
+                exitDoor:source.exitDoor
             }
         };
 
@@ -2594,7 +2599,8 @@ function snapshotObject(o) {
         },
         scale: { x: o.scale.x, y: o.scale.y, z: o.scale.z },
         collision: d.collision, climbable: d.climbable, hideSpot: d.hideSpot,
-        spawnPoint: d.spawnPoint, seekerSpawn: d.seekerSpawn, hiderSpawn: d.hiderSpawn
+        spawnPoint: d.spawnPoint, seekerSpawn: d.seekerSpawn, hiderSpawn: d.hiderSpawn,
+        exitDoor: d.exitDoor
     };
 }
 function snapshotScene() { return placedObjects.map(snapshotObject); }
@@ -2816,6 +2822,21 @@ function createSpawnMarkerMesh()
     );
 }
 
+// Editor-only marker for an exit door (key-deposit zone). A green translucent ring
+// gate, never exported as geometry — the game draws the goal portal from the
+// `door` marker's position (Level.buildDoors).
+function createDoorMarkerMesh()
+{
+    return new THREE.Mesh(
+        new THREE.TorusGeometry(1.3, 0.18, 10, 28),
+        new THREE.MeshBasicMaterial({
+            color:0x00e5a0,
+            transparent:true,
+            opacity:0.6
+        })
+    );
+}
+
 // Single source of truth for turning a model id into an editor mesh, shared by
 // click-to-place and Load Level. Returns null if a GLB model isn't loaded yet.
 function createEditorMesh(model)
@@ -2825,6 +2846,9 @@ function createEditorMesh(model)
 
     if(model === "spawn")
         return createSpawnMarkerMesh();
+
+    if(model === "door")
+        return createDoorMarkerMesh();
 
     if(!modelLibrary[model])
         return null;
@@ -2877,7 +2901,8 @@ function buildEditorObject(prop)
                 hideSpot:    prop.hideSpot     ?? def.hideSpot,
                 spawnPoint:  prop.spawnPoint   ?? false,
                 seekerSpawn: prop.seekerSpawn  ?? false,
-                hiderSpawn:  prop.hiderSpawn   ?? false
+                hiderSpawn:  prop.hiderSpawn   ?? false,
+                exitDoor:    prop.exitDoor     ?? false
             }
     };
 

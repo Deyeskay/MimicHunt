@@ -15,7 +15,8 @@ const LayoutEditor = {
         { key: 'joystick', id: 'joystick-zone' },
         { key: 'jump',     id: 'btn-action-jump' },
         { key: 'prop',     id: 'btn-action-disguise' },
-        { key: 'shoot',    id: 'btn-action-shoot' }
+        { key: 'shoot',    id: 'btn-action-shoot' },
+        { key: 'power',    id: 'btn-action-power' }
     ],
 
     _teardown: [],   // listener-removers active only while editing

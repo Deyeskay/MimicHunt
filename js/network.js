@@ -57,7 +57,15 @@ const Network = {
             propHeight: 2,
             propRadius: 1,
             propRotation: null,
-            color: role === 'Seeker' ? 0xff4757 : 0x2ed573
+            color: role === 'Seeker' ? 0xff4757 : 0x2ed573,
+            // --- AIRDROP POWER-UPS (see Network.grantPower / processShot) ---
+            heldPower: null,        // hider: 'heal'|'invis'|'shield' awaiting manual activation (E)
+            invisUntil: 0,          // hider: invisible-to-seeker deadline (local clock)
+            shieldArmed: false,     // hider: absorb-1-hit-while-disguised armed
+            scanUntil: 0,           // seeker: see-hiders-through-walls deadline (local clock)
+            killUntil: 0,           // seeker: one-shot-kill deadline (local clock)
+            // (jammer reuses each hider's existing `disguiseLockUntil`)
+            carriedKeys: 0          // hider: purple-beam keys held but not yet deposited
         };
     },
 
@@ -78,10 +86,25 @@ const Network = {
 
     // Host-only: show an event toast locally AND on every client (e.g. a player
     // left / was eliminated / disconnected). Clients render it via case 'notice'.
-    notify(text) {
+    // `opts.audience` ('all'|'hiders'|'seekers') restricts who sees it — honored both
+    // locally (the host's own role) and on clients. `opts.toastMs` lengthens display.
+    notify(text, opts) {
         if (!text) return;
-        if (typeof UI !== 'undefined' && UI.toast) UI.toast(text);
-        this.broadcast({ type: 'notice', text: text });
+        opts = opts || {};
+        const pkt = { type: 'notice', text: text };
+        if (opts.audience) pkt.audience = opts.audience;
+        if (opts.toastMs) pkt.toastMs = opts.toastMs;
+        // Local (host) display, honoring audience against the host's own role.
+        let show = true;
+        if (opts.audience && opts.audience !== 'all') {
+            const me = gameState.players[myId];
+            const r = me && me.role;
+            if (opts.audience === 'hiders' && r !== 'Hider') show = false;
+            if (opts.audience === 'seekers' && r !== 'Seeker') show = false;
+        }
+        if (show && typeof UI !== 'undefined' && UI.toast)
+            UI.toast(text, opts.toastMs ? { duration: opts.toastMs } : undefined);
+        this.broadcast(pkt);
     },
 
     sendToHost(packet) {
@@ -293,6 +316,8 @@ const Network = {
         for (const id in gameState.players) {
             const h = gameState.players[id];
             if (h.role !== 'Hider' || h.isCaught) continue;
+            // Invisible hiders can't be seen — and so can't be hit — by seekers.
+            if (h.invisUntil && now < h.invisUntil) continue;
             const hitRadius = Math.max(1.0, (h.disguiseSize || 2) / 2);  // forgiving aim assist; big props easier
             let hitDist = Infinity, hitT = Infinity;
             for (let k = 0; k < COLUMN.length; k++) {
@@ -308,23 +333,33 @@ const Network = {
             if (hitDist < hitRadius && hitT < bestT && hitT < blockT) { best = id; bestT = hitT; }
         }
 
-        let hit = false, targetId = null, health, eliminated = false, forcedOut = false;
+        let hit = false, targetId = null, health, eliminated = false, forcedOut = false, shielded = false;
         if (best) {
             hit = true;
             targetId = best;
             const tgt = gameState.players[best];
-            tgt.health = Math.max(0, (tgt.health != null ? tgt.health : HIDER_MAX_HP) - 1);
-            shooter.score = (shooter.score || 0) + HIT_SCORE;
-            tgt.revealedUntil = now + REVEAL_MS;
-            tgt.disguiseLockUntil = now + DISGUISE_LOCK_MS;
-            if (tgt.disguiseType !== 'player') {
-                forcedOut = true;
-                tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
-                tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null;
-                tgt.color = 0x2ed573;
+            if (tgt.shieldArmed) {
+                // Disguise-shield power: absorb this one hit entirely — no damage, no
+                // reveal, no forced-out. Consumed; the next hit is the usual behaviour.
+                tgt.shieldArmed = false;
+                shielded = true;
+                health = tgt.health;   // unchanged; no score for a deflected shot
+            } else {
+                // One-shot-kill power: a hit goes straight to 0 HP for its window.
+                const oneShot = shooter.killUntil && now < shooter.killUntil;
+                tgt.health = oneShot ? 0 : Math.max(0, (tgt.health != null ? tgt.health : HIDER_MAX_HP) - 1);
+                shooter.score = (shooter.score || 0) + HIT_SCORE;
+                tgt.revealedUntil = now + REVEAL_MS;
+                tgt.disguiseLockUntil = now + DISGUISE_LOCK_MS;
+                if (tgt.disguiseType !== 'player') {
+                    forcedOut = true;
+                    tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
+                    tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null;
+                    tgt.color = 0x2ed573;
+                }
+                health = tgt.health;
+                if (tgt.health <= 0) { tgt.isCaught = true; eliminated = true; }
             }
-            health = tgt.health;
-            if (tgt.health <= 0) { tgt.isCaught = true; eliminated = true; }
         }
 
         // Where the bolt ends: at the hider if hit, else at the blocking prop,
@@ -337,7 +372,7 @@ const Network = {
             mx: ray.mx, my: ray.my, mz: ray.mz,
             hit, targetId, health, score: shooter.score, impactDist,
             revealMs: REVEAL_MS, lockMs: DISGUISE_LOCK_MS, shootMs: SHOOT_ANIM_MS,
-            eliminated, forcedOut
+            eliminated, forcedOut, shielded
         };
         this.broadcast(packet);
 
@@ -347,8 +382,12 @@ const Network = {
             Sound.pew();
             Level.spawnPulse(packet, packet.impactDist);
         }
-        // If the host itself is the hider that got hit, play the damage sound.
-        if (hit && targetId === myId) Sound.hurt();
+        // If the host itself is the hider that got hit, play the damage sound
+        // (or a shield-deflect toast when the hit was absorbed).
+        if (hit && targetId === myId) {
+            if (shielded) UI.toast('🛡️ Shield absorbed the hit!');
+            else Sound.hurt();
+        }
         // Hit-marker on our own crosshair when we (the host seeker) land a shot.
         if (hit && shooterId === myId) UI.hitMarker();
 
@@ -356,7 +395,330 @@ const Network = {
             const tn = (gameState.players[targetId] && gameState.players[targetId].name) || 'A hider';
             const sn = (shooter && shooter.name) || 'Seeker';
             this.notify('💀 ' + tn + ' was eliminated by ' + sn);
+            // A killed carrier drops its un-deposited keys for any hider to recover.
+            this.dropCarriedKeys(gameState.players[targetId]);
             Mechanics.checkWinConditions();
+        }
+    },
+
+    /*=================================================================
+      AIRDROP BEAMS & POWER-UPS (host-authoritative)
+
+      tickBeams() runs in the host physics loop. It (1) fires scheduled beam
+      spawns once HUNTING elapsed time reaches each GOLD_BEAM_TIMES entry, (2)
+      detects walk-through pickups for EVERY player from their synced positions
+      (first within BEAM_RADIUS wins — no double-claims), and (3) despawns beams
+      nobody collected. All visuals/effects travel as discrete events that each
+      peer converts to local deadlines (same pattern as the `shot` packet).
+    =================================================================*/
+    tickBeams() {
+        if (gameState.phase !== 'HUNTING' || !gameState.huntStartT) return;
+        const now = this.now();
+        // Light throttle — pickup proximity at ~10 Hz is plenty for a 3-unit radius.
+        if (this._lastBeamTick && now - this._lastBeamTick < 100) return;
+        this._lastBeamTick = now;
+
+        if (!this._beams) this._beams = [];
+        const elapsed = (now - gameState.huntStartT) / 1000;
+        const huntLen = ROUND_DURATION();
+
+        // (1) Fire any scheduled beam (gold = powers, purple = keys) whose time has
+        // arrived (and still fits inside the match — the last ~2 min get no beams).
+        if (this._beamSched) {
+            for (let i = this._beamSched.length - 1; i >= 0; i--) {
+                const ev = this._beamSched[i];
+                if (elapsed >= ev.at && ev.at < huntLen) {
+                    this._beamSched.splice(i, 1);
+                    this.spawnBeam(ev.kind);
+                }
+            }
+        }
+
+        // (2) + (3) walk-through pickups and lifetime despawns.
+        for (let i = this._beams.length - 1; i >= 0; i--) {
+            const b = this._beams[i];
+            const active = now >= b.spawnAt + b.armMs;
+            if (!active) continue;
+            // Despawn if uncollected for too long.
+            if (now >= b.spawnAt + b.armMs + BEAM_LIFETIME_MS) {
+                this._beams.splice(i, 1);
+                this.broadcast({ type: 'beamGone', beamId: b.id });
+                Level.removeBeam(b.id);
+                continue;
+            }
+            // First eligible living player standing in the beam collects it. Purple
+            // key beams are HIDER-ONLY (seekers gain nothing from them).
+            let taker = null;
+            for (const id in gameState.players) {
+                const p = gameState.players[id];
+                if (p.isCaught) continue;
+                if (b.kind === 'purple' && p.role !== 'Hider') continue;
+                if (Math.hypot(p.x - b.x, p.z - b.z) <= BEAM_RADIUS) { taker = id; break; }
+            }
+            if (taker) {
+                this._beams.splice(i, 1);
+                this.collectBeam(b, taker);
+            }
+        }
+    },
+
+    /*=================================================================
+      KEYS & EXIT DOORS (Phase 2, host-authoritative)
+      tickKeys() detects (a) a key-carrying hider walking into an exit door
+      (deposit → team count → win at KEYS_TO_WIN) and (b) a hider walking over
+      a dropped-key bundle (recover). Doors come from the level (props flagged
+      `door`); dropped bundles are created when a carrier is eliminated.
+    =================================================================*/
+    tickKeys() {
+        if (gameState.phase !== 'HUNTING') return;
+        const now = this.now();
+        if (this._lastKeyTick && now - this._lastKeyTick < 100) return;
+        this._lastKeyTick = now;
+
+        // (a) Deposits at exit doors — only once the doors have OPENED (last key drop
+        // + EXIT_ACTIVATE_DELAY_MS). Closed doors are hidden and reject deposits.
+        const doorsOpen = gameState.doorsActivateAt && now >= gameState.doorsActivateAt;
+        const doors = (doorsOpen && typeof PropLevel !== 'undefined' && PropLevel.getDoorPositions)
+            ? PropLevel.getDoorPositions(mapProps3D) : [];
+        if (doors.length) {
+            for (const id in gameState.players) {
+                const p = gameState.players[id];
+                if (p.role !== 'Hider' || p.isCaught || !(p.carriedKeys > 0)) continue;
+                const atDoor = doors.some(d => Math.hypot(p.x - d.x, p.z - d.z) <= DOOR_RADIUS);
+                if (atDoor) this.depositKeys(id);
+            }
+        }
+
+        // (b) Recover dropped-key bundles.
+        if (this._droppedKeys && this._droppedKeys.length) {
+            for (let i = this._droppedKeys.length - 1; i >= 0; i--) {
+                const k = this._droppedKeys[i];
+                let taker = null;
+                for (const id in gameState.players) {
+                    const p = gameState.players[id];
+                    if (p.role !== 'Hider' || p.isCaught) continue;
+                    if (Math.hypot(p.x - k.x, p.z - k.z) <= DROP_KEY_RADIUS) { taker = id; break; }
+                }
+                if (taker) {
+                    this._droppedKeys.splice(i, 1);
+                    const p = gameState.players[taker];
+                    p.carriedKeys = (p.carriedKeys || 0) + k.count;
+                    this.broadcast({ type: 'keyDropGone', keyId: k.id });
+                    Level.removeDroppedKey(k.id);
+                    this.broadcast({ type: 'keyGain', playerId: taker, carried: p.carriedKeys });
+                    this.applyKeyGain(taker, p.carriedKeys, true);
+                }
+            }
+        }
+    },
+
+    // Purple-beam pickup: a hider gains one carried key.
+    grantKey(playerId) {
+        const p = gameState.players[playerId];
+        if (!p || p.role !== 'Hider') return;
+        p.carriedKeys = (p.carriedKeys || 0) + 1;
+        this.broadcast({ type: 'keyGain', playerId, carried: p.carriedKeys });
+        this.applyKeyGain(playerId, p.carriedKeys, true);
+    },
+
+    // Deposit a carrier's keys at a door → team count; win at KEYS_TO_WIN.
+    depositKeys(playerId) {
+        const p = gameState.players[playerId];
+        if (!p || !(p.carriedKeys > 0)) return;
+        const n = p.carriedKeys;
+        p.carriedKeys = 0;
+        gameState.submittedKeys = (gameState.submittedKeys || 0) + n;
+        this.broadcast({ type: 'keyDeposit', playerId, carried: 0, submitted: gameState.submittedKeys });
+        this.applyKeyDeposit(playerId, 0, gameState.submittedKeys, true);
+        const nm = p.name || 'A hider';
+        this.notify('🔑 ' + nm + ' delivered ' + n + ' key' + (n > 1 ? 's' : '') +
+                    ' (' + gameState.submittedKeys + '/' + KEYS_TO_WIN + ')');
+        if (gameState.submittedKeys >= KEYS_TO_WIN && gameState.phase === 'HUNTING') {
+            gameState.phase = 'ENDED';
+            this.finishMatch("Keys Secured!", "Hiders Win! " + KEYS_TO_WIN + " keys delivered.");
+        }
+    },
+
+    // A killed carrier drops its keys on the ground as a recoverable bundle.
+    dropCarriedKeys(player) {
+        if (!player || !(player.carriedKeys > 0)) return;
+        const k = { id: ++this._dropKeySeq, x: player.x, z: player.z, count: player.carriedKeys };
+        player.carriedKeys = 0;
+        (this._droppedKeys = this._droppedKeys || []).push(k);
+        this.broadcast({ type: 'keyDrop', keyId: k.id, x: k.x, z: k.z, count: k.count });
+        Level.spawnDroppedKey(k.id, k.x, k.z, k.count);
+        // Warn hiders the keys are recoverable (5s, host + all hider clients).
+        this.notify('🔑 Keys dropped — grab them!', { audience: 'hiders', toastMs: 5000 });
+    },
+
+    // Apply a key-count change to the LOCAL view (host echo + clients).
+    applyKeyGain(playerId, carried, isHostEcho) {
+        const p = gameState.players[playerId];
+        if (!p) return;
+        if (!isHostEcho) p.carriedKeys = carried;
+        if (playerId === myId) {
+            Sound.coin();
+            UI.toast('🔑 Key collected — bring it to an exit door!');
+        }
+    },
+    applyKeyDeposit(playerId, carried, submitted, isHostEcho) {
+        const p = gameState.players[playerId];
+        if (p && !isHostEcho) p.carriedKeys = carried;
+        if (!isHostEcho) gameState.submittedKeys = submitted;
+    },
+
+    // Pick a random spawn point for the beam and announce it to everyone.
+    spawnBeam(kind) {
+        if (!this._beams) this._beams = [];
+        const pos = this.pickBeamPos();
+        const b = { id: ++this._beamSeq, kind, x: pos.x, z: pos.z,
+                    spawnAt: this.now(), armMs: BEAM_ARM_MS };
+        this._beams.push(b);
+        const pkt = { type: 'beamSpawn', beamId: b.id, kind, x: b.x, z: b.z, armMs: b.armMs };
+        this.broadcast(pkt);
+        Level.spawnBeam(b.id, kind, b.x, b.z, b.armMs);   // host renders it too
+        Sound.beam(kind);
+        this.notify(kind === 'purple' ? '🟣 A key beam has dropped!' : '🟡 An airdrop beam has dropped!');
+    },
+
+    // A candidate ground position for a beam: reuse the level's spawn points
+    // (seeker/hider/generic) when present, else a random open spot near origin.
+    pickBeamPos() {
+        let pts = [];
+        if (typeof PropLevel !== 'undefined' && PropLevel.getSpawnPositions && mapProps3D) {
+            const s = PropLevel.getSpawnPositions(mapProps3D);
+            pts = (s.seeker || []).concat(s.hider || []);
+        }
+        if (pts.length) {
+            const p = pts[Math.floor(Math.random() * pts.length)];
+            return { x: p.x, z: p.z };
+        }
+        const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 14;
+        return { x: Math.cos(a) * r, z: Math.sin(a) * r };
+    },
+
+    // A player walked into an active beam — clear the visual everywhere and grant
+    // the reward: a power (gold) or a key (purple, hider-only).
+    collectBeam(beam, playerId) {
+        this.broadcast({ type: 'beamGone', beamId: beam.id, collectorId: playerId });
+        Level.removeBeam(beam.id, playerId);
+        if (beam.kind === 'purple') this.grantKey(playerId);
+        else this.grantPower(playerId, beam.kind);
+    },
+
+    // Roll + apply the random power for the collector's role. Hiders also get an
+    // automatic 5s invisibility and HOLD one power to activate later (E / button);
+    // seekers get their power applied instantly.
+    grantPower(playerId, kind) {
+        const p = gameState.players[playerId];
+        if (!p) return;
+        const now = this.now();
+        if (p.role === 'Hider') {
+            const power = HIDER_POWERS[Math.floor(Math.random() * HIDER_POWERS.length)];
+            p.invisUntil = now + PICKUP_INVIS_MS;
+            p.heldPower = power;
+            this.broadcast({ type: 'powerGain', playerId, role: 'Hider',
+                             heldPower: power, invisMs: PICKUP_INVIS_MS });
+            this.applyPowerGain(playerId, 'Hider', { heldPower: power, invisMs: PICKUP_INVIS_MS }, true);
+        } else {
+            const power = SEEKER_POWERS[Math.floor(Math.random() * SEEKER_POWERS.length)];
+            const pkt = { type: 'powerGain', playerId, role: 'Seeker', power };
+            if (power === 'scan') {
+                p.scanUntil = now + POWER_SCAN_MS;
+                pkt.scanMs = POWER_SCAN_MS;
+            } else if (power === 'kill') {
+                p.killUntil = now + POWER_KILL_MS;
+                pkt.killMs = POWER_KILL_MS;
+            } else { // jammer
+                const ids = [];
+                for (const id in gameState.players) {
+                    const h = gameState.players[id];
+                    if (h.role === 'Hider' && !h.isCaught && h.disguiseType === 'player') {
+                        h.disguiseLockUntil = now + POWER_JAM_MS;
+                        ids.push(id);
+                    }
+                }
+                pkt.jamIds = ids; pkt.jamMs = POWER_JAM_MS;
+            }
+            this.broadcast(pkt);
+            this.applyPowerGain(playerId, 'Seeker', pkt, true);
+            // Warn the hiders that a seeker ability is now active (5s so it's readable).
+            const alertNames = { scan: 'Scan', jammer: 'Jammer', kill: 'One-Shot Kill' };
+            this.notify('⚠️ Seeker activated ' + (alertNames[power] || power) + '!',
+                        { audience: 'hiders', toastMs: 5000 });
+        }
+    },
+
+    // Apply a powerGain to the LOCAL view (deadlines from ms). Shared by the host
+    // (local echo) and clients (handleHostData). `isHostEcho` skips re-stamping the
+    // authoritative fields the host already set in real time.
+    applyPowerGain(playerId, role, data, isHostEcho) {
+        const p = gameState.players[playerId];
+        if (!p) return;
+        const now = this.now();
+        if (role === 'Hider') {
+            if (!isHostEcho && data.invisMs) p.invisUntil = now + data.invisMs;
+            if (!isHostEcho) p.heldPower = data.heldPower || null;
+            if (playerId === myId) {
+                Sound.coin();
+                const names = { heal: 'Full Health', invis: 'Invisibility', shield: 'Disguise Shield' };
+                UI.toast('✨ Power: ' + (names[data.heldPower] || data.heldPower) + ' — press E');
+                const invisMs = data.invisMs || (typeof PICKUP_INVIS_MS !== 'undefined' ? PICKUP_INVIS_MS : 0);
+                if (invisMs) UI.toast('👻 Invisible for ' + Math.round(invisMs / 1000) + 's');
+            }
+        } else {
+            if (!isHostEcho) {
+                if (data.scanMs) p.scanUntil = now + data.scanMs;
+                if (data.killMs) p.killUntil = now + data.killMs;
+                if (data.jamIds) data.jamIds.forEach(id => {
+                    const h = gameState.players[id];
+                    if (h) h.disguiseLockUntil = now + (data.jamMs || POWER_JAM_MS);
+                });
+            }
+            if (playerId === myId) {
+                Sound.coin();
+                const names = { scan: '📡 Scan — hiders revealed', jammer: '🚫 Jammer — disguises locked', kill: '🎯 One-Shot Kill' };
+                UI.toast(names[data.power] || data.power);
+            }
+        }
+    },
+
+    // Hider activates the held power (E / power button). Validated host-side.
+    handleActivate(playerId) {
+        const p = gameState.players[playerId];
+        if (!p || p.role !== 'Hider' || p.isCaught || !p.heldPower) return;
+        const now = this.now();
+        const power = p.heldPower;
+        const pkt = { type: 'powerUse', playerId, power };
+        if (power === 'heal') {
+            p.health = HIDER_MAX_HP;
+            pkt.healTo = HIDER_MAX_HP;
+        } else if (power === 'invis') {
+            p.invisUntil = Math.max(p.invisUntil || 0, now + POWER_INVIS_MS);
+            pkt.invisMs = POWER_INVIS_MS;
+        } else if (power === 'shield') {
+            p.shieldArmed = true;
+            pkt.shield = true;
+        }
+        p.heldPower = null;
+        this.broadcast(pkt);
+        this.applyPowerUse(pkt, true);
+    },
+
+    // Apply a powerUse to the LOCAL view. Shared by host echo + clients.
+    applyPowerUse(data, isHostEcho) {
+        const p = gameState.players[data.playerId];
+        if (!p) return;
+        const now = this.now();
+        if (!isHostEcho) {
+            if (data.healTo != null) p.health = data.healTo;
+            if (data.invisMs) p.invisUntil = Math.max(p.invisUntil || 0, now + data.invisMs);
+            if (data.shield) p.shieldArmed = true;
+            if (data.playerId === myId) p.heldPower = null;
+        }
+        if (data.playerId === myId) {
+            const names = { heal: '❤️ Full health restored', invis: '👻 Invisible for 10s', shield: '🛡️ Disguise shield armed' };
+            UI.toast(names[data.power] || data.power);
         }
     },
 
@@ -674,6 +1036,11 @@ const Network = {
                 }
                 break;
             }
+
+            case 'activatePower':
+                // A client hider pressed E / the power button — validate + apply.
+                this.handleActivate(conn.peer);
+                break;
         }
     },
 
@@ -765,6 +1132,26 @@ const Network = {
                 if (gameState.phase === 'HIDING') {
                     gameState.phase = 'HUNTING';
                     gameState.timer = ROUND_DURATION();
+                    // Hunting just began — anchor the airdrop-beam schedule to now.
+                    gameState.huntStartT = this.now();
+                    // Combined schedule: gold (powers) + purple (keys). Each fires once.
+                    this._beamSched = GOLD_BEAM_TIMES.map(t => ({ at: t, kind: 'gold' }))
+                        .concat(PURPLE_BEAM_TIMES.map(t => ({ at: t, kind: 'purple' })));
+                    // Exit doors open EXIT_ACTIVATE_DELAY_MS after the LAST purple key
+                    // beam that actually fits inside this hunt. If none fit (too short a
+                    // hunt), doors never open — keys can't be deposited (surfaced in docs).
+                    const huntLen = ROUND_DURATION();
+                    const firing = PURPLE_BEAM_TIMES.filter(t => t < huntLen);
+                    if (firing.length) {
+                        const lastPurple = Math.max.apply(null, firing);
+                        gameState.doorsActivateAt =
+                            gameState.huntStartT + lastPurple * 1000 + EXIT_ACTIVATE_DELAY_MS;
+                        this.broadcast({ type: 'doorsSchedule',
+                            activateInMs: gameState.doorsActivateAt - this.now() });
+                    } else {
+                        gameState.doorsActivateAt = null;
+                        this.broadcast({ type: 'doorsSchedule', activateInMs: null });
+                    }
                 } else if (gameState.phase === 'HUNTING') {
                     gameState.phase = 'ENDED';
                     this.finishMatch('Time\'s Up!', 'Hiders Win! Time expired.');
@@ -782,6 +1169,11 @@ const Network = {
 
             // Seekers shoot to catch hiders now (replaces proximity collisions).
             Mechanics.tickReload();
+
+            // Airdrop beams: schedule spawns + detect walk-through pickups (host-only).
+            this.tickBeams();
+            // Keys: door deposits + dropped-key recovery (host-only).
+            this.tickKeys();
 
             UI.updateHUD();
         }, 1000 / 60);
@@ -937,10 +1329,21 @@ const Network = {
                 break;
             }
 
-            case 'notice':
-                // Host-broadcast event toast (player left / eliminated / disconnected).
-                if (data.text) UI.toast(data.text);
+            case 'notice': {
+                // Host-broadcast event toast. Optional `audience` ('all'|'hiders'|
+                // 'seekers') restricts who shows it (e.g. seeker-ability alerts go to
+                // hiders only); optional `toastMs` lengthens the display for readability.
+                if (!data.text) break;
+                const aud = data.audience || 'all';
+                if (aud !== 'all') {
+                    const me = gameState.players[myId];
+                    const myRole = me && me.role;
+                    if (aud === 'hiders' && myRole !== 'Hider') break;
+                    if (aud === 'seekers' && myRole !== 'Seeker') break;
+                }
+                UI.toast(data.text, data.toastMs ? { duration: data.toastMs } : undefined);
                 break;
+            }
 
             case 'shot': {
                 // Authoritative result of a seeker's energy-pulse shot.
@@ -949,7 +1352,7 @@ const Network = {
                 // Aim-stance window so remotes show the upper-body shoot pose + facing.
                 if (shooter) shooter.shootingUntil = this.now() + (data.shootMs || SHOOT_ANIM_MS);
 
-                if (data.hit && data.targetId) {
+                if (data.hit && data.targetId && !data.shielded) {
                     const tgt = gameState.players[data.targetId];
                     if (tgt) {
                         if (data.health !== undefined) tgt.health = data.health;
@@ -975,8 +1378,14 @@ const Network = {
                     Sound.pew();
                     Level.spawnPulse(data, data.impactDist);
                 }
-                // Damage sound when WE are the hider that got hit.
-                if (data.hit && data.targetId === myId) Sound.hurt();
+                // A shielded hit consumes the target's disguise shield everywhere.
+                if (data.hit && data.shielded) {
+                    const st = gameState.players[data.targetId];
+                    if (st) st.shieldArmed = false;
+                    if (data.targetId === myId) UI.toast('🛡️ Shield absorbed the hit!');
+                }
+                // Damage sound when WE are the hider that got hit (not when shielded).
+                if (data.hit && !data.shielded && data.targetId === myId) Sound.hurt();
                 // Hit-marker on our own crosshair when our shot landed.
                 if (data.hit && data.shooterId === myId) UI.hitMarker();
                 break;
@@ -990,6 +1399,55 @@ const Network = {
                 if (jp && data.id !== myId) jp.jumpAt = this.now();
                 break;
             }
+
+            case 'beamSpawn':
+                // Host announced an airdrop beam — render it (arming, then active).
+                Level.spawnBeam(data.beamId, data.kind, data.x, data.z, data.armMs);
+                Sound.beam(data.kind);
+                break;
+
+            case 'beamGone':
+                // Beam collected or expired — clear the visual (flash if collected).
+                Level.removeBeam(data.beamId, data.collectorId);
+                break;
+
+            case 'powerGain':
+                // Someone collected a power. Convert ms durations → local deadlines.
+                this.applyPowerGain(data.playerId, data.role, data, false);
+                break;
+
+            case 'powerUse':
+                // A hider activated a held power.
+                this.applyPowerUse(data, false);
+                break;
+
+            case 'keyGain':
+                // A hider collected/recovered a key (purple beam or dropped bundle).
+                this.applyKeyGain(data.playerId, data.carried, false);
+                break;
+
+            case 'keyDeposit':
+                // A hider deposited keys at an exit door (team count up).
+                this.applyKeyDeposit(data.playerId, data.carried, data.submitted, false);
+                break;
+
+            case 'keyDrop':
+                // A killed carrier's keys hit the ground — render the recoverable bundle.
+                // The "grab them" toast is delivered separately via a host `notice`
+                // (audience: hiders, 5s) so it shows on the host too and stays readable.
+                Level.spawnDroppedKey(data.keyId, data.x, data.z, data.count);
+                break;
+
+            case 'keyDropGone':
+                Level.removeDroppedKey(data.keyId);
+                break;
+
+            case 'doorsSchedule':
+                // Host told us when exit doors open. Convert the relative ms delay to a
+                // local deadline (per-peer clocks, same convention as the 'shot' packet).
+                gameState.doorsActivateAt = (data.activateInMs != null)
+                    ? this.now() + data.activateInMs : null;
+                break;
 
             case 'hidersWin':
                 // The hunter disconnected during migration. We're already (or
@@ -1099,9 +1557,28 @@ const Network = {
             p.disguiseType = 'player';
             p.disguiseSize = 2;
             p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;
+            // Airdrop power-up state — fresh each round.
+            p.heldPower = null;
+            p.invisUntil = 0;
+            p.shieldArmed = false;
+            p.scanUntil = 0;
+            p.killUntil = 0;
+            p.carriedKeys = 0;
             delete p._lastMoveT;
             delete p._lastShotT;
         });
+
+        // Reset the airdrop-beam schedule for the new round (re-armed when HUNTING
+        // begins — see the timer loop).
+        this._beams = [];
+        this._beamSeq = 0;
+        this._beamSched = null;
+        gameState.huntStartT = 0;
+        // Keys & exit doors (Phase 2): team deposit counter + dropped-key bundles.
+        gameState.submittedKeys = 0;
+        gameState.doorsActivateAt = null;   // set when HUNTING begins (timer loop)
+        this._droppedKeys = [];
+        this._dropKeySeq = 0;
 
         // Re-seed the host's local prediction from its (re-spawned) record.
         const host = gameState.players[myId];
@@ -1116,6 +1593,12 @@ const Network = {
 
         gameState.phase = 'HIDING';
         gameState.timer = HIDING_DURATION();
+        // Stamp the authoritative hunting length onto gameState so clients (whose
+        // local GAME_SETTINGS.huntingTime may differ) can derive the airdrop
+        // countdown from it instead of their own setting.
+        gameState.huntingTime = ROUND_DURATION();
+        gameState.submittedKeys = 0;   // team key-deposit count (synced via gameStart)
+        gameState.doorsActivateAt = null;   // exit-door open time (set at HUNTING start)
         this.broadcast({ type: 'gameStart', gameState });
         UI.transitionToGame();
     },

@@ -26,6 +26,16 @@ id; the host's own id is `myId`.
 | `propHeight` | number | bounds height of disguise (collider height) | disguise | `disguise` |
 | `propRadius` | number | bounds radius of disguise | disguise | `disguise` |
 | `propRotation` | {x,y,z}\|null | disguise prop rotation (degrees) | disguise | `disguise` |
+| `heldPower` | str\|null | hider's unused airdrop power (`heal`/`invis`/`shield`) awaiting **E** | host `grantPower` / cleared by `handleActivate` | `powerGain`/`powerUse` |
+| `invisUntil` | ms (local clock) | hider invisible-to-seekers deadline (5s pickup or 10s power) | each peer from `*Ms` | `powerGain`/`powerUse` |
+| `shieldArmed` | bool | hider disguise-shield armed (absorbs 1 hit) | host; cleared in `processShot` | `powerUse` / `shot.shielded` |
+| `scanUntil` | ms (local clock) | seeker see-hiders-through-walls deadline | each peer from `scanMs` | `powerGain` |
+| `killUntil` | ms (local clock) | seeker one-shot-kill deadline | each peer from `killMs` | `powerGain` |
+| `carriedKeys` | int | hider's purple-beam keys held but not yet deposited at a door | host `grantKey`/`depositKeys`/`dropCarriedKeys` | `keyGain`/`keyDeposit` |
+
+> **Team field (on `gameState`, not per-player):** `submittedKeys` — keys deposited at
+> exit doors toward the hider key-win (`KEYS_TO_WIN`). Host-owned; synced via `gameStart`
+> and the `keyDeposit` event.
 
 ### Runtime-only (not part of design state)
 `_lastMoveT`, `_lastShotT` (host timestamp guards), `_lastSeen` (host ghost sweep),

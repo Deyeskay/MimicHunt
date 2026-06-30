@@ -67,6 +67,49 @@ Accuracy reward: +100 score per hit. Weapon = blue "energy pulse" (Pew!), red fl
 - Reveal: the per-instance **foot ring blinks red** for 2s (`applyRevealBlink`).
 - Eliminated: ring greys (`0x333333`), animation freezes, movement/disguise blocked.
 
+## Airdrop beams & power-ups (Phase 1: GOLD)
+PUBG-style sky drops during HUNTING. `Network.tickBeams` (host) spawns **gold beams**
+at random spawn points on a schedule anchored to HUNTING start (`GOLD_BEAM_TIMES =
+[120,360,600]` s; only those `< huntingTime` fire). A beam **arms 5s** then **activates**;
+the first player within `BEAM_RADIUS` collects it (host-authoritative).
+- **Hider** pickup → auto-invisible 5s **and** holds one random power, used with **E /
+  power button**: **Full-health**, **Invisible 10s**, **Disguise-shield** (absorb one hit
+  while disguised — no break, no damage; consumed next hit).
+- **Seeker** pickup → instant: **Scan** (hiders ≤20m show a *listen-mode* see-through
+  silhouette — a dark body cutout + soft glowing rim — on their body/prop, plus an
+  orange head dot, drawn through walls, 10s, beats invis; an undisguised hider's
+  silhouette follows the **live animated pose**, not a frozen T-pose),
+  **Jammer** (undisguised hiders can't disguise 10s; reuses `disguiseLockUntil`), **Kill**
+  (one-shot direct kill 10s).
+- Combat: invisible hiders are untargetable; shield negates one hit (`shot.shielded`);
+  kill sends HP to 0. Tunables in `js/globals.js` (`BEAM_*`, `POWER_*`, `PICKUP_INVIS_MS`).
+- **Invisibility look:** an invisible hider is **completely hidden from seekers**, but the
+  hider **itself and other hiders** see a *ghost* — the real character/prop rendered
+  faintly translucent inside a glowing **white fresnel rim** — so you keep track of
+  yourself while invisible (`Level.applyInvisGhost`, `js/level.js`).
+
+### Keys & exit doors (Phase 2: PURPLE beam)
+A second hider win path. **Purple beams** (`PURPLE_BEAM_TIMES = [180,420,660]` s into
+hunting) drop a key only a **hider** can take (seekers gain nothing). A hider **carries**
+collected keys, then walks into any **exit door** (`DOOR_RADIUS`) to **deposit** them to
+the team total; the team wins at `KEYS_TO_WIN = 3` ("Keys Secured! Hiders Win!").
+- A carrier **killed** before depositing **drops** their keys on the ground; any hider
+  can recover the bundle.
+- **Exit doors** are `model:'door'` markers (or an `exitDoor` flag) placed during level
+  design (editor "Exit Door" button) — green goal portals with a through-wall "EXIT"
+  label. `PropLevel.getDoorPositions` lists them; `Network.tickKeys` is host-authoritative.
+- **Doors stay HIDDEN + non-depositable until they OPEN**, which is `EXIT_ACTIVATE_DELAY_MS`
+  (60s) after the **last purple key beam that actually fires** in the hunt. The host computes
+  `gameState.doorsActivateAt` at HIDING→HUNTING and broadcasts a relative `doorsSchedule`
+  (`{activateInMs}`); clients convert it to a local deadline. `Level.updateDoors` reveals the
+  portals at the deadline; `tickKeys` rejects deposits until then. **If the hunt is too short
+  for any purple beam (first at 180s; full set ≈12 min), doors never open** — set a long
+  Hunting time, else the key-win path is unavailable.
+- HUD: top-left `🔑 deposited/3` (everyone) + the local hider's `🎒 carried`, plus the
+  persistent **Objective pill** (under the role card) showing the live `⏳ Exits unlock in M:SS`
+  countdown → `🚪 EXITS OPEN — escape!` once active.
+- Both hider wins co-exist: keys delivered **or** the hunting timer expiring.
+
 ## Scoring
 - Seeker: **+100 per hit** (`score`), shown in the combat HUD (`⭐`). Hiders have no
   score (survival is the goal). Per-match; reset at round start.

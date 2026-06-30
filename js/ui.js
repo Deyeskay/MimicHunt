@@ -50,16 +50,74 @@ const UI = {
     },
 
     // Transient bottom-center notification (player left / eliminated / disconnected).
-    // Auto-dismisses; CSS handles the fade in/out.
-    toast: function(text) {
+    // Auto-dismisses; CSS handles the fade in/out. `opts.duration` (ms) overrides the
+    // default 4.1s for messages that need longer to read (e.g. seeker-ability alerts);
+    // the fade-out is re-keyed inline so it still fades ~0.5s before removal.
+    toast: function(text, opts) {
         const box = document.getElementById('toast-container');
         if (!box) return;
+        const dur = (opts && opts.duration) || 4100;
         const el = document.createElement('div');
         el.className = 'toast';
         el.innerText = text;
+        if (dur !== 4100) {
+            // Keep fade-in at 0s; start fade-out 0.4s before removal.
+            el.style.animationDelay = '0s, ' + Math.max(0, (dur - 400) / 1000) + 's';
+        }
         box.appendChild(el);
         while (box.children.length > 4) box.removeChild(box.firstChild);   // cap visible
-        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4100);
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur);
+    },
+
+    // Persistent top-left "objective" pill (current goal/state). Replace semantics:
+    // each call swaps the text; clearObjective() hides it. Driven by updateObjective().
+    objective: function(text) {
+        const hud = document.getElementById('objective-hud');
+        const el = document.getElementById('objective-text');
+        if (!hud || !el) return;
+        if (el.innerText !== text) el.innerText = text;
+        hud.style.display = 'flex';
+    },
+    clearObjective: function() {
+        const hud = document.getElementById('objective-hud');
+        if (hud) hud.style.display = 'none';
+    },
+
+    // Compute the single objective-slot text from local game state, by priority
+    // (highest wins). Called each tick from updateHUD. Phase/role goals + the live
+    // exit-unlock countdown + the key/escape goals.
+    updateObjective: function() {
+        if (typeof gameState === 'undefined' || !gameState) { this.clearObjective(); return; }
+        const phase = gameState.phase;
+        if (phase === 'LOBBY' || phase === 'ENDED' || !phase) { this.clearObjective(); return; }
+
+        const me = gameState.players && gameState.players[myId];
+        if (!me) { this.clearObjective(); return; }
+        const role = me.role;
+        if (role !== 'Hider' && role !== 'Seeker') { this.clearObjective(); return; }
+        const carrying = role === 'Hider' && (me.carriedKeys > 0);
+        const now = (typeof Network !== 'undefined' && Network.now) ? Network.now() : 0;
+        const actAt = gameState.doorsActivateAt;
+        const exitsOpen = actAt && now >= actAt;
+
+        if (phase === 'HUNTING') {
+            if (exitsOpen) {
+                this.objective(carrying ? '🚪 Deposit your key at an EXIT!' : '🚪 EXITS OPEN — escape!');
+            } else if (actAt) {
+                const secs = Math.max(0, Math.ceil((actAt - now) / 1000));
+                const mmss = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+                this.objective(carrying ? ('🔑 Key secured — exits unlock in ' + mmss)
+                                        : ('⏳ Exits unlock in ' + mmss));
+            } else {
+                // No exit schedule (short match) — fall back to the role goal.
+                this.objective(role === 'Seeker' ? '🎯 Hunt the hiders' : '🏃 Survive!');
+            }
+            return;
+        }
+
+        // HIDING
+        if (role === 'Seeker') this.objective('⏳ Hunt begins in ' + (gameState.timer || 0) + 's');
+        else this.objective('🫥 Hide — disguise as a prop');
     },
 
     transitionToGame: function() {
@@ -391,6 +449,118 @@ const UI = {
                     setBtn(null, 'assets/icons/refresh.png', near ? this.propIcon(near.model) : '❓',
                            near ? near.model.toUpperCase() : 'PROP', !near);
                 }
+            }
+        }
+
+        // --- Airdrop power-up HUD (held power + active timed effects) ---
+        this.updatePowerHUD(me, isSeeker);
+
+        // --- Next-airdrop countdown (top-right) ---
+        this.updateNextDrop();
+
+        // --- Key objective (top-left) ---
+        this.updateKeysHUD(me);
+
+        // --- Persistent objective pill (top-left, under the role card) ---
+        this.updateObjective();
+    },
+
+    // Team key progress (deposited toward the hider win) for everyone, plus the
+    // local hider's carried (un-deposited) keys. Only during HUNTING.
+    updateKeysHUD: function(me) {
+        const el = document.getElementById('keys-hud');
+        if (!el) return;
+        const goal = (typeof KEYS_TO_WIN !== 'undefined') ? KEYS_TO_WIN : 3;
+        if (gameState.phase !== 'HUNTING') { el.style.display = 'none'; return; }
+        el.style.display = 'flex';
+        let txt = '🔑 ' + (gameState.submittedKeys || 0) + '/' + goal;
+        if (me.role === 'Hider' && me.carriedKeys > 0) txt += ' · 🎒 ' + me.carriedKeys;
+        const t = document.getElementById('keys-hud-text');
+        if (t) t.innerText = txt;
+    },
+
+    // Top-right "Next Drop in M:SS" pill. The beam schedule is fixed seconds into
+    // HUNTING, so every peer derives the countdown from gameState.timer alone
+    // (no need for the host-only huntStartT): elapsed = huntingTime − timer.
+    updateNextDrop: function() {
+        const el = document.getElementById('next-drop');
+        if (!el) return;
+        let secs = null, kind = null;
+        if (gameState.phase === 'HUNTING' && typeof GOLD_BEAM_TIMES !== 'undefined') {
+            // Use the HOST's hunting length (synced on gameState), not the local
+            // GAME_SETTINGS — a client's own huntingTime may differ, which would
+            // otherwise make its countdown wrong.
+            const huntLen = gameState.huntingTime || ROUND_DURATION();
+            const elapsed = huntLen - gameState.timer;        // seconds into hunting
+            // Next drop = the soonest upcoming GOLD (power) or PURPLE (key) beam.
+            const sched = GOLD_BEAM_TIMES.map(t => ({ at: t, kind: 'gold' }))
+                .concat((typeof PURPLE_BEAM_TIMES !== 'undefined' ? PURPLE_BEAM_TIMES : [])
+                    .map(t => ({ at: t, kind: 'purple' })))
+                .filter(e => e.at > elapsed && e.at < huntLen)
+                .sort((a, b) => a.at - b.at);
+            if (sched.length) { secs = sched[0].at - elapsed; kind = sched[0].kind; }
+        }
+        if (secs == null) { el.style.display = 'none'; return; }
+        el.style.display = 'flex';
+        const m = Math.floor(secs / 60).toString();
+        const s = (secs % 60).toString().padStart(2, '0');
+        const ic = el.querySelector('.nd-ic');
+        if (ic) ic.textContent = kind === 'purple' ? '🟣' : '🔔';
+        const t = document.getElementById('next-drop-time');
+        if (t) t.innerText = `${m}:${s}`;
+        el.classList.toggle('imminent', secs <= 10);
+    },
+
+    // Power status chip (icon + small label, beside the bottom bar) + the hider's
+    // mobile "use power" button. Driven each tick so countdowns deplete smoothly.
+    updatePowerHUD: function(me, isSeeker) {
+        const now = Network.now();
+        const inGame = gameState.phase !== 'LOBBY' && !me.isCaught;
+        const HELD = { heal: ['❤️', 'FULL HEALTH'], invis: ['👻', 'INVISIBLE'], shield: ['🛡️', 'DISGUISE SHIELD'] };
+        const secs = (until) => ((until - now) / 1000).toFixed(1) + 's';
+
+        // Pick the single most relevant thing to show as icon + short label.
+        let icon = null, label = '';
+        if (inGame && !isSeeker) {
+            const invisOn = me.invisUntil > now;
+            if (me.heldPower && HELD[me.heldPower]) {
+                icon = HELD[me.heldPower][0];
+                label = HELD[me.heldPower][1] + ' [E]';
+                // Pickup also grants a brief invisibility — show its countdown too.
+                if (invisOn) label += ' · 👻 ' + secs(me.invisUntil);
+            } else if (invisOn) {
+                icon = '👻'; label = 'INVISIBLE ' + secs(me.invisUntil);
+            } else if (me.shieldArmed) {
+                icon = '🛡️'; label = 'SHIELD';
+            }
+        } else if (inGame && isSeeker) {
+            if (me.scanUntil > now)      { icon = '📡'; label = 'SCAN ' + secs(me.scanUntil); }
+            else if (me.killUntil > now) { icon = '🎯'; label = 'KILL ' + secs(me.killUntil); }
+        }
+
+        const pill = document.getElementById('power-pill');
+        if (pill) {
+            if (icon) {
+                pill.style.display = 'flex';
+                const ic = document.getElementById('power-pill-icon');
+                const tx = document.getElementById('power-pill-text');
+                if (ic) ic.textContent = icon;
+                if (tx) tx.textContent = label;
+            } else {
+                pill.style.display = 'none';
+            }
+        }
+
+        // Mobile "use power" button — hider only, only while holding an unused power.
+        const powerBtn = document.getElementById('btn-action-power');
+        if (powerBtn) {
+            const showBtn = inGame && !isSeeker && !!me.heldPower;
+            powerBtn.style.display = showBtn ? '' : 'none';
+            if (showBtn && HELD[me.heldPower]) {
+                const ic = document.getElementById('pb-icon');
+                const lb = document.getElementById('pb-label');
+                if (ic) ic.textContent = HELD[me.heldPower][0];
+                if (lb) lb.textContent = HELD[me.heldPower][1];
             }
         }
     },

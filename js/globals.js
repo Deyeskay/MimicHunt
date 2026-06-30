@@ -33,7 +33,10 @@ const DEFAULT_CONTROL_LAYOUT = {
     joystick: { x: 10.8, y: 73 },
     jump:     { x: 93.5, y: 65 },
     prop:     { x: 87,   y: 84 },
-    shoot:    { x: 87,   y: 84 }
+    shoot:    { x: 87,   y: 84 },
+    // Hider-only "activate power" button — sits just above the prop/shoot slot so it
+    // doesn't overlap. Only shown when the local hider holds an unused power.
+    power:    { x: 70,   y: 70 }
 };
 
 // True only while the Edit Layout overlay is open — movement/action touch
@@ -137,6 +140,40 @@ const HIT_SCORE = 100;         // points per hit
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
 const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit
 const SHOOT_ANIM_MS = 1200;    // aim-stance window after a shot (upper-body shoot + face target + back-walk)
+
+// --- AIRDROP BEAMS & POWER-UPS (PUBG-style sky drops) ---
+// Timed beams of light rise from the map; walking through an ACTIVE beam grants a
+// power-up. Host-authoritative (see Network.tickBeams / grantPower). Times below are
+// SECONDS since HUNTING began. The schedule only fires events that fit inside the
+// configured huntingTime, so shorter matches simply get fewer beams.
+const BEAM_ARM_MS      = 5000;    // "beam shows, no powerup" → then it activates (walkable)
+const BEAM_LIFETIME_MS = 30000;   // an active beam despawns if nobody collects it in time
+const BEAM_RADIUS      = 3;       // walk-through pickup radius (matches the visual cylinder)
+const GOLD_BEAM_TIMES  = [120, 360, 600];   // gold-beam spawn times (s into HUNTING)
+const PURPLE_BEAM_TIMES = [180, 420, 660];  // purple key-beam spawn times (s into HUNTING)
+const PICKUP_INVIS_MS  = 5000;    // hider becomes invisible this long the instant they pick up
+const POWER_INVIS_MS   = 10000;   // hider "Invisible" power duration
+const POWER_SCAN_MS    = 10000;   // seeker "Scan" (see hiders through walls) duration
+const POWER_SCAN_RANGE = 20;      // seeker "Scan" range (world units / "metres")
+const POWER_JAM_MS     = 10000;   // seeker "Jammer" locks undisguised hiders out of disguising
+const POWER_KILL_MS    = 10000;   // seeker "Kill" (one-shot direct kill) window
+// Random power pools, by role. Hiders activate manually (E / power button); seekers
+// get theirs applied instantly on pickup.
+const HIDER_POWERS  = ['heal', 'invis', 'shield'];
+const SEEKER_POWERS = ['scan', 'jammer', 'kill'];
+
+// --- KEYS & EXIT DOORS (Phase 2: purple beam objective) ---
+// Purple beams drop a key only a HIDER can take (seekers gain nothing). Hiders
+// CARRY collected keys, then DEPOSIT them by walking into any exit door; the team
+// wins once KEYS_TO_WIN are deposited. A carrier killed before depositing DROPS its
+// keys on the ground for any hider to recover.
+const KEYS_TO_WIN  = 3;     // team keys to deposit for a hider win
+const DOOR_RADIUS  = 3.5;   // walk-in deposit radius around an exit door
+const DROP_KEY_RADIUS = 2.5;// walk-over radius to recover a dropped key bundle
+// Exit doors stay HIDDEN + inactive until this long after the last key beam drops,
+// then open (visible + depositable) until the match ends. Anchored host-side off the
+// last purple beam that actually fires (see Network HUNTING transition).
+const EXIT_ACTIVATE_DELAY_MS = 60000;   // 1 min after the final key drop
 
 // --- REMOTE FOOTSTEPS (heard from OTHER players; computed client-side, no packets) ---
 const FOOTSTEP_MAX_DIST   = 40;   // beyond this (world units), remote footsteps are silent
@@ -320,6 +357,49 @@ const Sound = {
         osc.connect(gain).connect(ctx.destination);
         osc.start(t);
         osc.stop(t + 0.08);
+    },
+    // A rising shimmer announcing an airdrop beam. Everyone should hear it (esp. the
+    // purple key beam), so it's a touch longer/louder than the UI blip. `kind` tints
+    // the timbre (gold brighter, purple lower) but both are clearly "something dropped".
+    beam(kind = 'gold') {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const base = kind === 'purple' ? 300 : 440;
+        // Two stacked sine sweeps (a fifth apart) gliding upward = a magical "warp-in".
+        [1, 1.5].forEach((mult, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(base * mult, t);
+            osc.frequency.exponentialRampToValueAtTime(base * mult * 2.2, t + 0.6);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(i ? 0.07 : 0.12, t + 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.72);
+        });
+    },
+    // Mario-like "coin" — a quick two-note ascending blip (B5 → E6) for collecting an
+    // ability or a key. Short, bright, and unmistakably a pickup. Square wave for the
+    // chiptune timbre; the second note is held a touch longer like the classic.
+    coin() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(988, t);          // B5
+        osc.frequency.setValueAtTime(1319, t + 0.07);  // E6
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
+        gain.gain.setValueAtTime(0.12, t + 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.3);
     }
 };
 
