@@ -350,7 +350,7 @@ const Network = {
             } else {
                 // One-shot-kill power: a hit goes straight to 0 HP for its window.
                 const oneShot = shooter.killUntil && now < shooter.killUntil;
-                tgt.health = oneShot ? 0 : Math.max(0, (tgt.health != null ? tgt.health : HIDER_MAX_HP) - 1);
+                tgt.health = oneShot ? 0 : Math.max(0, (tgt.health != null ? tgt.health : HIDER_MAX_HP) - SHOT_DAMAGE);
                 shooter.score = (shooter.score || 0) + HIT_SCORE;
                 tgt.revealedUntil = now + REVEAL_MS;
                 tgt.disguiseLockUntil = now + DISGUISE_LOCK_MS;
@@ -415,7 +415,7 @@ const Network = {
       AIRDROP BEAMS & POWER-UPS (host-authoritative)
 
       tickBeams() runs in the host physics loop. It (1) fires scheduled beam
-      spawns once HUNTING elapsed time reaches each GOLD_BEAM_TIMES entry, (2)
+      spawns once HUNTING elapsed time reaches each scheduled time (2)
       detects walk-through pickups for EVERY player from their synced positions
       (first within BEAM_RADIUS wins — no double-claims), and (3) despawns beams
       nobody collected. All visuals/effects travel as discrete events that each
@@ -771,6 +771,14 @@ const Network = {
         const list = (typeof LEVELS !== 'undefined' ? LEVELS : []);
         const found = list.find(l => l.name === name);
         return (found || list[0] || { props: [] }).props;
+    },
+
+    // Per-level scene options (ground texture etc.). Bundled in the registry, so
+    // identical on every peer — only the level NAME is synced.
+    getLevelOptions(name) {
+        const list = (typeof LEVELS !== 'undefined' ? LEVELS : []);
+        const found = list.find(l => l.name === name);
+        return (found && found.options) || {};
     },
 
     // Host picks a map → record it + tell everyone (just the name).
@@ -1153,14 +1161,17 @@ const Network = {
                     gameState.timer = ROUND_DURATION();
                     // Hunting just began — anchor the airdrop-beam schedule to now.
                     gameState.huntStartT = this.now();
-                    // Combined schedule: gold (powers) + purple (keys). Each fires once.
-                    this._beamSched = GOLD_BEAM_TIMES.map(t => ({ at: t, kind: 'gold' }))
-                        .concat(PURPLE_BEAM_TIMES.map(t => ({ at: t, kind: 'purple' })));
-                    // Exit doors open EXIT_ACTIVATE_DELAY_MS after the LAST purple key
-                    // beam that actually fits inside this hunt. If none fit (too short a
-                    // hunt), doors never open — keys can't be deposited (surfaced in docs).
+                    // Combined schedule: gold (powers) + purple (keys), derived from
+                    // the match length so pacing scales and >=KEYS_TO_WIN purple beams
+                    // always fit (see computeBeamSchedule). Each fires once.
                     const huntLen = ROUND_DURATION();
-                    const firing = PURPLE_BEAM_TIMES.filter(t => t < huntLen);
+                    const sched = computeBeamSchedule(huntLen);
+                    this._beamSched = sched.gold.map(t => ({ at: t, kind: 'gold' }))
+                        .concat(sched.purple.map(t => ({ at: t, kind: 'purple' })));
+                    // Exit doors open EXIT_ACTIVATE_DELAY_MS after the LAST purple key
+                    // beam that actually fits inside this hunt. computeBeamSchedule keeps
+                    // every purple beam inside the window, so all of them fire.
+                    const firing = sched.purple.filter(t => t < huntLen);
                     if (firing.length) {
                         const lastPurple = Math.max.apply(null, firing);
                         gameState.doorsActivateAt =
@@ -1257,7 +1268,7 @@ const Network = {
             case 'gameStart':
                 Object.assign(gameState, data.gameState);
                 // Load the host's chosen level into our scene before entering it.
-                Level.loadLevel(this.getLevelProps(gameState.levelName));
+                Level.loadLevel(this.getLevelProps(gameState.levelName), this.getLevelOptions(gameState.levelName));
                 // Seed local prediction state from our authoritative spawn so
                 // the client starts at the right place instead of the origin.
                 {
@@ -1564,7 +1575,7 @@ const Network = {
 
         // Load the host-selected level into the scene FIRST, so the spawn points
         // below (getSpawnForRole reads mapProps3D) come from the chosen map.
-        Level.loadLevel(this.getLevelProps(gameState.levelName));
+        Level.loadLevel(this.getLevelProps(gameState.levelName), this.getLevelOptions(gameState.levelName));
 
         // Roles may have changed in the lobby, so the spawn/color baked in at
         // createPlayer is stale. Reassign spawn + color per each player's FINAL

@@ -5,6 +5,54 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **Airdrop-beam schedule now derived from match length.** Files: `js/globals.js`,
+  `js/network.js`, `js/ui.js`. Replaced the fixed `GOLD_BEAM_TIMES=[120,360,600]` /
+  `PURPLE_BEAM_TIMES=[180,420,660]` lists with `computeBeamSchedule(huntLen)`, which
+  builds both schedules from the configured hunting time. Gold count `≈huntLen/170`
+  (1–8) spread across `[head … huntLen−30s]`; purple count `KEYS_TO_WIN + ⌊(huntLen−300)/300⌋`
+  clamped 3–6, endpoint-spread across `[head … huntLen−100s]` (100s tail reserves
+  door-open + run-to-exit). `head = max(60, 0.12·huntLen)`. Gold uses midpoint spacing so
+  it interleaves with the endpoint-spread purple. **Fixes a live bug:** the old fixed list
+  gave 5–11 min matches too few purple beams to ever reach `KEYS_TO_WIN`, so the key-win
+  path (and the exit doors) silently never opened; now every match length — down to the
+  5-min minimum — fits ≥3 purple beams with time to deposit. Deterministic (no jitter) so
+  the "Next Drop" HUD (`UI.updateNextDrop`) recomputes the host's exact schedule locally
+  with no new packets.
+
+- **Combat rebalance: faster seeker weapon, tankier hiders.** File: `js/globals.js`
+  (`js/mechanics.js`, `js/network.js`). Fire rate **2→4 shots/s** (`FIRE_INTERVAL_MS
+  500→250`), magazine **4→8** (`MAG_SIZE`). To compensate: hider HP **5→12**
+  (`HIDER_MAX_HP`) and per-hit damage is now a named `SHOT_DAMAGE=1` const
+  (`processShot` uses it instead of a literal −1). Mag (8) < hits-to-kill (12) so a single
+  magazine can't solo-eliminate a hider — at least one reload is always forced. Mobile
+  hold-to-fire poll tightened `100→50ms` so held fire can actually reach 4/s against the
+  250ms gate.
+
+- **Editor: material + texture editing now works on multi-selection.** File: `editor.html`.
+  - **Choose Texture** picker (cube/wall) shows whenever ≥1 texturable prop is selected and
+    applies the texture + Tiling X/Y to ALL selected texturable props (header shows the
+    count). New `_texturableSelection()` / `_texturableLead()` helpers.
+  - **Materials** editor (albedo / opacity / emission / metallic / roughness / map
+    upload+clear + Reset) now targets every material of every selected object via
+    `_matEditTargets()`; the panel seeds from the primary (`_matLead`/`_displayMat`).
+    The per-material dropdown stays single-object-only; Save-to-`.glb` alerts if >1 selected.
+    Previously both sections were single-selection only ("Select one object to edit materials").
+
+- **Per-level custom ground texture (editor → export → game).** Files:
+  `js/levels/registry.js`, `js/level.js`, `js/network.js`, `editor.html`.
+  - `registerLevel(name, props, options)` gained an optional 3rd arg;
+    `options.ground = { texture, tileX, tileY }` picks the ground surface. Older 2-arg
+    level files are unaffected (`options` defaults to `{}`).
+  - `Level.applyGroundTexture(cfg)` swaps the ground plane's map + tiling (falls back to
+    grass when a level has none). `loadLevel(props, options)` applies it; `setGraphicsQuality`
+    now **skips the grass tint** for a custom ground (so a non-grass surface isn't
+    green-shifted). `Net.getLevelOptions(name)` feeds both `loadLevel` call sites + init.
+    Only the level NAME is synced (options are bundled, identical on every peer).
+  - **Editor:** new **Ground** panel (texture dropdown + Tiling X/Y + ↻ rescan + ↺ reset)
+    live-previews on the editor ground plane. Export appends `options.ground` to the
+    `registerLevel(...)` string only when a custom ground is chosen; import parses the
+    trailing options object and restores it. So `forest.js` etc. now carry ground details.
+
 - **Power HUD feedback: heartbeat active-effect + pickup pop.** Files: `css/style.css`,
   `js/ui.js`.
   - **`#active-effect`** now *continuously* beats like a **heartbeat** (one quick size +

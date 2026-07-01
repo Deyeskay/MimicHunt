@@ -14,7 +14,7 @@ id; the host's own id is `myId`.
 | `color` | hex | role tint (Seeker `0xff4757`, Hider `0x2ed573`) | role/disguise | roster/`disguise` |
 | `isReady` | bool | lobby ready (host implicitly ready) | `lobbyReady` | `lobbySync` |
 | `isCaught` | bool | **eliminated** (HP hit 0). Freezes movement/disguise, greys mesh, drops from win count | host `processShot` | `shot.eliminated` / roster |
-| `health` | int | hider HP, starts `HIDER_MAX_HP=5` | host `processShot` (−1/hit) | `shot.health` / roster |
+| `health` | int | hider HP, starts `HIDER_MAX_HP=12` | host `processShot` (−`SHOT_DAMAGE`/hit) | `shot.health` / roster |
 | `score` | int | seeker score (+`HIT_SCORE=100`/hit) | host `processShot` | `shot.score` / roster |
 | `revealedUntil` | ms (local clock) | red reveal blink deadline after a hit | each peer from `shot.revealMs` | event→local deadline |
 | `disguiseLockUntil` | ms (local clock) | can't re-disguise until this | each peer from `shot.lockMs` | event→local deadline |
@@ -59,7 +59,7 @@ ring, lastPos, etc. (see ANIMATION_SYSTEM.md).
   role; reset `health/score/revealedUntil/disguiseLockUntil/shootingUntil/jumpAt/
   isCaught/disguise`; clear `_lastMoveT/_lastShotT`. Host re-seeds `localPos`,
   `cameraYaw`, `ammo`.
-- **Hit**: host `processShot` → `health-=1`, set reveal/lock windows, `forcedOut`
+- **Hit**: host `processShot` → `health-=SHOT_DAMAGE`, set reveal/lock windows, `forcedOut`
   (clear disguise) if disguised, `score+=100` on shooter; HP≤0 → `isCaught=true` →
   `checkWinConditions`.
 - **Eliminated** (`isCaught`): `handleLocalMovement` early-returns (frozen);

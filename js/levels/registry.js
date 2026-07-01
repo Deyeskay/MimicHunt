@@ -16,8 +16,11 @@
 
 const LEVELS = [];
 
-function registerLevel(name, props) {
-    LEVELS.push({ name: name, props: props });
+// `options` (optional 3rd arg) carries per-level scene settings that aren't props —
+// currently `{ ground: { texture, tileX, tileY } }` for a custom ground surface.
+// Older level files call registerLevel(name, props) with no options; that's fine.
+function registerLevel(name, props, options) {
+    LEVELS.push({ name: name, props: props, options: options || {} });
 }
 
 // --- The only place you edit to add a level ---

@@ -428,6 +428,26 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
         <button class="btn" style="margin-top:8px;" onclick="openPrefabModal()">🧩 Edit Prefabs</button>
     </div>
 
+    <div class="section">
+        <div class="section-label">Ground</div>
+        <div class="field">
+            <label class="mat-head">Ground Texture
+                <span class="mat-head-actions">
+                    <span id="groundTexRefresh" class="mat-save" title="Rescan assets/textures/ for new files">↻</span>
+                    <span id="groundTexReset" class="mat-save" title="Reset to default grass">↺</span>
+                </span>
+            </label>
+            <div class="mat-row">
+                <select id="groundTexSelect" class="mat-select" style="flex:1;"></select>
+            </div>
+            <div class="mat-row"><span title="how many times the texture repeats across the 200×200 ground">Tiling</span>
+                <span>X</span><input id="groundTileX" type="number" step="1" min="1" style="width:52px;">
+                <span>Y</span><input id="groundTileY" type="number" step="1" min="1" style="width:52px;">
+            </div>
+            <span id="groundTexPreview" class="mat-thumb" style="margin-top:6px;"></span>
+        </div>
+    </div>
+
 </div>
 
 <button id="helpBtn" class="help-btn">?</button>
@@ -487,7 +507,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
         </div>
 
         <div class="field" id="cubeTextureField" style="display:none;">
-            <label class="mat-head">Choose Texture
+            <label class="mat-head"><span id="cubeTexHead">Choose Texture</span>
                 <span class="mat-head-actions">
                     <span id="cubeTexRefresh" class="mat-save" title="Rescan assets/textures/ for new files">↻</span>
                 </span>
@@ -701,6 +721,9 @@ let mouse = new THREE.Vector2();
 let moveSpeed = 0.5;
 
 let ground;
+// Per-level ground surface picked in the Ground panel. null = default grass (not
+// exported). { texture, tileX, tileY } → emitted as the level's options.ground.
+let groundConfig = null;
 
 let selectedModel = null;
 
@@ -1680,10 +1703,36 @@ function _activeMat() {
     if (!s) return null;
     return activeMaterials[s.userData._matIdx || 0] || null;
 }
+// The lead object whose material values seed the panel (primary if editable, else the
+// first selected non-spawn object that has materials).
+function _matLead() {
+    const ok = o => o && o.userData.data && o.userData.data.model !== 'spawn' && getObjectMaterials(o).length;
+    if (ok(selectedObject)) return selectedObject;
+    return selectedObjects.find(ok) || null;
+}
+// Materials a control edit writes to. Single selection → the chosen material index
+// (unchanged behaviour). Multi selection → EVERY material of EVERY selected non-spawn
+// object, so one tweak paints them all.
+function _matEditTargets() {
+    if (selectedObjects.length <= 1) { const m = _activeMat(); return m ? [m] : []; }
+    const out = [];
+    selectedObjects.forEach(o => {
+        if (o.userData && o.userData.data && o.userData.data.model === 'spawn') return;
+        getObjectMaterials(o).forEach(m => { if (m && out.indexOf(m) === -1) out.push(m); });
+    });
+    return out;
+}
+// The material whose values are shown in the panel (single → active index; multi →
+// the lead/primary object's first material).
+function _displayMat() {
+    if (selectedObjects.length <= 1) return _activeMat();
+    const lead = _matLead();
+    const mats = lead ? getObjectMaterials(lead) : [];
+    return mats[0] || _matEditTargets()[0] || null;
+}
 function _markMatDirty() {
-    const s = _singleSelected();
-    if (!s) return;
-    s.userData.materialDirty = true;
+    if (!selectedObjects.length) return;
+    selectedObjects.forEach(o => { o.userData.materialDirty = true; });
     _setMatDirtyUI(true);
 }
 
@@ -1694,24 +1743,26 @@ function refreshMaterialsSection() {
     const saveBtn = document.getElementById('matSaveBtn');
     if (!note || !ctrls) return;
 
-    const s = _singleSelected();
+    const multi = selectedObjects.length > 1;
+    const s = multi ? _matLead() : _singleSelected();
     activeMaterials = s ? getObjectMaterials(s) : [];
     const usable = s && s.userData.data && s.userData.data.model !== 'spawn' && activeMaterials.length;
 
     if (!usable) {
         note.style.display = '';
-        note.textContent = (selectedObjects.length > 1) ? 'Select one object to edit materials.'
-            : (s ? 'No editable material.' : 'Select one object to edit materials.');
+        note.textContent = s ? 'No editable material.' : 'Select an object to edit materials.';
         ctrls.style.display = 'none';
         _setMatDirtyUI(false);
         return;
     }
     note.style.display = 'none';
     ctrls.style.display = '';
-    _setMatDirtyUI(!!s.userData.materialDirty);
+    _setMatDirtyUI(selectedObjects.some(o => o.userData.materialDirty));
 
     const sel = document.getElementById('matSelect');
-    if (activeMaterials.length > 1) {
+    // Per-material picker only makes sense for a single multi-material object; when
+    // several objects are selected, edits go to ALL their materials at once.
+    if (!multi && activeMaterials.length > 1) {
         sel.style.display = '';
         sel.innerHTML = '';
         activeMaterials.forEach((m, i) => {
@@ -1731,7 +1782,7 @@ function refreshMaterialsSection() {
 }
 
 function _populateMatControls() {
-    const m = _activeMat();
+    const m = _displayMat();
     if (!m) return;
     const row = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
 
@@ -1766,36 +1817,64 @@ function wireMaterialControls() {
     byId('matSelect').addEventListener('change', e => {
         const s = _singleSelected(); if (s) { s.userData._matIdx = parseInt(e.target.value) || 0; _populateMatControls(); }
     });
-    byId('matColor').addEventListener('input', e => { const m = _activeMat(); if (m && m.color) { m.color.set(e.target.value); m.needsUpdate = true; _markMatDirty(); } });
+    // Every control writes to _matEditTargets() — one material (single select) or all
+    // materials of all selected objects (multi select).
+    byId('matColor').addEventListener('input', e => {
+        let any = false;
+        _matEditTargets().forEach(m => { if (m.color) { m.color.set(e.target.value); m.needsUpdate = true; any = true; } });
+        if (any) _markMatDirty();
+    });
     byId('matOpacity').addEventListener('input', e => {
-        const m = _activeMat(); if (!m) return; const v = parseFloat(e.target.value);
-        m.opacity = v; m.transparent = v < 1; m.needsUpdate = true;
+        const v = parseFloat(e.target.value); const t = _matEditTargets(); if (!t.length) return;
+        t.forEach(m => { m.opacity = v; m.transparent = v < 1; m.needsUpdate = true; });
         byId('matOpacityVal').textContent = v.toFixed(2); _markMatDirty();
     });
-    byId('matEmissive').addEventListener('input', e => { const m = _activeMat(); if (m && m.emissive) { m.emissive.set(e.target.value); m.needsUpdate = true; _markMatDirty(); } });
-    byId('matEmissiveInt').addEventListener('input', e => { const m = _activeMat(); if (m && m.emissiveIntensity != null) { m.emissiveIntensity = parseFloat(e.target.value); m.needsUpdate = true; _markMatDirty(); } });
-    byId('matMetalness').addEventListener('input', e => { const m = _activeMat(); if (!m || !('metalness' in m)) return; const v = parseFloat(e.target.value); m.metalness = v; byId('matMetalnessVal').textContent = v.toFixed(2); _markMatDirty(); });
-    byId('matRoughness').addEventListener('input', e => { const m = _activeMat(); if (!m || !('roughness' in m)) return; const v = parseFloat(e.target.value); m.roughness = v; byId('matRoughnessVal').textContent = v.toFixed(2); _markMatDirty(); });
+    byId('matEmissive').addEventListener('input', e => {
+        let any = false;
+        _matEditTargets().forEach(m => { if (m.emissive) { m.emissive.set(e.target.value); m.needsUpdate = true; any = true; } });
+        if (any) _markMatDirty();
+    });
+    byId('matEmissiveInt').addEventListener('input', e => {
+        const v = parseFloat(e.target.value); let any = false;
+        _matEditTargets().forEach(m => { if (m.emissiveIntensity != null) { m.emissiveIntensity = v; m.needsUpdate = true; any = true; } });
+        if (any) _markMatDirty();
+    });
+    byId('matMetalness').addEventListener('input', e => {
+        const v = parseFloat(e.target.value); let any = false;
+        _matEditTargets().forEach(m => { if ('metalness' in m) { m.metalness = v; m.needsUpdate = true; any = true; } });
+        byId('matMetalnessVal').textContent = v.toFixed(2); if (any) _markMatDirty();
+    });
+    byId('matRoughness').addEventListener('input', e => {
+        const v = parseFloat(e.target.value); let any = false;
+        _matEditTargets().forEach(m => { if ('roughness' in m) { m.roughness = v; m.needsUpdate = true; any = true; } });
+        byId('matRoughnessVal').textContent = v.toFixed(2); if (any) _markMatDirty();
+    });
 
     byId('matMapUploadBtn').addEventListener('click', () => byId('matMapFile').click());
     byId('matMapFile').addEventListener('change', e => {
-        const m = _activeMat(); const file = e.target.files && e.target.files[0];
-        if (m && file) {
+        const targets = _matEditTargets(); const file = e.target.files && e.target.files[0];
+        if (targets.length && file) {
             const reader = new FileReader();
             reader.onload = ev => new THREE.TextureLoader().load(ev.target.result, tex => {
                 tex.flipY = false; tex.encoding = THREE.sRGBEncoding;
-                _disposeIfNotOrig(m); m.map = tex; m.needsUpdate = true; _markMatDirty(); _populateMatControls();
+                targets.forEach(m => { _disposeIfNotOrig(m); m.map = tex; m.needsUpdate = true; });
+                _markMatDirty(); _populateMatControls();
             });
             reader.readAsDataURL(file);
         }
         e.target.value = '';
     });
-    byId('matMapClear').addEventListener('click', () => { const m = _activeMat(); if (!m) return; _disposeIfNotOrig(m); m.map = null; m.needsUpdate = true; _markMatDirty(); _populateMatControls(); });
+    byId('matMapClear').addEventListener('click', () => {
+        const targets = _matEditTargets(); if (!targets.length) return;
+        targets.forEach(m => { _disposeIfNotOrig(m); m.map = null; m.needsUpdate = true; });
+        _markMatDirty(); _populateMatControls();
+    });
 
     byId('matResetBtn').addEventListener('click', resetMaterials);
 
     byId('matSaveBtn').addEventListener('click', () => {
-        const s = _singleSelected(); if (!s) return;
+        const s = _singleSelected();
+        if (!s) { alert('Saving a material to a .glb works on one object at a time — select a single object.'); return; }
         byId('matSaveName').value = (s.userData.data.model || 'model') + '_custom';
         byId('matSaveStatus').textContent = '';
         openModal('matSaveModal');
@@ -1820,6 +1899,22 @@ function _texturableSelected() {
     const s = _singleSelected();
     const m = s && s.userData.data && s.userData.data.model;
     return (m && PropLevel.TEXTURABLE_MODELS.indexOf(m) !== -1) ? s : null;
+}
+
+// ALL selected objects that support a per-instance texture (cube/wall). A texture /
+// tiling change is applied to every one of these, so you can skin many walls at once.
+function _texturableSelection() {
+    return selectedObjects.filter(o => {
+        const m = o && o.userData && o.userData.data && o.userData.data.model;
+        return m && PropLevel.TEXTURABLE_MODELS.indexOf(m) !== -1;
+    });
+}
+// The texturable object whose values seed the panel: the primary (last-clicked) if it
+// qualifies, else the first texturable in the selection.
+function _texturableLead() {
+    const list = _texturableSelection();
+    if (!list.length) return null;
+    return (selectedObject && list.indexOf(selectedObject) !== -1) ? selectedObject : list[0];
 }
 
 async function listTextureFiles() {
@@ -1865,12 +1960,12 @@ function _dataTiling(data) {
              y: data.tileY != null ? data.tileY : dt.y };
 }
 
-// Show the picker only for a single texturable prop; sync the dropdown + Tiling X/Y
-// to that prop's texture/tiling (falling back to the model defaults when unset).
+// Show the picker whenever one OR MORE texturable props are selected; sync the
+// dropdown + Tiling X/Y from the lead prop (edits then apply to the whole selection).
 function refreshTextureSection() {
     const field = document.getElementById('cubeTextureField');
     if (!field) return;
-    const s = _texturableSelected();
+    const s = _texturableLead();
     field.style.display = s ? '' : 'none';
     if (!s) return;
     const d = s.userData.data;
@@ -1879,6 +1974,9 @@ function refreshTextureSection() {
     const tx = document.getElementById('texTileX'), ty = document.getElementById('texTileY');
     if (tx) tx.value = t.x;
     if (ty) ty.value = t.y;
+    // Header hint: show how many props an edit will touch when multi-selected.
+    const head = document.getElementById('cubeTexHead');
+    if (head) { const n = _texturableSelection().length; head.textContent = n > 1 ? 'Choose Texture (' + n + ')' : 'Choose Texture'; }
 }
 
 (function wireTextureControls() {
@@ -1887,24 +1985,28 @@ function refreshTextureSection() {
     const txEl = document.getElementById('texTileX'), tyEl = document.getElementById('texTileY');
 
     if (sel) sel.addEventListener('change', () => {
-        const s = _texturableSelected();
-        if (!s) return;
-        s.userData.data.texture = sel.value;
-        PropLevel.applyPropTexture(s, sel.value, _dataTiling(s.userData.data));
+        const list = _texturableSelection();
+        if (!list.length) return;
+        list.forEach(s => {
+            s.userData.data.texture = sel.value;
+            PropLevel.applyPropTexture(s, sel.value, _dataTiling(s.userData.data));
+        });
         _populateTexSelect(sel.value);   // refresh the preview thumb
     });
 
     const onTile = () => {
-        const s = _texturableSelected();
-        if (!s) return;
-        const d = s.userData.data;
+        const list = _texturableSelection();
+        if (!list.length) return;
         const vx = parseFloat(txEl.value), vy = parseFloat(tyEl.value);
-        if (!isNaN(vx)) d.tileX = Math.max(0.1, vx);
-        if (!isNaN(vy)) d.tileY = Math.max(0.1, vy);
-        // Tiling only takes effect via the per-instance texture path — a plain wall
-        // needs a texture assigned so it leaves the shared wall.png (fixed 2×2).
-        if (!d.texture) d.texture = sel ? sel.value : PropLevel.defaultTextureFor(d.model);
-        PropLevel.applyPropTexture(s, d.texture, _dataTiling(d));
+        list.forEach(s => {
+            const d = s.userData.data;
+            if (!isNaN(vx)) d.tileX = Math.max(0.1, vx);
+            if (!isNaN(vy)) d.tileY = Math.max(0.1, vy);
+            // Tiling only takes effect via the per-instance texture path — a plain wall
+            // needs a texture assigned so it leaves the shared wall.png (fixed 2×2).
+            if (!d.texture) d.texture = sel ? sel.value : PropLevel.defaultTextureFor(d.model);
+            PropLevel.applyPropTexture(s, d.texture, _dataTiling(d));
+        });
     };
     // 'input' = typing/spinner; 'change' = also fired by the label-scrub gesture.
     [txEl, tyEl].forEach(el => { if (el) { el.addEventListener('input', onTile); el.addEventListener('change', onTile); } });
@@ -1917,7 +2019,7 @@ function refreshTextureSection() {
 
     if (refresh) refresh.addEventListener('click', async () => {
         await listTextureFiles();
-        const s = _texturableSelected();
+        const s = _texturableLead();
         _populateTexSelect(s ? (s.userData.data.texture ||
             PropLevel.defaultTextureFor(s.userData.data.model)) : null);
     });
@@ -1925,23 +2027,110 @@ function refreshTextureSection() {
     listTextureFiles();
 })();
 
+// ---------------------------------------------------------------------------
+// Ground texture picker — a per-LEVEL surface (not per-prop). Mirrors the game's
+// Level.applyGroundTexture: swaps the editor ground plane's map + tiling live, and
+// (when set) exports as the level's options.ground so <level>.js carries it.
+// ---------------------------------------------------------------------------
+const GROUND_DEFAULT = { texture: 'grass.png', tileX: 24, tileY: 24 };
+
+// Repaint the editor ground plane from groundConfig (or default grass when null).
+function applyEditorGround() {
+    if (!ground || !ground.material) return;
+    const cfg = groundConfig || GROUND_DEFAULT;
+    const tex = PropLevel.getPropTexture(cfg.texture, { x: cfg.tileX, y: cfg.tileY });
+    if (tex) {
+        ground.material.map = tex;
+        ground.material.color.set(0xffffff);   // untinted so the texture reads true
+    } else {
+        ground.material.map = null;
+        ground.material.color.set(0x228B22);
+    }
+    ground.material.needsUpdate = true;
+}
+
+// Sync the Ground panel widgets to groundConfig (or the default when unset).
+function _populateGroundSelect() {
+    const sel = document.getElementById('groundTexSelect');
+    if (!sel) return;
+    const cfg = groundConfig || GROUND_DEFAULT;
+    const list = textureFileList.slice();
+    if (cfg.texture && list.indexOf(cfg.texture) === -1) list.unshift(cfg.texture);
+    sel.innerHTML = '';
+    list.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        sel.appendChild(o);
+    });
+    sel.value = cfg.texture;
+    const tx = document.getElementById('groundTileX'), ty = document.getElementById('groundTileY');
+    if (tx) tx.value = cfg.tileX;
+    if (ty) ty.value = cfg.tileY;
+    const prev = document.getElementById('groundTexPreview');
+    if (prev) prev.innerHTML = '<img src="assets/textures/' + cfg.texture +
+        '" style="width:48px;height:48px;object-fit:cover;border-radius:4px;">';
+}
+
+// Adopt a ground config (e.g. from an imported level) into the editor + UI.
+function setGroundConfig(cfg) {
+    groundConfig = (cfg && cfg.texture)
+        ? { texture: cfg.texture, tileX: cfg.tileX || 24, tileY: cfg.tileY || 24 }
+        : null;
+    applyEditorGround();
+    _populateGroundSelect();
+}
+
+(function wireGroundControls() {
+    const sel = document.getElementById('groundTexSelect');
+    const txEl = document.getElementById('groundTileX'), tyEl = document.getElementById('groundTileY');
+    const refresh = document.getElementById('groundTexRefresh');
+    const reset = document.getElementById('groundTexReset');
+
+    const commit = () => {
+        const cur = groundConfig || Object.assign({}, GROUND_DEFAULT);
+        if (sel) cur.texture = sel.value;
+        const vx = parseFloat(txEl && txEl.value), vy = parseFloat(tyEl && tyEl.value);
+        if (!isNaN(vx)) cur.tileX = Math.max(1, vx);
+        if (!isNaN(vy)) cur.tileY = Math.max(1, vy);
+        groundConfig = cur;   // any interaction opts the level into a custom ground
+        applyEditorGround();
+        _populateGroundSelect();
+    };
+
+    if (sel) sel.addEventListener('change', commit);
+    [txEl, tyEl].forEach(el => { if (el) { el.addEventListener('input', commit); el.addEventListener('change', commit); } });
+
+    if (refresh) refresh.addEventListener('click', async () => {
+        await listTextureFiles();
+        _populateGroundSelect();
+    });
+    if (reset) reset.addEventListener('click', () => setGroundConfig(null));
+
+    // Populate once the texture scan (kicked off above) has a chance to fill the list.
+    listTextureFiles().then(_populateGroundSelect);
+    applyEditorGround();   // show grass in the editor by default, matching the game
+})();
+
 // Restore every material of the selected object to its pristine (as-loaded) values.
 function resetMaterials() {
-    const s = _singleSelected();
-    if (!s) return;
-    activeMaterials.forEach(m => {
-        const o = m.userData && m.userData._matOrig;
-        if (!o) return;
-        if (o.color != null && m.color) m.color.setHex(o.color);
-        m.opacity = o.opacity; m.transparent = o.transparent;
-        if (o.emissive != null && m.emissive) m.emissive.setHex(o.emissive);
-        if (m.emissiveIntensity != null) m.emissiveIntensity = o.emissiveIntensity;
-        if (o.metalness != null && 'metalness' in m) m.metalness = o.metalness;
-        if (o.roughness != null && 'roughness' in m) m.roughness = o.roughness;
-        if (m.map !== o.map) { _disposeIfNotOrig(m); m.map = o.map; }
-        m.needsUpdate = true;
+    const targets = selectedObjects.length ? selectedObjects
+                  : (_singleSelected() ? [_singleSelected()] : []);
+    if (!targets.length) return;
+    targets.forEach(s => {
+        getObjectMaterials(s).forEach(m => {
+            const o = m.userData && m.userData._matOrig;
+            if (!o) return;
+            if (o.color != null && m.color) m.color.setHex(o.color);
+            m.opacity = o.opacity; m.transparent = o.transparent;
+            if (o.emissive != null && m.emissive) m.emissive.setHex(o.emissive);
+            if (m.emissiveIntensity != null) m.emissiveIntensity = o.emissiveIntensity;
+            if (o.metalness != null && 'metalness' in m) m.metalness = o.metalness;
+            if (o.roughness != null && 'roughness' in m) m.roughness = o.roughness;
+            if (m.map !== o.map) { _disposeIfNotOrig(m); m.map = o.map; }
+            m.needsUpdate = true;
+        });
+        s.userData.materialDirty = false;
     });
-    s.userData.materialDirty = false;
     _setMatDirtyUI(false);
     _populateMatControls();
 }
@@ -2064,6 +2253,10 @@ ground.rotation.x =
     -Math.PI/2;
 
 scene.add(ground);
+
+// Paint the default grass surface now that the ground mesh exists (the Ground panel
+// wiring above ran before this and could only no-op). applyEditorGround is hoisted.
+applyEditorGround();
 
 //////////////////////////////////////////////////////
 // Grid
@@ -2953,8 +3146,24 @@ function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function buildLevelString(name)
 {
     const result = placedObjects.map(obj => PropLevel.exportProp(obj));
-    return "registerLevel(" + JSON.stringify(name || "level") + ", " +
-           JSON.stringify(result, null, 4) + ");";
+    let s = "registerLevel(" + JSON.stringify(name || "level") + ", " +
+            JSON.stringify(result, null, 4);
+    // Emit the per-level options (currently just a custom ground) only when set, so
+    // plain-grass levels stay slim and older 2-arg files keep working.
+    const opts = buildLevelOptions();
+    if (opts) s += ", " + JSON.stringify(opts, null, 4);
+    return s + ");";
+}
+
+// The level's non-prop scene options, or null when everything is at defaults.
+function buildLevelOptions()
+{
+    if (!groundConfig || !groundConfig.texture) return null;
+    return { ground: {
+        texture: groundConfig.texture,
+        tileX: groundConfig.tileX,
+        tileY: groundConfig.tileY
+    } };
 }
 
 // Export button → open the Save/Export modal, pre-filled with current scene data
@@ -3172,6 +3381,18 @@ function applyLevelData(raw)
 
     pushUndo();        // loading replaces the scene — make it undoable
     clearAllObjects();
+
+    // A trailing object literal after the props array is the registerLevel 3rd arg
+    // (options). Parse its ground config so an imported level restores its surface.
+    let options = null;
+    const after = raw.slice(end + 1);
+    const oStart = after.indexOf("{"), oEnd = after.lastIndexOf("}");
+    if(oStart !== -1 && oEnd > oStart)
+    {
+        try { options = JSON.parse(after.slice(oStart, oEnd + 1)); }
+        catch(e) { /* no/!valid options object → default grass */ }
+    }
+    setGroundConfig(options && options.ground);
 
     let loaded = 0;
     const missing = [];

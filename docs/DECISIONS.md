@@ -25,8 +25,10 @@ timeline.)
   HP, reveal, score) is the core loop. **Host-authoritative hits** (client supplies
   aim ray; host validates geometry + occlusion) — cheat-resistant enough for a
   casual game while letting the client keep responsive local visuals.
-- **HP 5 / every hit −1 (first hit also reveals).** 5 hits to eliminate; clean and
-  matches "health = 5". Reveal = 2 s red blink; disguise lock = 5 s so a revealed
+- **HP 12 / every hit −`SHOT_DAMAGE` (=1; first hit also reveals).** 12 hits to
+  eliminate. Sized against the faster weapon (4 shots/s, 8-round mag) so a single
+  magazine can't solo-kill — at least one reload is always forced, keeping hiders from
+  being melted instantly. Reveal = 2 s red blink; disguise lock = 5 s so a revealed
   hider can't instantly re-hide. +100/hit.
 - **Energy-pulse weapon feel** (blue bolt + synth "pew"/"hurt", red flash) over a
   military gun — fits the playful hide-and-seek theme. No audio assets (WebAudio).

@@ -96,7 +96,9 @@ const Mechanics = {
                 shootLastY = t.clientY;
                 shootBtn.classList.add('firing');   // selected/active state while held
                 this.fireShot();
-                if (shootFireTimer === null) shootFireTimer = setInterval(() => this.fireShot(), 100);
+                // Poll faster than the fire gate (FIRE_INTERVAL_MS) so held-fire can
+                // actually reach the full 4 shots/sec; fireShot self-gates the rate.
+                if (shootFireTimer === null) shootFireTimer = setInterval(() => this.fireShot(), 50);
                 e.preventDefault();
             }, { passive: false });
             document.addEventListener('touchmove', (e) => {

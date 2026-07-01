@@ -33,8 +33,8 @@ All cross-file globals. Key items:
   `isGrounded`, `GRAVITY=-0.015`, `JUMP_STRENGTH=0.35`, `CAMERA_MAX_LOOK_UP/DOWN`.
 - Input: `keys`, `joyActive`, `touchVector`, `joyTouchId`, `lookTouchId`,
   `lastLookX/Y`.
-- Combat: `MAG_SIZE=4`, `FIRE_INTERVAL_MS=500`, `RELOAD_MS=1500`, `HIDER_MAX_HP=5`,
-  `SHOT_RANGE=60`, `HIT_SCORE=100`, `REVEAL_MS=2000`, `DISGUISE_LOCK_MS=5000`,
+- Combat: `MAG_SIZE=8`, `FIRE_INTERVAL_MS=250`, `RELOAD_MS=1500`, `HIDER_MAX_HP=12`,
+  `SHOT_DAMAGE=1`, `SHOT_RANGE=60`, `HIT_SCORE=100`, `REVEAL_MS=2000`, `DISGUISE_LOCK_MS=5000`,
   `SHOOT_ANIM_MS=1200`; `ammo`, `reloading`, `lastShotAt`, `reloadUntil`.
 - Net/migration: `NETWORK_SEND_RATE=20`, `HEARTBEAT_MS=1000`, `HOST_TIMEOUT_MS=3000`,
   `WATCHDOG_MS=500`, `CLIENT_TIMEOUT_MS=3000`, `migrating`, `sessionEnding`,

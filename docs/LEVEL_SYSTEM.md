@@ -5,8 +5,8 @@ enumerate a folder, so a manifest + loader injects them.
 
 ## Registry — `js/levels/registry.js`
 ```js
-const LEVELS = [];                         // [{ name, props }]
-function registerLevel(name, props) { LEVELS.push({ name, props }); }
+const LEVELS = [];                         // [{ name, props, options }]
+function registerLevel(name, props, options) { LEVELS.push({ name, props, options: options||{} }); }
 const LEVEL_FILES = ['forest.js', 'arena.js'];   // <-- the ONE place to add a level
 function loadLevelScripts() { /* inject each js/levels/<file>?v=N sequentially */ }
 ```
@@ -15,7 +15,7 @@ function loadLevelScripts() { /* inject each js/levels/<file>?v=N sequentially *
 - Cache `?v=` for level files lives in this loader (keep in sync with `index.html`).
 
 ## Level files — `js/levels/forest.js`, `arena.js`
-Each calls `registerLevel('Name', [ ...prop objects... ])`. A prop object:
+Each calls `registerLevel('Name', [ ...prop objects... ], options?)`. A prop object:
 ```
 { id, model:'tree'|'rock'|'bush'|'wall'|'spawn', x, y, z, bottomY,
   scale:{x,y,z}, rotation:{x,y,z},            // degrees
@@ -29,7 +29,19 @@ Each calls `registerLevel('Name', [ ...prop objects... ])`. A prop object:
 - Only the level **name** crosses the wire (levels are bundled identically on every
   peer); prop data never transmits.
 
-## Loading a level into the scene — `Level.loadLevel(props)` (`js/level.js`)
+### Level options (3rd arg) — custom ground
+```
+registerLevel('Name', [ ...props... ], { ground: { texture:'rock_wall.png', tileX:24, tileY:24 } });
+```
+- `options.ground` sets the ground surface (file in `assets/textures/`, plus tiling
+  = repeats across the 200×200 plane). Omit it → the default grass.
+- Applied by `Level.applyGroundTexture(cfg)` (from `loadLevel(props, options)`). A custom
+  ground renders untinted — `setGraphicsQuality` skips the grass green tint for it.
+- Authored in `editor.html` → **Ground** panel (texture + Tiling X/Y); exported into the
+  `registerLevel(...)` string automatically. Like props, only the level NAME syncs.
+
+## Loading a level into the scene — `Level.loadLevel(props, options)` (`js/level.js`)
+0. `applyGroundTexture(options.ground)` — swap the ground surface (or reset to grass).
 1. Remove the previous level's meshes (`Level.levelMeshes`).
 2. `mapProps3D = JSON.parse(JSON.stringify(props))` — deep clone so `enrichProp`
    doesn't mutate the registry source (the same level can load repeatedly).

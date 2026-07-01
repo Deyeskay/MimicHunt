@@ -55,7 +55,8 @@ const Level = {
         // js/levels/ folder via the registry (LEVELS); the lobby lets the host
         // pick which one, and loadLevel() swaps it in at game start.
         const def = (typeof LEVELS !== 'undefined' && LEVELS[0]) ? LEVELS[0].props : [];
-        this.loadLevel(def);
+        const defOpts = (typeof LEVELS !== 'undefined' && LEVELS[0]) ? LEVELS[0].options : {};
+        this.loadLevel(def, defOpts);
 
         // Apply the saved graphics quality (default Medium) now that the scene exists.
         this.setGraphicsQuality(
@@ -110,9 +111,16 @@ const Level = {
         if (scene.fog) { scene.fog.near = 20; scene.fog.far = p.fogFar; }
 
         // Grass-only colour (affects nothing else). Low gets darkened toward the bush
-        // green so ground and foliage read alike; Medium/High stay [1,1,1].
+        // green so ground and foliage read alike; Medium/High stay [1,1,1]. A level with
+        // a CUSTOM ground texture skips this green tint (it would shift a non-grass
+        // surface) — it uses the level's `color` if given, else white.
         if (this._groundMat && p.grassTint) {
-            this._groundMat.color.setRGB(p.grassTint[0], p.grassTint[1], p.grassTint[2]);
+            if (this._groundCfg) {
+                if (this._groundCfg.color) this._groundMat.color.set(this._groundCfg.color);
+                else this._groundMat.color.setRGB(1, 1, 1);
+            } else {
+                this._groundMat.color.setRGB(p.grassTint[0], p.grassTint[1], p.grassTint[2]);
+            }
             this._groundMat.needsUpdate = true;
         }
 
@@ -289,6 +297,35 @@ const Level = {
         return tex;
     },
 
+    // Apply a level's ground surface. cfg = { texture, tileX, tileY, color } — all
+    // optional. No cfg / no texture → the shipped grass look (grass.png) with the
+    // quality-managed grass tint. A custom texture renders UNtinted (white) unless the
+    // level supplies an explicit `color`, so a non-grass surface isn't green-shifted.
+    // Records this._groundCfg so setGraphicsQuality knows whether to skip the grass tint.
+    applyGroundTexture: function(cfg) {
+        const mat = this._groundMat;
+        if (!mat || typeof THREE === 'undefined' || !THREE.TextureLoader) return;
+        this._groundCfg = (cfg && cfg.texture) ? cfg : null;
+        const file = (cfg && cfg.texture) || 'grass.png';
+        const rx = (cfg && cfg.tileX) || 24, ry = (cfg && cfg.tileY) || 24;
+        new THREE.TextureLoader().load(
+            'assets/textures/' + file,
+            (tex) => {
+                tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+                tex.repeat.set(rx, ry);
+                const old = mat.map;
+                mat.map = tex;
+                mat.needsUpdate = true;
+                this._groundTex = tex;
+                if (old && old !== tex) old.dispose();
+                // Reapply the current quality (srgb/anisotropy + grass-tint-vs-custom logic).
+                this.setGraphicsQuality(this._quality || 'medium');
+            },
+            undefined,
+            () => { /* missing/failed → keep whatever's currently on the ground */ }
+        );
+    },
+
     // Asynchronously swap the ground to the real grass image when it loads. Keeps
     // the procedural texture if the file is missing or fails to load.
     loadGroundImage: function(mat) {
@@ -314,11 +351,14 @@ const Level = {
     // Swap the active level: remove the previous level's prop meshes and spawn
     // the new ones. Props are cloned so enrichProp() doesn't mutate the shared
     // registry source (the same level can be loaded repeatedly).
-    loadLevel: function(props) {
+    loadLevel: function(props, options) {
         if (this.levelMeshes) {
             this.levelMeshes.forEach(m => scene.remove(m));
         }
         this.levelMeshes = [];
+
+        // Swap the ground to this level's surface (or back to grass if it has none).
+        this.applyGroundTexture(options && options.ground);
 
         mapProps3D = JSON.parse(JSON.stringify(props || []));
         mapProps3D.forEach(prop => this.spawnProp(prop));

@@ -543,16 +543,17 @@ const UI = {
         const el = document.getElementById('next-drop');
         if (!el) return;
         let secs = null, kind = null;
-        if (gameState.phase === 'HUNTING' && typeof GOLD_BEAM_TIMES !== 'undefined') {
+        if (gameState.phase === 'HUNTING' && typeof computeBeamSchedule !== 'undefined') {
             // Use the HOST's hunting length (synced on gameState), not the local
             // GAME_SETTINGS — a client's own huntingTime may differ, which would
-            // otherwise make its countdown wrong.
+            // otherwise make its countdown wrong. computeBeamSchedule is deterministic,
+            // so this recomputes the host's exact schedule with no extra packets.
             const huntLen = gameState.huntingTime || ROUND_DURATION();
             const elapsed = huntLen - gameState.timer;        // seconds into hunting
             // Next drop = the soonest upcoming GOLD (power) or PURPLE (key) beam.
-            const sched = GOLD_BEAM_TIMES.map(t => ({ at: t, kind: 'gold' }))
-                .concat((typeof PURPLE_BEAM_TIMES !== 'undefined' ? PURPLE_BEAM_TIMES : [])
-                    .map(t => ({ at: t, kind: 'purple' })))
+            const sc = computeBeamSchedule(huntLen);
+            const sched = sc.gold.map(t => ({ at: t, kind: 'gold' }))
+                .concat(sc.purple.map(t => ({ at: t, kind: 'purple' })))
                 .filter(e => e.at > elapsed && e.at < huntLen)
                 .sort((a, b) => a.at - b.at);
             if (sched.length) { secs = sched[0].at - elapsed; kind = sched[0].kind; }

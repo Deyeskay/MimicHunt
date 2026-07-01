@@ -133,10 +133,14 @@ let shootLastY = 0;
 let shootFireTimer = null;
 
 // --- COMBAT (seeker energy-pulse shooting) ---
-const MAG_SIZE = 4;            // shots before a reload
-const FIRE_INTERVAL_MS = 500;  // min time between shots (1 shot / 0.5s)
+const MAG_SIZE = 8;            // shots before a reload (bullets until reload)
+const FIRE_INTERVAL_MS = 250;  // min time between shots (4 shots / sec)
 const RELOAD_MS = 1500;        // reload duration
-const HIDER_MAX_HP = 5;        // hits to eliminate
+const HIDER_MAX_HP = 12;       // hider hit points — sized so a full 8-round mag can't
+                               // solo-kill (forces at least one reload), keeping the
+                               // faster fire rate from making hiders instantly fragile.
+const SHOT_DAMAGE = 1;         // HP removed per normal hit (reduced share of max HP vs
+                               // the old 1-of-5 model → hiders take less relative damage)
 const SHOT_RANGE = 60;         // max pulse travel / hit range (world units)
 const HIT_SCORE = 100;         // points per hit
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
@@ -145,14 +149,13 @@ const SHOOT_ANIM_MS = 1200;    // aim-stance window after a shot (upper-body sho
 
 // --- AIRDROP BEAMS & POWER-UPS (PUBG-style sky drops) ---
 // Timed beams of light rise from the map; walking through an ACTIVE beam grants a
-// power-up. Host-authoritative (see Network.tickBeams / grantPower). Times below are
-// SECONDS since HUNTING began. The schedule only fires events that fit inside the
-// configured huntingTime, so shorter matches simply get fewer beams.
+// power-up. Host-authoritative (see Network.tickBeams / grantPower). Spawn times are
+// SECONDS since HUNTING began and are DERIVED from the match length at HUNTING start
+// via computeBeamSchedule() (below) rather than a fixed list — see that function for
+// the pacing rationale.
 const BEAM_ARM_MS      = 5000;    // "beam shows, no powerup" → then it activates (walkable)
 const BEAM_LIFETIME_MS = 30000;   // an active beam despawns if nobody collects it in time
 const BEAM_RADIUS      = 3;       // walk-through pickup radius (matches the visual cylinder)
-const GOLD_BEAM_TIMES  = [120, 360, 600];   // gold-beam spawn times (s into HUNTING)
-const PURPLE_BEAM_TIMES = [180, 420, 660];  // purple key-beam spawn times (s into HUNTING)
 const PICKUP_INVIS_MS  = 5000;    // hider becomes invisible this long the instant they pick up
 const POWER_INVIS_MS   = 10000;   // hider "Invisible" power duration
 const POWER_SCAN_MS    = 10000;   // seeker "Scan" (see hiders through walls) duration
@@ -176,6 +179,52 @@ const DROP_KEY_RADIUS = 2.5;// walk-over radius to recover a dropped key bundle
 // then open (visible + depositable) until the match ends. Anchored host-side off the
 // last purple beam that actually fires (see Network HUNTING transition).
 const EXIT_ACTIVATE_DELAY_MS = 60000;   // 1 min after the final key drop
+
+// --- AIRDROP-BEAM SCHEDULE (derived from match length) ---
+// Build the gold (power) + purple (key) beam spawn times for a hunt of `huntLen`
+// seconds. Derived from the length rather than a fixed list so EVERY match is
+// well-paced and — crucially — always has at least KEYS_TO_WIN purple beams so the
+// key-win path is viable. (The old fixed [120,360,600]/[180,420,660] lists left 5–11
+// min matches with too few purple beams to ever reach KEYS_TO_WIN, i.e. a dead win
+// path.) Fully DETERMINISTIC (no jitter) so the host and every client derive an
+// identical schedule from gameState.huntingTime alone — the "Next Drop" HUD
+// (UI.updateNextDrop) recomputes it locally with no extra packets.
+function computeBeamSchedule(huntLen) {
+    const T = Math.max(1, huntLen | 0);
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    // No beams in the opening seconds — players orient / seekers scan first.
+    const head = Math.max(60, Math.round(0.12 * T));
+    // Purple must leave room after the LAST key for the doors to open
+    // (EXIT_ACTIVATE_DELAY_MS) plus a run to an exit (~40s) so it's depositable.
+    const purpleTail = Math.round(EXIT_ACTIVATE_DELAY_MS / 1000) + 40;   // ~100s
+    const goldTail   = 30;   // gold has no door dependency, so it can drop later.
+    // Counts scale with length; purple floored at KEYS_TO_WIN so the key path lives.
+    const purpleCount = clamp(KEYS_TO_WIN + Math.floor((T - 300) / 300), KEYS_TO_WIN, 6);
+    const goldCount   = clamp(Math.round(T / 170), 1, 8);
+    return {
+        // Endpoint-spread purple across [head, T-purpleTail] (first at head, last at end).
+        purple: spreadBeamTimes(head, T - purpleTail, purpleCount, false),
+        // Midpoint-spread gold across [head, T-goldTail] — the half-slot offset makes it
+        // naturally interleave with the endpoint-spread purple instead of colliding.
+        gold:   spreadBeamTimes(head, T - goldTail, goldCount, true)
+    };
+}
+
+// N times spread across [a,b] (seconds), rounded. midpoint=false → endpoints included
+// (i/(N-1)); midpoint=true → each at the centre of its 1/N slot ((i+0.5)/N), which
+// offsets from an endpoint series so two schedules interleave.
+function spreadBeamTimes(a, b, n, midpoint) {
+    if (n <= 0) return [];
+    a = Math.max(0, a);
+    if (b <= a) return Array.from({ length: n }, () => Math.round(a));
+    if (n === 1) return [Math.round(midpoint ? (a + b) / 2 : a)];
+    const out = [];
+    for (let i = 0; i < n; i++) {
+        const f = midpoint ? (i + 0.5) / n : i / (n - 1);
+        out.push(Math.round(a + (b - a) * f));
+    }
+    return out;
+}
 
 // --- REMOTE FOOTSTEPS (heard from OTHER players; computed client-side, no packets) ---
 const FOOTSTEP_MAX_DIST   = 40;   // beyond this (world units), remote footsteps are silent
