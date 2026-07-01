@@ -58,12 +58,22 @@ Bottom-center (`.bottom-center-hud`, absolutely positioned):
 - **Combat HUD** (`#combat-hud`, Seeker+HUNTING+alive): `🔫 ammo/MAG · ⭐ score`
   (or `RELOAD`), blue border. Sits in the same bottom-centre slot as the hider health
   bar (mutually exclusive by role).
-- **RELOADING…** (`#reload-indicator`, Seeker reloading): blinks (`.blink`); stacks just
-  above the combat pill (`bottom: 74px`).
+- **Active-effect** (`#active-effect`, above the bottom pill, `bottom: 72px`): the current
+  active power effect, rendered by type by `UI.updateActiveEffect` — **countdown**
+  (`.ae-count`: invis/scan/kill/jammer → `#ae-bar` depletes over the effect duration),
+  **toggle** (`.ae-toggle`: shield → "SHIELD ACTIVE", persists until lost), **instant**
+  (`.ae-instant`: heal → brief "HEALTH RESTORED" flash via `UI.flashEffect`).
 
 Plus: centered `#crosshair` (Seeker+HUNTING+alive; `UI.hitMarker()` flashes it red
-on a landed hit); mobile **SHOOT** (seeker) / circular **disguise/switch** button
+on a landed hit). While a seeker **reloads**, the crosshair hides and a center **reload
+ring** (`#reload-ring`, conic-gradient sweep driven by a `--p` var from `reloadUntil`)
+fills over `RELOAD_MS`. Mobile **SHOOT** (seeker) / circular **disguise/switch** button
 (hider) toggled by role.
+
+**Power pills:** `#power-pill` (bottom-center-RIGHT) shows a hider's *held* un-activated
+power `… [E]` (PC only; on mobile the `#btn-action-power` button shows it and the pill is
+suppressed). Seekers have no held state (powers auto-activate on pickup) — their effect
+shows only in `#active-effect`. Driven by `UI.updatePowerHUD`.
 
 **Disguise/switch button** (`#btn-action-disguise .disguise-btn`): a circular button
 with a glowing ring and stacked spans — `#db-swap` (🔄) / `#db-icon` (prop emoji via

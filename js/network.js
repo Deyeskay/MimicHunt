@@ -62,10 +62,11 @@ const Network = {
             // --- AIRDROP POWER-UPS (see Network.grantPower / processShot) ---
             heldPower: null,        // hider: 'heal'|'invis'|'shield' awaiting manual activation (E)
             invisUntil: 0,          // hider: invisible-to-seeker deadline (local clock)
+            invisTotalMs: 0,        // hider: the invis window's total ms (5s pickup vs 10s power) — for the HUD bar
             shieldArmed: false,     // hider: absorb-1-hit-while-disguised armed
             scanUntil: 0,           // seeker: see-hiders-through-walls deadline (local clock)
             killUntil: 0,           // seeker: one-shot-kill deadline (local clock)
-            // (jammer reuses each hider's existing `disguiseLockUntil`)
+            jamUntil: 0,            // seeker: own jammer-active deadline (hiders' locks reuse disguiseLockUntil)
             carriedKeys: 0          // hider: purple-beam keys held but not yet deposited
         };
     },
@@ -355,6 +356,13 @@ const Network = {
                 tgt.disguiseLockUntil = now + DISGUISE_LOCK_MS;
                 if (tgt.disguiseType !== 'player') {
                     forcedOut = true;
+                    // Lift y so the revealed character's feet stay on the same ground:
+                    // while disguised y sits at propRadius; as a player it must sit at
+                    // PLAYER_BASE_HEIGHT. Without this a short prop (bush/rock, radius <
+                    // base height) leaves y too low and the character renders sunk into
+                    // the floor until the next position packet corrects it.
+                    const oldBase = tgt.propRadius || (tgt.disguiseSize / 2);
+                    tgt.y = (tgt.y || 0) - oldBase + PropLevel.PLAYER_BASE_HEIGHT;
                     tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
                     tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null; tgt.disguiseTexture = null;
                     tgt.color = 0x2ed573;
@@ -560,7 +568,7 @@ const Network = {
         if (!isHostEcho) p.carriedKeys = carried;
         if (playerId === myId) {
             Sound.coin();
-            UI.toast('🔑 Key collected — bring it to an exit door!');
+            UI.announce('🔑 Key', 'Collected');
         }
     },
     applyKeyDeposit(playerId, carried, submitted, isHostEcho) {
@@ -618,6 +626,7 @@ const Network = {
         if (p.role === 'Hider') {
             const power = HIDER_POWERS[Math.floor(Math.random() * HIDER_POWERS.length)];
             p.invisUntil = now + PICKUP_INVIS_MS;
+            p.invisTotalMs = PICKUP_INVIS_MS;
             p.heldPower = power;
             this.broadcast({ type: 'powerGain', playerId, role: 'Hider',
                              heldPower: power, invisMs: PICKUP_INVIS_MS });
@@ -632,6 +641,7 @@ const Network = {
                 p.killUntil = now + POWER_KILL_MS;
                 pkt.killMs = POWER_KILL_MS;
             } else { // jammer
+                p.jamUntil = now + POWER_JAM_MS;   // the seeker's own "jammer active" timer (HUD)
                 const ids = [];
                 for (const id in gameState.players) {
                     const h = gameState.players[id];
@@ -659,28 +669,31 @@ const Network = {
         if (!p) return;
         const now = this.now();
         if (role === 'Hider') {
-            if (!isHostEcho && data.invisMs) p.invisUntil = now + data.invisMs;
+            if (!isHostEcho && data.invisMs) { p.invisUntil = now + data.invisMs; p.invisTotalMs = data.invisMs; }
             if (!isHostEcho) p.heldPower = data.heldPower || null;
             if (playerId === myId) {
                 Sound.coin();
-                const names = { heal: 'Full Health', invis: 'Invisibility', shield: 'Disguise Shield' };
-                UI.toast('✨ Power: ' + (names[data.heldPower] || data.heldPower) + ' — press E');
-                const invisMs = data.invisMs || (typeof PICKUP_INVIS_MS !== 'undefined' ? PICKUP_INVIS_MS : 0);
-                if (invisMs) UI.toast('👻 Invisible for ' + Math.round(invisMs / 1000) + 's');
+                const names = { heal: '❤️ Full Heal', invis: '👻 Ghost', shield: '🛡️ Disguise Shield' };
+                // Pickup → AAA centre banner. The pickup-invis countdown now shows on the
+                // #active-effect bar, so no separate "Invisible for Ns" toast.
+                UI.announce(names[data.heldPower] || data.heldPower, 'Picked Up');
             }
         } else {
             if (!isHostEcho) {
                 if (data.scanMs) p.scanUntil = now + data.scanMs;
                 if (data.killMs) p.killUntil = now + data.killMs;
-                if (data.jamIds) data.jamIds.forEach(id => {
-                    const h = gameState.players[id];
-                    if (h) h.disguiseLockUntil = now + (data.jamMs || POWER_JAM_MS);
-                });
+                if (data.jamIds) {
+                    p.jamUntil = now + (data.jamMs || POWER_JAM_MS);   // seeker's own jammer timer
+                    data.jamIds.forEach(id => {
+                        const h = gameState.players[id];
+                        if (h) h.disguiseLockUntil = now + (data.jamMs || POWER_JAM_MS);
+                    });
+                }
             }
             if (playerId === myId) {
                 Sound.coin();
-                const names = { scan: '📡 Scan — hiders revealed', jammer: '🚫 Jammer — disguises locked', kill: '🎯 One-Shot Kill' };
-                UI.toast(names[data.power] || data.power);
+                const names = { scan: '📡 Scan', jammer: '🚫 Jammer', kill: '🎯 One-Shot Kill' };
+                UI.announce(names[data.power] || data.power, 'Picked Up');
             }
         }
     },
@@ -697,6 +710,7 @@ const Network = {
             pkt.healTo = HIDER_MAX_HP;
         } else if (power === 'invis') {
             p.invisUntil = Math.max(p.invisUntil || 0, now + POWER_INVIS_MS);
+            p.invisTotalMs = POWER_INVIS_MS;
             pkt.invisMs = POWER_INVIS_MS;
         } else if (power === 'shield') {
             p.shieldArmed = true;
@@ -714,13 +728,14 @@ const Network = {
         const now = this.now();
         if (!isHostEcho) {
             if (data.healTo != null) p.health = data.healTo;
-            if (data.invisMs) p.invisUntil = Math.max(p.invisUntil || 0, now + data.invisMs);
+            if (data.invisMs) { p.invisUntil = Math.max(p.invisUntil || 0, now + data.invisMs); p.invisTotalMs = data.invisMs; }
             if (data.shield) p.shieldArmed = true;
             if (data.playerId === myId) p.heldPower = null;
         }
         if (data.playerId === myId) {
-            const names = { heal: '❤️ Full health restored', invis: '👻 Invisible for 10s', shield: '🛡️ Disguise shield armed' };
-            UI.toast(names[data.power] || data.power);
+            // Instant powers (heal) have no duration — flash a brief "HEALTH RESTORED" in the
+            // active-effect indicator (countdown/toggle powers render from their state instead).
+            if (data.power === 'heal' && UI.flashEffect) UI.flashEffect('❤️', 'HEALTH RESTORED', 1500);
         }
     },
 
@@ -1366,11 +1381,20 @@ const Network = {
                         tgt.disguiseLockUntil = this.now() + (data.lockMs || DISGUISE_LOCK_MS);
                         if (data.eliminated) tgt.isCaught = true;
                         if (data.forcedOut) {
+                            // Lift y by the standing-height difference so the revealed
+                            // character's feet stay on the ground (see host handler) —
+                            // otherwise short props (bush/rock) render sunk underground.
+                            const oldBase = tgt.propRadius || (tgt.disguiseSize / 2);
+                            tgt.y = (tgt.y || 0) - oldBase + PropLevel.PLAYER_BASE_HEIGHT;
                             tgt.disguiseType = 'player';
                             tgt.disguiseSize = 2; tgt.propScale = 1;
                             tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null; tgt.disguiseTexture = null;
                             tgt.color = 0x2ed573;
                             if (data.targetId === myId) {
+                                // Raise our own position too so the next broadcast carries
+                                // the corrected height (gravity/floor-snap would fix it a
+                                // frame later, but this avoids sending one sunk frame).
+                                localPos.y = tgt.y;
                                 localDisguise = { type: 'player', size: 2, color: 0x2ed573,
                                     propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null };
                             }
@@ -1565,9 +1589,11 @@ const Network = {
             // Airdrop power-up state — fresh each round.
             p.heldPower = null;
             p.invisUntil = 0;
+            p.invisTotalMs = 0;
             p.shieldArmed = false;
             p.scanUntil = 0;
             p.killUntil = 0;
+            p.jamUntil = 0;
             p.carriedKeys = 0;
             delete p._lastMoveT;
             delete p._lastShotT;

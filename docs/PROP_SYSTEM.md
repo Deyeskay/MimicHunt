@@ -79,10 +79,8 @@ are still used by disguise sizing, climbing, spawns, and the hit radius — only
 ## Gameplay-flag resolution — `resolveGameplay(prop)`
 - `collision`, `hideSpot`: **instance value wins** when defined, else prefab default.
 - `climbable`: same rule (instance-wins-else-prefab). NOTE: older level files baked
-  `"climbable": false` on every prop; `forest.js` has had those stripped (so rocks/
-  bushes inherit `climbable:true` from the prefab). **`arena.js` still has baked
-  `climbable:false`** → its rocks/bushes are currently non-climbable (TODO: strip or
-  re-export).
+  `"climbable": false` on every prop; `forest.js` and the rebuilt `arena.js` omit those
+  (so rocks/bushes inherit `climbable:true` from the prefab).
 - `canDisguise` is prefab-only (read via `canDisguiseAs`, which also returns true for
   any `hideSpot`).
 

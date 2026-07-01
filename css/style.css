@@ -362,8 +362,8 @@ button.leave {
 }
 
 .hud-header { display: flex; justify-content: flex-start; align-items: center; width: 100%; position: relative; }
-/* Timer pill is centred along the top; role badge stays left, icon cluster right. */
-#timer-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+/* Timer pill sits top-LEFT next to the role badge (flows in the header row); the
+   icon cluster stays right. The top-CENTRE slot is used by the disguise-lock alert. */
 .hud-card {
     background: rgba(26, 26, 36, 0.85); padding: 10px 16px; border-radius: 30px;
     font-weight: bold; border: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px;
@@ -412,8 +412,42 @@ button.leave {
 }
 #health-hud { border-color: var(--accent-green); }
 #combat-hud { font-family: monospace; border-color: var(--accent-blue); }
-/* Reload pill stacks just above the seeker ammo pill (both bottom-center). */
-#reload-indicator { color: #ffa502; letter-spacing: 2px; border-color: #ffa502; bottom: 74px; }
+
+/* Active power-effect indicator — a pill just ABOVE the bottom health/combat HUD.
+   Three visual variants: countdown (depleting bar), toggle (persistent), instant (flash). */
+#active-effect {
+    position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%);
+    z-index: 13; pointer-events: none;
+    background: rgba(26, 26, 36, 0.9); padding: 6px 14px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.14); color: #fff; font-weight: 700;
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 3px 6px;
+    font-size: 0.82rem; letter-spacing: 0.5px; white-space: nowrap;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    /* While an effect is active this pill keeps beating like a heartbeat: one quick
+       thump (size + glow) then a rest, repeating. The animation lives on the #id (not the
+       ae-* class) so it survives updateActiveEffect re-setting className every frame.
+       --ae-glow is the glow colour, overridden per variant below. */
+    --ae-glow: 255, 209, 102;
+    animation: ae-heartbeat 1.5s ease-in-out infinite;
+}
+@keyframes ae-heartbeat {
+    0%   { transform: translateX(-50%) scale(1);
+           box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 9px rgba(var(--ae-glow), 0.22); }
+    10%  { transform: translateX(-50%) scale(1.075);
+           box-shadow: 0 4px 18px rgba(0,0,0,0.45), 0 0 24px rgba(var(--ae-glow), 0.65); }
+    22%  { transform: translateX(-50%) scale(1);
+           box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 9px rgba(var(--ae-glow), 0.22); }
+    100% { transform: translateX(-50%) scale(1);
+           box-shadow: 0 4px 14px rgba(0,0,0,0.4), 0 0 9px rgba(var(--ae-glow), 0.22); }
+}
+#active-effect .ae-ic { font-size: 1.05rem; line-height: 1; }
+.ae-track { flex-basis: 100%; width: 100%; height: 5px; background: rgba(255,255,255,0.18); border-radius: 3px; overflow: hidden; }
+.ae-bar { height: 100%; width: 100%; background: #ffd166; transition: width .1s linear; }
+/* Variant accents. Countdown = amber bar shown; toggle = green, no bar; instant = red flash. */
+#active-effect.ae-count  { border-color: #ffd166;            --ae-glow: 255, 209, 102; }
+#active-effect.ae-toggle { border-color: var(--accent-green); color: #b8ffcf; --ae-glow: 88, 229, 160; }
+#active-effect.ae-instant{ border-color: var(--accent-red);   color: #ffc2ca; --ae-glow: 255, 107, 129; }
+
 .hp-track {
     width: 220px; height: 16px; background: rgba(255,255,255,0.18);
     border-radius: 8px; overflow: hidden;
@@ -426,9 +460,10 @@ button.leave {
 .blink { animation: hud-blink 0.7s steps(1, end) infinite; }
 @keyframes hud-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
 
-/* Hider disguise cooldown alert (top-centre, shown for ~5s after being hit). */
+/* Hider disguise cooldown alert (top-centre in the header slot the timer vacated,
+   shown for ~5s after being hit). */
 #disguise-cd {
-    position: absolute; left: 50%; top: 70px; transform: translateX(-50%);
+    position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
     z-index: 13; pointer-events: none;
     background: rgba(26, 26, 36, 0.9); padding: 8px 16px; border-radius: 22px;
     border: 1px solid var(--accent-red); color: #ff6b81; font-weight: bold;
@@ -452,6 +487,9 @@ button.leave {
     box-shadow: 0 0 14px rgba(255,215,0,0.28);
 }
 #power-pill .pp-ic { font-size: 1.15rem; line-height: 1; }
+/* The one-shot "power acquired" pop is driven in JS via the Web Animations API
+   (UI.pulsePickup) with composite:'add', so its scale composes with the layout
+   editor's inline transform (translate(-50%,-50%) scale()) instead of clobbering it. */
 
 /* Persistent objective pill (top-left, directly under the role card). Teal = goal theme.
    Sits above #keys-hud so the two top-left pills stack without overlapping. */
@@ -472,18 +510,21 @@ button.leave {
     white-space: nowrap; box-shadow: 0 0 12px rgba(166,77,255,0.25);
 }
 
-/* Hider "use power" action button (mobile) — gold-ringed, matches .action-btn sizing. */
+/* Hider "use power" action button (mobile) — gold-ringed. Sized + labelled to
+   match the disguise/shoot button (same bottom-right action slot) so the round
+   buttons read consistently. */
 .action-btn.power-btn {
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    width: 128px; height: 128px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
     border-color: #ffd700; box-shadow: 0 0 20px rgba(255,215,0,0.5), inset 0 0 16px rgba(255,215,0,0.2);
 }
-.power-btn .pb-icon  { font-size: 2rem; line-height: 1; }
-.power-btn .pb-label { font-size: 0.74rem; font-weight: 700; letter-spacing: 1px; color: #ffe98a; }
+.power-btn .pb-icon  { font-size: 2.4rem; line-height: 1; }
+.power-btn .pb-label { font-size: 0.82rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; line-height: 1.05; color: #ffe98a; }
 .power-btn:active:not(:disabled) { transform: scale(0.95); }
 
 /* Event toasts — stacked bottom-center, just above the health/reload row. */
 #toast-container {
-    position: absolute; left: 50%; bottom: 78px; transform: translateX(-50%);
+    position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%);
     z-index: 13; pointer-events: none;
     display: flex; flex-direction: column-reverse; align-items: center; gap: 8px;
 }
@@ -497,6 +538,61 @@ button.leave {
 }
 @keyframes toast-in  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
+
+/* AAA-style centre-screen pickup announcements (power/key). A beveled hexagon panel
+   with a translucent dark fill (scene stays visible through it), a glowing cyan edge,
+   a small subtitle on top and a big gradient title below — rising up and fading out
+   for the "level-up"/"power get" feel. Stacked upward via #center-announce. */
+#center-announce {
+    position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 14; pointer-events: none;
+    display: flex; flex-direction: column-reverse; align-items: center; gap: 14px;
+}
+.ca-item {
+    position: relative;
+    min-width: 300px; text-align: center;
+    padding: 16px 66px;
+    /* hexagon with cut left/right corners */
+    clip-path: polygon(7% 0, 93% 0, 100% 50%, 93% 100%, 7% 100%, 0 50%);
+    /* the visible 2px border is this cyan layer showing around ::before */
+    background: linear-gradient(180deg, rgba(140,235,255,0.19), rgba(70,150,235,0.09));
+    filter: drop-shadow(0 0 14px rgba(90,210,255,0.06)) drop-shadow(0 2px 10px rgba(0,0,0,0.5));
+    opacity: 0; animation: ca-rise 2.2s ease-out forwards;
+}
+/* translucent inner fill — inset 2px leaves the cyan border showing */
+.ca-item::before {
+    content: ''; position: absolute; inset: 2px;
+    clip-path: polygon(7% 0, 93% 0, 100% 50%, 93% 100%, 7% 100%, 0 50%);
+    background: linear-gradient(180deg, rgba(10,22,44,0.38), rgba(4,10,26,0.39));
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    box-shadow: inset 0 0 26px rgba(80,200,255,0.84);
+}
+.ca-item > * { position: relative; z-index: 1; }
+.ca-sub {
+    font-family: "Fredoka", system-ui, sans-serif;
+    font-weight: 600; font-size: 0.9rem; letter-spacing: 3px;
+    color: rgba(206,232,255,0.82); white-space: nowrap;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.85);
+    margin-bottom: 3px;
+}
+.ca-title {
+    font-family: "Fredoka", system-ui, sans-serif;
+    font-weight: 800; font-size: 2.6rem; line-height: 1.04; letter-spacing: 0.5px;
+    white-space: nowrap; display: inline-flex; align-items: center; justify-content: center;
+}
+.ca-emoji { margin-right: 12px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.6)); }
+.ca-txt {
+    background: linear-gradient(180deg, #9ff2ff 0%, #f3aaff 62%, #d68cff 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.55));
+}
+@keyframes ca-rise {
+    0%   { opacity: 0; transform: translateY(24px) scale(0.9); }
+    16%  { opacity: 1; transform: translateY(0) scale(1); }
+    74%  { opacity: 1; transform: translateY(-8px) scale(1); }
+    100% { opacity: 0; transform: translateY(-46px) scale(1.03); }
+}
 
 /* Two-button modal action row (used by UI.showConfirm). */
 .modal-actions { display: flex; gap: 10px; justify-content: center; }
@@ -518,6 +614,18 @@ button.leave {
 #crosshair.hit { width: 32px; height: 32px; }
 #crosshair.hit::before, #crosshair.hit::after {
     background: var(--accent-red); box-shadow: 0 0 10px rgba(255, 71, 87, 1);
+}
+
+/* Seeker reload ring (screen-centre): a conic-gradient sweep masked to a ring, filling
+   clockwise as --p goes 0deg→360deg over the reload. Replaces the crosshair while reloading. */
+#reload-ring {
+    position: absolute; top: 50%; left: 50%;
+    width: 54px; height: 54px; transform: translate(-50%, -50%);
+    pointer-events: none; z-index: 11; border-radius: 50%;
+    background: conic-gradient(#ffa502 var(--p, 0deg), rgba(255,255,255,0.16) 0deg);
+    -webkit-mask: radial-gradient(farthest-side, transparent 58%, #000 60%);
+            mask: radial-gradient(farthest-side, transparent 58%, #000 60%);
+    filter: drop-shadow(0 0 4px rgba(255,165,2,0.55));
 }
 
 #blind-overlay {
@@ -724,16 +832,23 @@ body.layout-editing .le-selected {
     #timer-display { font-size: 0.95rem; }
     #health-hud .hp-track { width: 150px; height: 12px; }
     .bottom-center-hud { bottom: 14px; padding: 6px 14px; font-size: 0.85rem; }
-    #reload-indicator { bottom: 56px; }
-    #disguise-cd { top: 48px; padding: 5px 12px; font-size: 0.78rem; gap: 4px; }
+    #active-effect { bottom: 54px; padding: 5px 12px; font-size: 0.74rem; }
+    #active-effect .ae-track { width: 120px; }
+    #toast-container { bottom: 96px; }
+    #reload-ring { width: 46px; height: 46px; }
+    .ca-item { min-width: 220px; padding: 12px 46px; }
+    .ca-title { font-size: 1.8rem; }
+    .ca-sub { font-size: 0.78rem; letter-spacing: 2px; }
+    #disguise-cd { top: 8px; padding: 5px 12px; font-size: 0.78rem; gap: 4px; }
     #disguise-cd .dcd-track { width: 130px; height: 5px; }
     #power-pill { bottom: 16px; left: calc(50% + 104px); padding: 4px 10px; font-size: 0.7rem; }
     #power-pill .pp-ic { font-size: 1rem; }
     #keys-hud { top: 40px; left: 8px; padding: 3px 10px; font-size: 0.76rem; }
     .hud-right { gap: 8px; }
     #next-drop { padding: 3px 9px; font-size: 0.74rem; }
-    .power-btn .pb-icon { font-size: 1.6rem; }
-    .power-btn .pb-label { font-size: 0.62rem; }
+    .action-btn.power-btn { width: 100px; height: 100px; }
+    .power-btn .pb-icon { font-size: 1.9rem; }
+    .power-btn .pb-label { font-size: 0.68rem; }
     button.leave { padding: 5px 11px; font-size: 0.78rem; }
 
     #joystick-zone { width: 96px; height: 96px; }

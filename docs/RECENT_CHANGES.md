@@ -3,6 +3,107 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-02
+
+- **Power HUD feedback: heartbeat active-effect + pickup pop.** Files: `css/style.css`,
+  `js/ui.js`.
+  - **`#active-effect`** now *continuously* beats like a **heartbeat** (one quick size +
+    glow thump, then a rest) while an effect is live, via an `ae-heartbeat` animation on the
+    `#id` (survives `updateActiveEffect` re-setting `className` each frame). Glow colour is
+    variant-aware through a `--ae-glow` CSS var (amber = countdown, green = toggle, red =
+    instant); the scale keyframes keep the `translateX(-50%)` centering.
+  - **Power pickup pop:** the moment a hider acquires a power, the held pill (PC) / power
+    button (mobile) flashes a one-shot grow + gold flare. Driven in JS by the new
+    `UI.pulsePickup(el)` via the **Web Animations API with `composite:'add'`** so the pop
+    scale composes with the layout editor's inline `transform: translate(-50%,-50%) scale()`
+    on the mobile button — a plain CSS `transform` animation dropped that translate and made
+    the button jump then snap back. `UI.updatePowerHUD` triggers it on the none→held
+    transition (`_heldPowerShown`).
+
+- **New Arena level — symmetric vertical "Colosseum".** File: `js/levels/arena.js`
+  (fully replaced the old one-sided cramped layout; still registered via `arena.js` in
+  `registry.js`, no wiring change). 79 props, 4-fold rotationally symmetric inside a 44×44
+  perimeter-walled ring: a **central 3-tier climbable crate ziggurat** (disguisable cubes)
+  as the high-ground landmark, **four corner bastions** (crate steps up onto the wall + tree
+  + rocks + bushes), **four mid-edge cover walls** with flanking rocks/crates, a **scatter
+  ring of 8 identical bushes + 8 rocks** so hiders have a crowd of matching props to disguise
+  into, and **four pinwheel interior walls** for sightline breaks. Seeker spawns at the south
+  gate; five hider `spawnPoint`s ring the arena. Gameplay flags are omitted so props inherit
+  the prefab defaults (everything climbable — fixes the old baked `climbable:false` TODO for
+  this map). Walls/cubes sit on the ground via `y = scale.y/2`; crates use `crate.png`.
+
+- **Fixed: revealed hider sank into the ground after being hit.** File: `js/network.js`
+  (host `shot` resolution + client `shot` handler, both `forcedOut` branches). A disguised
+  hider's body center `y` sits at `propRadius`; the revealed character mesh renders feet at
+  `y − PLAYER_BASE_HEIGHT` (≈1.5). For short props (bush/rock, radius < base height) the
+  forced-out reset left `y` too low, so the character rendered sunk underground until the
+  next position packet. Now the forced-out reset lifts `y` by
+  `PLAYER_BASE_HEIGHT − propRadius` (keeping the feet on the same ground) on the host, on
+  remotes, and for the local hider (`localPos.y`) so its next broadcast is already correct.
+
+- **Announcement banner redesigned + two-line API.** Files: `css/style.css`
+  (`#center-announce`, `.ca-item` + `.ca-sub`/`.ca-title`/`.ca-emoji`/`.ca-txt`, `ca-rise`),
+  `js/ui.js` (`UI.announce`), `js/network.js`. `UI.announce(title, subtitle, opts)` now
+  renders a beveled **hexagon** panel with a translucent dark fill (scene stays visible
+  through it via `backdrop-filter`), a glowing cyan edge, a small subtitle on top, and a
+  big cyan→magenta **gradient title** below. A leading emoji is split off the title so it
+  keeps full colour (a gradient text-clip would render it invisible in Chrome). Back-compat:
+  `announce(text)` / `announce(text, opts)` still work. New pickup texts:
+  🔑 Key / Collected · ❤️ Full Heal / Picked Up · 👻 Ghost / Picked Up ·
+  🛡️ Disguise Shield / Picked Up · 📡 Scan / Picked Up · 🚫 Jammer / Picked Up ·
+  🎯 One-Shot Kill / Picked Up. (The old "— Press E" / "hiders revealed" hints were dropped.)
+
+- **Removed the power-*use* toasts.** File: `js/network.js` (`applyPowerUse`). Dropped the
+  "❤️ Full health restored", "👻 Invisible for 10s", and "🛡️ Disguise shield armed" corner
+  toasts shown when a hider activates their held power. Heal still flashes "HEALTH RESTORED"
+  in the `#active-effect` indicator; invis/shield render from their own state.
+
+- **Pickups now show as AAA-style centre-screen banners (not corner toasts).** Files: `index.html`
+  (`#center-announce`), `css/style.css` (`.ca-item` + `ca-rise` keyframes), `js/ui.js`
+  (`UI.announce`), `js/network.js`. Power/key **pickups** call `UI.announce(text)` → a big bold
+  uppercase white banner with a black shade, held ~50% opacity, rising up and fading (like a
+  level-up) at screen centre. Rerouted: hider power pickup (`applyPowerGain`), seeker power pickup,
+  and key pickup (`applyKeyGain`). The redundant "Invisible for Ns" pickup toast was dropped (the
+  `#active-effect` bar shows it). Other events (hits, deposits, seeker-alert-to-hiders) stay toasts.
+
+- **HUD rework: center reload ring + power HUD split into held-pill vs active-effect.** Files:
+  `index.html`, `css/style.css`, `js/ui.js`, `js/network.js`.
+  - **Reload → screen centre (PUBG-style):** removed the bottom `#reload-indicator`; added
+    `#reload-ring` at the crosshair — a conic-gradient ring (masked to a ring) that fills over
+    `RELOAD_MS`. While reloading the crosshair hides and the ring shows; `updateHUD` sets the sweep
+    via a `--p` CSS var from `reloadUntil`. The combat pill still flips ammo to `RELOAD`.
+  - **Power HUD split:** `#power-pill` (bottom-center-RIGHT) now shows ONLY a hider's *held*
+    (un-activated) power `… [E]` (PC; suppressed on mobile where the button shows it). A NEW
+    `#active-effect` indicator (bottom-center, above the health/combat pill) shows the *active*
+    effect by type — **countdown** (invis/scan/kill/jammer → depleting bar), **toggle** (shield →
+    "SHIELD ACTIVE", persists), **instant** (heal → brief "HEALTH RESTORED" flash via
+    `UI.flashEffect`). `UI.updateActiveEffect` picks one by priority; `#toast-container` bumped up
+    to clear it.
+  - **State (`js/network.js`):** added `invisTotalMs` (so the invis bar knows 5s-pickup vs
+    10s-power) and a seeker-side `jamUntil` (jammer now has its OWN countdown — previously only
+    hiders' `disguiseLockUntil` was set). Set in `grantPower`/`handleActivate`/`applyPowerGain`/
+    `applyPowerUse` and cleared on round reset. `scan`/`kill`/`jam` bars use the fixed
+    `POWER_*_MS` constants.
+
+- **HUD: timer moved to top-left, disguise-lock alert moved to the top-centre slot it vacated.**
+  File: `css/style.css` only. `#timer-card` was absolutely centred (`left:50%`); it now flows in the
+  `.hud-header` row right after `#role-card` (top-left, `.hud-header` already has `gap:8px`).
+  `#disguise-cd` moved up from `top:70px`→`top:12px` (compact `48px`→`8px`) so the "DISGUISE LOCKED"
+  alert occupies the freed top-centre spot. No HTML/JS changes.
+
+- **Power ability HUD: no longer duplicated on mobile + button sized to match the disguise button.**
+  Files: `js/ui.js` (`updatePowerHUD`), `css/style.css`.
+  - **De-dupe on mobile:** the held power showed BOTH in the bottom-center `#power-pill` and on the
+    mobile `#btn-action-power`. Now the pill is suppressed for the held-power state when mobile
+    controls are visible (`GAME_SETTINGS.showMobileControls`) — only PC players (no mobile controls)
+    see the pill for it. Active-effect countdowns (hider invis, seeker scan/kill) have no mobile
+    button, so they keep the pill regardless.
+  - **Consistent button:** `.action-btn.power-btn` was 70px (compact 60px) vs the disguise/shoot
+    button's 128px (compact 100px), so its `DISGUISE SHIELD` label looked cramped/smaller. The power
+    button now matches that size, and `.pb-label` matches `.db-label` typography (`0.82rem`/compact
+    `0.68rem`, uppercase, `letter-spacing:1px`), with a larger `.pb-icon`. Default control-layout
+    positions don't overlap at the new size (verified geometry); still Edit-Layout adjustable.
+
 ## 2026-07-01
 
 - **Per-instance texture tiling (Unity-style Tiling X/Y) for cube + wall.** Files: `js/props.js`,

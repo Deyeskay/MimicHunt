@@ -129,6 +129,13 @@
         </div>
 
         <div id="crosshair"></div>
+        <!-- Seeker reload progress ring (screen-centre, PUBG-style): shown while reloading,
+             replacing the crosshair. The fill sweep is driven by the --p CSS var each frame. -->
+        <div id="reload-ring" style="display:none;"></div>
+
+        <!-- AAA-style centre-screen announcements (power / key pickups): big bold text that
+             rises + fades. Each UI.announce() appends a .ca-item that self-removes. -->
+        <div id="center-announce"></div>
 
         <!-- Hider disguise cooldown (after being hit): top-center alert + countdown. -->
         <div id="disguise-cd" style="display:none;">
@@ -148,11 +155,16 @@
              toward the hider win, plus the local hider's carried (un-deposited) keys. -->
         <div id="keys-hud" style="display:none;"><span id="keys-hud-text">🔑 0/3</span></div>
 
-        <!-- Bottom-center HUD: hider health bar / seeker reload indicator. -->
+        <!-- Active power-effect indicator (bottom-center, just ABOVE the health/combat pill):
+             countdown effects show a depleting bar, toggle effects (shield) persist, instant
+             effects (heal) flash briefly. Driven by UI.updateActiveEffect. -->
+        <div id="active-effect" style="display:none;"><span class="ae-ic" id="ae-icon"></span><span class="ae-label" id="ae-label"></span><div class="ae-track" id="ae-track"><div class="ae-bar" id="ae-bar"></div></div></div>
+
+        <!-- Bottom-center HUD: hider health bar / seeker ammo pill. (Reload now shows as a
+             centre-screen ring; the combat pill still flips ammo to "RELOAD".) -->
         <div id="health-hud" class="bottom-center-hud" style="display:none;">❤ <div class="hp-track"><div id="hp-fill" class="hp-fill"></div></div></div>
         <!-- Seeker ammo/score pill: bottom-center, mirrors the hider health bar. -->
         <div id="combat-hud" class="bottom-center-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
-        <div id="reload-indicator" class="bottom-center-hud" style="display:none;">RELOADING…</div>
 
         <!-- Event toasts (player left / eliminated / disconnected), stacked above the bottom HUD. -->
         <div id="toast-container"></div>

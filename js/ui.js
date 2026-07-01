@@ -69,6 +69,52 @@ const UI = {
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur);
     },
 
+    // AAA-style centre-screen announcement (power / key pickups): a beveled hexagon panel
+    // with a translucent (see-through) fill, a small subtitle on top and a big gradient
+    // title below, that rises up and fades. Renders in #center-announce.
+    //   announce(title, subtitle, opts)  — subtitle optional; opts.duration in ms.
+    //   announce(title, opts)            — back-compat single-line form.
+    // The 2.2s figure matches the .ca-item `ca-rise` animation length.
+    announce: function(title, subtitle, opts) {
+        if (subtitle && typeof subtitle === 'object') { opts = subtitle; subtitle = ''; }
+        const box = document.getElementById('center-announce');
+        if (!box) return;
+        const dur = (opts && opts.duration) || 2200;
+        const el = document.createElement('div');
+        el.className = 'ca-item';
+
+        if (subtitle) {
+            const sub = document.createElement('div');
+            sub.className = 'ca-sub';
+            sub.textContent = subtitle;
+            el.appendChild(sub);
+        }
+
+        // Split a leading emoji from the title so it stays full-colour — a gradient
+        // text-clip renders emoji transparent (invisible) in Chrome otherwise.
+        const ttl = document.createElement('div');
+        ttl.className = 'ca-title';
+        let emoji = '', rest = title;
+        const sp = title.indexOf(' ');
+        if (sp > 0 && /^\p{Extended_Pictographic}/u.test(title)) {
+            emoji = title.slice(0, sp); rest = title.slice(sp + 1);
+        }
+        if (emoji) {
+            const e = document.createElement('span');
+            e.className = 'ca-emoji'; e.textContent = emoji;
+            ttl.appendChild(e);
+        }
+        const t = document.createElement('span');
+        t.className = 'ca-txt'; t.textContent = rest;
+        ttl.appendChild(t);
+        el.appendChild(ttl);
+
+        if (dur !== 2200) el.style.animationDuration = (dur / 1000) + 's';
+        box.appendChild(el);
+        while (box.children.length > 3) box.removeChild(box.firstChild);   // cap visible
+        setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur + 60);
+    },
+
     // Persistent top-left "objective" pill (current goal/state). Replace semantics:
     // each call swaps the text; clearObjective() hides it. Driven by updateObjective().
     objective: function(text) {
@@ -354,9 +400,20 @@ const UI = {
 
         // --- Combat UI: crosshair + ammo/score, Seeker only, while alive in HUNTING ---
         const combatActive = isSeeker && gameState.phase === 'HUNTING' && !me.isCaught;
+        // PUBG-style reload: while reloading, hide the crosshair and show a centre-screen
+        // ring that fills over RELOAD_MS. The combat pill still flips ammo to "RELOAD".
+        const reloadingNow = combatActive && reloading;
         const ch = document.getElementById('crosshair');
+        const ring = document.getElementById('reload-ring');
+        if (ch) ch.style.display = (combatActive && !reloadingNow) ? 'block' : 'none';
+        if (ring) {
+            ring.style.display = reloadingNow ? 'block' : 'none';
+            if (reloadingNow) {
+                const prog = Math.max(0, Math.min(1, (RELOAD_MS - (reloadUntil - Network.now())) / RELOAD_MS));
+                ring.style.setProperty('--p', (prog * 360) + 'deg');
+            }
+        }
         const combat = document.getElementById('combat-hud');
-        if (ch) ch.style.display = combatActive ? 'block' : 'none';
         if (combat) {
             combat.style.display = combatActive ? 'flex' : 'none';
             if (combatActive) {
@@ -365,13 +422,6 @@ const UI = {
                 if (ammoEl) ammoEl.innerText = reloading ? 'RELOAD' : `${ammo}/${MAG_SIZE}`;
                 if (scoreEl) scoreEl.innerText = me.score || 0;
             }
-        }
-        // Bottom-center blinking "RELOADING…" while a seeker reloads.
-        const reloadEl = document.getElementById('reload-indicator');
-        if (reloadEl) {
-            const showReload = combatActive && reloading;
-            reloadEl.style.display = showReload ? 'flex' : 'none';
-            reloadEl.classList.toggle('blink', showReload);
         }
         // Hider health bar (top HUD): visible for a hider in-game.
         const healthHud = document.getElementById('health-hud');
@@ -518,41 +568,34 @@ const UI = {
         el.classList.toggle('imminent', secs <= 10);
     },
 
-    // Power status chip (icon + small label, beside the bottom bar) + the hider's
-    // mobile "use power" button. Driven each tick so countdowns deplete smoothly.
+    // Held airdrop power → the bottom-right "held pill" (awaiting [E]) + the hider's
+    // mobile "use power" button. The ACTIVE effect (once triggered / auto for seekers)
+    // is a separate bottom-center indicator — see updateActiveEffect.
+    HELD_POWERS: { heal: ['❤️', 'FULL HEALTH'], invis: ['👻', 'INVISIBLE'], shield: ['🛡️', 'DISGUISE SHIELD'] },
     updatePowerHUD: function(me, isSeeker) {
-        const now = Network.now();
         const inGame = gameState.phase !== 'LOBBY' && !me.isCaught;
-        const HELD = { heal: ['❤️', 'FULL HEALTH'], invis: ['👻', 'INVISIBLE'], shield: ['🛡️', 'DISGUISE SHIELD'] };
-        const secs = (until) => ((until - now) / 1000).toFixed(1) + 's';
+        const HELD = this.HELD_POWERS;
 
-        // Pick the single most relevant thing to show as icon + short label.
-        let icon = null, label = '';
-        if (inGame && !isSeeker) {
-            const invisOn = me.invisUntil > now;
-            if (me.heldPower && HELD[me.heldPower]) {
-                icon = HELD[me.heldPower][0];
-                label = HELD[me.heldPower][1] + ' [E]';
-                // Pickup also grants a brief invisibility — show its countdown too.
-                if (invisOn) label += ' · 👻 ' + secs(me.invisUntil);
-            } else if (invisOn) {
-                icon = '👻'; label = 'INVISIBLE ' + secs(me.invisUntil);
-            } else if (me.shieldArmed) {
-                icon = '🛡️'; label = 'SHIELD';
-            }
-        } else if (inGame && isSeeker) {
-            if (me.scanUntil > now)      { icon = '📡'; label = 'SCAN ' + secs(me.scanUntil); }
-            else if (me.killUntil > now) { icon = '🎯'; label = 'KILL ' + secs(me.killUntil); }
-        }
+        // --- Held pill (bottom-center-RIGHT): a hider's un-activated power (press E). ---
+        // Seekers have no held state (their powers auto-activate on pickup). On touch
+        // layouts the held power is shown on the mobile button instead, so suppress the
+        // duplicate pill there — only PC players (no mobile controls) get the pill.
+        const hasHeld = inGame && !isSeeker && !!me.heldPower && HELD[me.heldPower];
+        const suppressPill = hasHeld && GAME_SETTINGS.showMobileControls;
+        // Detect the moment a power is freshly acquired (none → held) so the held pill /
+        // power button can flash a one-shot "activated" pop the instant it appears.
+        const justGained = hasHeld && me.heldPower !== this._heldPowerShown;
+        this._heldPowerShown = hasHeld ? me.heldPower : null;
 
         const pill = document.getElementById('power-pill');
         if (pill) {
-            if (icon) {
+            if (hasHeld && !suppressPill) {
                 pill.style.display = 'flex';
                 const ic = document.getElementById('power-pill-icon');
                 const tx = document.getElementById('power-pill-text');
-                if (ic) ic.textContent = icon;
-                if (tx) tx.textContent = label;
+                if (ic) ic.textContent = HELD[me.heldPower][0];
+                if (tx) tx.textContent = HELD[me.heldPower][1] + ' [E]';
+                if (justGained) this.pulsePickup(pill);
             } else {
                 pill.style.display = 'none';
             }
@@ -568,8 +611,88 @@ const UI = {
                 const lb = document.getElementById('pb-label');
                 if (ic) ic.textContent = HELD[me.heldPower][0];
                 if (lb) lb.textContent = HELD[me.heldPower][1];
+                if (justGained) this.pulsePickup(powerBtn);
             }
         }
+
+        // --- Active effect (bottom-center, above the health/combat pill). ---
+        this.updateActiveEffect(me, isSeeker);
+    },
+
+    // One-shot "power acquired" pop on an element (held pill / power button): a quick grow
+    // + gold flare that reverts. Uses the Web Animations API so the scale COMPOSES (add)
+    // with the layout editor's inline transform (translate(-50%,-50%) scale()) on the mobile
+    // button — a plain CSS `transform` animation would drop that translate and make the
+    // button jump. Glow uses default (replace) compositing and isn't `forwards`, so the base
+    // box-shadow is restored when it finishes.
+    pulsePickup: function(el) {
+        if (!el || !el.animate) return;
+        el.animate(
+            [ { transform: 'scale(1)' }, { transform: 'scale(1.28)', offset: 0.35 }, { transform: 'scale(1)' } ],
+            { duration: 500, easing: 'ease-out', composite: 'add' }
+        );
+        el.animate(
+            [ { boxShadow: '0 0 14px rgba(255,215,0,0.30)' },
+              { boxShadow: '0 0 28px rgba(255,215,0,0.95), 0 0 12px rgba(255,255,255,0.65)', offset: 0.35 },
+              { boxShadow: '0 0 14px rgba(255,215,0,0.30)' } ],
+            { duration: 500, easing: 'ease-out' }
+        );
+    },
+
+    // Flash a brief INSTANT effect (e.g. heal → "HEALTH RESTORED") in the active-effect
+    // indicator. Countdown/toggle effects render from player state instead.
+    flashEffect: function(icon, label, ms) {
+        this._flashIcon = icon;
+        this._flashLabel = label;
+        this._flashUntil = Network.now() + (ms || 1500);
+    },
+
+    // The single active power-effect indicator. Picks ONE effect by priority and renders
+    // it by TYPE: countdown (depleting bar), toggle (persists), instant (brief flash).
+    updateActiveEffect: function(me, isSeeker) {
+        const el = document.getElementById('active-effect');
+        if (!el) return;
+        const now = Network.now();
+        const inGame = gameState.phase !== 'LOBBY' && !me.isCaught;
+        const secs = (until) => ((until - now) / 1000).toFixed(1) + 's';
+        const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+        let icon = null, label = '', kind = null, frac = 0;
+        if (this._flashUntil && now < this._flashUntil) {
+            // Instant flash (heal) takes brief priority over everything else.
+            icon = this._flashIcon; label = this._flashLabel; kind = 'instant';
+        } else if (inGame && !isSeeker) {
+            if (me.invisUntil > now) {
+                icon = '👻'; kind = 'count';
+                label = 'INVISIBLE ' + secs(me.invisUntil);
+                frac = clamp01((me.invisUntil - now) / (me.invisTotalMs || POWER_INVIS_MS));
+            } else if (me.shieldArmed) {
+                icon = '🛡️'; label = 'SHIELD ACTIVE'; kind = 'toggle';
+            }
+        } else if (inGame && isSeeker) {
+            if (me.scanUntil > now) {
+                icon = '📡'; kind = 'count'; label = 'SCAN ' + secs(me.scanUntil);
+                frac = clamp01((me.scanUntil - now) / POWER_SCAN_MS);
+            } else if (me.killUntil > now) {
+                icon = '🎯'; kind = 'count'; label = 'ONE-SHOT KILL ' + secs(me.killUntil);
+                frac = clamp01((me.killUntil - now) / POWER_KILL_MS);
+            } else if (me.jamUntil > now) {
+                icon = '🚫'; kind = 'count'; label = 'JAMMER ' + secs(me.jamUntil);
+                frac = clamp01((me.jamUntil - now) / POWER_JAM_MS);
+            }
+        }
+
+        if (!icon) { el.style.display = 'none'; return; }
+        el.style.display = 'flex';
+        el.className = 'ae-' + kind;   // ae-count | ae-toggle | ae-instant (drives styling)
+        const ic = document.getElementById('ae-icon');
+        const lb = document.getElementById('ae-label');
+        const track = document.getElementById('ae-track');
+        const bar = document.getElementById('ae-bar');
+        if (ic) ic.textContent = icon;
+        if (lb) lb.textContent = label;
+        if (track) track.style.display = (kind === 'count') ? '' : 'none';
+        if (kind === 'count' && bar) bar.style.width = (frac * 100) + '%';
     },
 
     // Icon for a disguisable prop type, shown on the switch button. PNG artwork

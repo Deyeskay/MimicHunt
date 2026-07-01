@@ -1,21 +1,15 @@
 registerLevel('Arena', [
     {
-        "id": "tree_1",
-        "x": 2.97,
-        "y": 0.04,
-        "z": 8.62,
-        "model": "tree",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.12,
+        "id": "wall_1",
+        "model": "wall",
+        "x": 0,
+        "y": 3,
+        "z": 22,
+        "bottomY": 0,
         "scale": {
-            "x": 3.82,
-            "y": 3.82,
-            "z": 3.82
+            "x": 46,
+            "y": 6,
+            "z": 0.6
         },
         "rotation": {
             "x": 0,
@@ -24,94 +18,387 @@ registerLevel('Arena', [
         }
     },
     {
-        "id": "tree_2",
-        "x": -3.76,
-        "y": 0.04,
-        "z": 1.4,
-        "model": "tree",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.04,
+        "id": "wall_2",
+        "model": "wall",
+        "x": -22,
+        "y": 3,
+        "z": 0,
+        "bottomY": 0,
         "scale": {
-            "x": 1.81,
-            "y": 1.81,
-            "z": 1.81
+            "x": 46,
+            "y": 6,
+            "z": 0.6
         },
         "rotation": {
             "x": 0,
-            "y": -62,
+            "y": 90,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_3",
+        "model": "wall",
+        "x": 0,
+        "y": 3,
+        "z": -22,
+        "bottomY": 0,
+        "scale": {
+            "x": 46,
+            "y": 6,
+            "z": 0.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 180,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_4",
+        "model": "wall",
+        "x": 22,
+        "y": 3,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 46,
+            "y": 6,
+            "z": 0.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 270,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_1",
+        "model": "cube",
+        "x": 0,
+        "y": 0.75,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 10,
+            "y": 1.5,
+            "z": 10
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png",
+        "tileX": 3,
+        "tileY": 3
+    },
+    {
+        "id": "cube_2",
+        "model": "cube",
+        "x": 0,
+        "y": 2.25,
+        "z": 0,
+        "bottomY": 1.5,
+        "scale": {
+            "x": 6,
+            "y": 1.5,
+            "z": 6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png",
+        "tileX": 2,
+        "tileY": 2
+    },
+    {
+        "id": "cube_3",
+        "model": "cube",
+        "x": 0,
+        "y": 3.75,
+        "z": 0,
+        "bottomY": 3,
+        "scale": {
+            "x": 3,
+            "y": 1.5,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "rock_1",
+        "model": "rock",
+        "x": 6.5,
+        "y": 0.04,
+        "z": 1,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.4,
+            "y": 1.4,
+            "z": 1.4
+        },
+        "rotation": {
+            "x": 0,
+            "y": 20,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_1",
+        "model": "bush",
+        "x": -6.2,
+        "y": 0.04,
+        "z": -1.3,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.6,
+            "y": 1.6,
+            "z": 1.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_4",
+        "model": "cube",
+        "x": 18.5,
+        "y": 1,
+        "z": 18.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 2,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_5",
+        "model": "cube",
+        "x": 20.3,
+        "y": 2,
+        "z": 20.3,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 4,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "tree_1",
+        "model": "tree",
+        "x": 13.5,
+        "y": 0.04,
+        "z": 16.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.6,
+            "y": 2.6,
+            "z": 2.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 15,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_2",
+        "model": "rock",
+        "x": 16.5,
+        "y": 0.04,
+        "z": 12.8,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
             "z": 0
         }
     },
     {
         "id": "rock_3",
-        "x": -8.91,
-        "y": -0.01,
-        "z": 20.38,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": 0.01,
-        "scale": {
-            "x": 3.71,
-            "y": 3.71,
-            "z": 3.71
-        },
-        "rotation": {
-            "x": 180,
-            "y": -87.8,
-            "z": 180
-        }
-    },
-    {
-        "id": "rock_4",
-        "x": -10.47,
-        "y": -0.01,
-        "z": 11.65,
-        "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": 12.6,
+        "y": 0.04,
+        "z": 13.4,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
         },
         "rotation": {
             "x": 0,
             "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_2",
+        "model": "bush",
+        "x": 14.8,
+        "y": 0.04,
+        "z": 14.2,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_3",
+        "model": "bush",
+        "x": 11.6,
+        "y": 0.04,
+        "z": 16.8,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_6",
+        "model": "cube",
+        "x": -18.5,
+        "y": 1,
+        "z": 18.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 2,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_7",
+        "model": "cube",
+        "x": -20.3,
+        "y": 2,
+        "z": 20.3,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 4,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "tree_2",
+        "model": "tree",
+        "x": -16.5,
+        "y": 0.04,
+        "z": 13.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.6,
+            "y": 2.6,
+            "z": 2.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_4",
+        "model": "rock",
+        "x": -12.8,
+        "y": 0.04,
+        "z": 16.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 40,
             "z": 0
         }
     },
     {
         "id": "rock_5",
-        "x": -12.07,
-        "y": -0.01,
-        "z": 19.41,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": -13.4,
+        "y": 0.04,
+        "z": 12.6,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 12,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_4",
+        "model": "bush",
+        "x": -14.2,
+        "y": 0.04,
+        "z": 14.8,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
         },
         "rotation": {
             "x": 0,
@@ -120,22 +407,126 @@ registerLevel('Arena', [
         }
     },
     {
-        "id": "rock_6",
-        "x": -9.48,
-        "y": -0.01,
-        "z": 22.98,
-        "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "id": "bush_5",
+        "model": "bush",
+        "x": -16.8,
+        "y": 0.04,
+        "z": 11.6,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_8",
+        "model": "cube",
+        "x": -18.5,
+        "y": 1,
+        "z": -18.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 2,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_9",
+        "model": "cube",
+        "x": -20.3,
+        "y": 2,
+        "z": -20.3,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 4,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "tree_3",
+        "model": "tree",
+        "x": -13.5,
+        "y": 0.04,
+        "z": -16.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.6,
+            "y": 2.6,
+            "z": 2.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 75,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_6",
+        "model": "rock",
+        "x": -16.5,
+        "y": 0.04,
+        "z": -12.8,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 80,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_7",
+        "model": "rock",
+        "x": -12.6,
+        "y": 0.04,
+        "z": -13.4,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 24,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_6",
+        "model": "bush",
+        "x": -14.8,
+        "y": 0.04,
+        "z": -14.2,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
         },
         "rotation": {
             "x": 0,
@@ -145,21 +536,15 @@ registerLevel('Arena', [
     },
     {
         "id": "bush_7",
-        "x": -13.8,
-        "y": 0.04,
-        "z": 2.98,
         "model": "bush",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": -11.6,
+        "y": 0.04,
+        "z": -16.8,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
         },
         "rotation": {
             "x": 0,
@@ -168,22 +553,108 @@ registerLevel('Arena', [
         }
     },
     {
-        "id": "bush_8",
-        "x": -15.67,
-        "y": 0.04,
-        "z": 8.79,
-        "model": "bush",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.02,
+        "id": "cube_10",
+        "model": "cube",
+        "x": 18.5,
+        "y": 1,
+        "z": -18.5,
+        "bottomY": 0,
         "scale": {
-            "x": 1.78,
-            "y": 1.78,
-            "z": 1.78
+            "x": 3,
+            "y": 2,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_11",
+        "model": "cube",
+        "x": 20.3,
+        "y": 2,
+        "z": -20.3,
+        "bottomY": 0,
+        "scale": {
+            "x": 3,
+            "y": 4,
+            "z": 3
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "tree_4",
+        "model": "tree",
+        "x": 16.5,
+        "y": 0.04,
+        "z": -13.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.6,
+            "y": 2.6,
+            "z": 2.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 105,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_8",
+        "model": "rock",
+        "x": 12.8,
+        "y": 0.04,
+        "z": -16.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 2.2,
+            "y": 2.2,
+            "z": 2.2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 120,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_9",
+        "model": "rock",
+        "x": 13.4,
+        "y": 0.04,
+        "z": -12.6,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.1,
+            "y": 1.1,
+            "z": 1.1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 36,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_8",
+        "model": "bush",
+        "x": 14.2,
+        "y": 0.04,
+        "z": -14.8,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
         },
         "rotation": {
             "x": 0,
@@ -193,21 +664,15 @@ registerLevel('Arena', [
     },
     {
         "id": "bush_9",
-        "x": -18.4,
-        "y": 0.04,
-        "z": 14.27,
         "model": "bush",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.02,
+        "x": 16.8,
+        "y": 0.04,
+        "z": -11.6,
+        "bottomY": 0,
         "scale": {
-            "x": 1.78,
-            "y": 1.78,
-            "z": 1.78
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
         },
         "rotation": {
             "x": 0,
@@ -216,22 +681,16 @@ registerLevel('Arena', [
         }
     },
     {
-        "id": "bush_10",
-        "x": -19.61,
-        "y": 0.04,
-        "z": 10.81,
-        "model": "bush",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.08,
+        "id": "wall_5",
+        "model": "wall",
+        "x": 0,
+        "y": 1.3,
+        "z": 15.5,
+        "bottomY": 0,
         "scale": {
-            "x": 3.19,
-            "y": 3.19,
-            "z": 3.19
+            "x": 9,
+            "y": 2.6,
+            "z": 0.6
         },
         "rotation": {
             "x": 0,
@@ -240,166 +699,290 @@ registerLevel('Arena', [
         }
     },
     {
-        "id": "tree_11",
-        "x": -4.81,
+        "id": "rock_10",
+        "model": "rock",
+        "x": -5.5,
         "y": 0.04,
-        "z": 20.27,
-        "model": "tree",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.04,
+        "z": 15.2,
+        "bottomY": 0,
         "scale": {
-            "x": 1.81,
-            "y": 1.81,
-            "z": 1.81
+            "x": 1.6,
+            "y": 1.6,
+            "z": 1.6
         },
         "rotation": {
-            "x": -180,
-            "y": 86.8,
-            "z": -180
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_11",
+        "model": "rock",
+        "x": 5.5,
+        "y": 0.04,
+        "z": 15.2,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_12",
+        "model": "cube",
+        "x": 0,
+        "y": 1,
+        "z": 12.6,
+        "bottomY": 0,
+        "scale": {
+            "x": 2,
+            "y": 2,
+            "z": 2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "wall_6",
+        "model": "wall",
+        "x": -15.5,
+        "y": 1.3,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 9,
+            "y": 2.6,
+            "z": 0.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 90,
+            "z": 0
         }
     },
     {
         "id": "rock_12",
-        "x": 5.46,
-        "y": -0.01,
-        "z": 15.3,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": 0.01,
-        "scale": {
-            "x": 3.71,
-            "y": 3.71,
-            "z": 3.71
-        },
-        "rotation": {
-            "x": 180,
-            "y": 82.4,
-            "z": -180
-        }
-    },
-    {
-        "id": "tree_13",
-        "x": -9.03,
-        "y": 0.08,
-        "z": 2.66,
-        "model": "tree",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": -15.2,
+        "y": 0.04,
+        "z": -5.5,
         "bottomY": 0,
         "scale": {
-            "x": 1.81,
-            "y": 1.81,
-            "z": 1.81
+            "x": 1.6,
+            "y": 1.6,
+            "z": 1.6
         },
         "rotation": {
             "x": 0,
-            "y": -10.4,
+            "y": 25,
             "z": 0
         }
     },
     {
-        "id": "tree_14",
-        "x": 6.18,
-        "y": 0.08,
-        "z": 19.51,
-        "model": "tree",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "id": "rock_13",
+        "model": "rock",
+        "x": -15.2,
+        "y": 0.04,
+        "z": 5.5,
         "bottomY": 0,
         "scale": {
-            "x": 1.81,
-            "y": 1.81,
-            "z": 1.81
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
         },
         "rotation": {
             "x": 0,
-            "y": -10.4,
+            "y": 55,
             "z": 0
         }
     },
     {
-        "id": "bush_15",
-        "x": 0.66,
-        "y": 0.04,
-        "z": 24.47,
-        "model": "bush",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.08,
+        "id": "cube_13",
+        "model": "cube",
+        "x": -12.6,
+        "y": 1,
+        "z": 0,
+        "bottomY": 0,
         "scale": {
-            "x": 3.19,
-            "y": 3.19,
-            "z": 3.19
+            "x": 2,
+            "y": 2,
+            "z": 2
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 90,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "wall_7",
+        "model": "wall",
+        "x": 0,
+        "y": 1.3,
+        "z": -15.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 9,
+            "y": 2.6,
+            "z": 0.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 180,
             "z": 0
         }
     },
     {
-        "id": "bush_16",
-        "x": -4.14,
+        "id": "rock_14",
+        "model": "rock",
+        "x": 5.5,
         "y": 0.04,
-        "z": 24.13,
-        "model": "bush",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
-        "bottomY": -0.02,
+        "z": -15.2,
+        "bottomY": 0,
         "scale": {
-            "x": 1.78,
-            "y": 1.78,
-            "z": 1.78
+            "x": 1.6,
+            "y": 1.6,
+            "z": 1.6
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 50,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_15",
+        "model": "rock",
+        "x": -5.5,
+        "y": 0.04,
+        "z": -15.2,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 110,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_14",
+        "model": "cube",
+        "x": 0,
+        "y": 1,
+        "z": -12.6,
+        "bottomY": 0,
+        "scale": {
+            "x": 2,
+            "y": 2,
+            "z": 2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 180,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "wall_8",
+        "model": "wall",
+        "x": 15.5,
+        "y": 1.3,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 9,
+            "y": 2.6,
+            "z": 0.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 270,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_16",
+        "model": "rock",
+        "x": 15.2,
+        "y": 0.04,
+        "z": 5.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.6,
+            "y": 1.6,
+            "z": 1.6
+        },
+        "rotation": {
+            "x": 0,
+            "y": 75,
             "z": 0
         }
     },
     {
         "id": "rock_17",
-        "x": -8.47,
-        "y": -0.01,
-        "z": 13.65,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": 15.2,
+        "y": 0.04,
+        "z": -5.5,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 165,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_15",
+        "model": "cube",
+        "x": 12.6,
+        "y": 1,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 2,
+            "y": 2,
+            "z": 2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 270,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "bush_10",
+        "model": "bush",
+        "x": 9.5,
+        "y": 0.04,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
         },
         "rotation": {
             "x": 0,
@@ -408,22 +991,142 @@ registerLevel('Arena', [
         }
     },
     {
-        "id": "rock_18",
-        "x": -10.07,
-        "y": -0.01,
-        "z": 3.23,
-        "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "id": "bush_11",
+        "model": "bush",
+        "x": 6.72,
+        "y": 0.04,
+        "z": 6.72,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 47,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_12",
+        "model": "bush",
+        "x": 0,
+        "y": 0.04,
+        "z": 9.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 94,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_13",
+        "model": "bush",
+        "x": -6.72,
+        "y": 0.04,
+        "z": 6.72,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 141,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_14",
+        "model": "bush",
+        "x": -9.5,
+        "y": 0.04,
+        "z": 0,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 188,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_15",
+        "model": "bush",
+        "x": -6.72,
+        "y": 0.04,
+        "z": -6.72,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 235,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_16",
+        "model": "bush",
+        "x": 0,
+        "y": 0.04,
+        "z": -9.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 282,
+            "z": 0
+        }
+    },
+    {
+        "id": "bush_17",
+        "model": "bush",
+        "x": 6.72,
+        "y": 0.04,
+        "z": -6.72,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.5,
+            "y": 1.5,
+            "z": 1.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 329,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_18",
+        "model": "rock",
+        "x": 11.55,
+        "y": 0.04,
+        "z": 4.78,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
         },
         "rotation": {
             "x": 0,
@@ -433,136 +1136,208 @@ registerLevel('Arena', [
     },
     {
         "id": "rock_19",
-        "x": -20.26,
-        "y": -0.01,
-        "z": 14.27,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": 4.78,
+        "y": 0.04,
+        "z": 11.55,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 63,
             "z": 0
         }
     },
     {
         "id": "rock_20",
-        "x": -15.18,
-        "y": -0.01,
-        "z": 4,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": -4.78,
+        "y": 0.04,
+        "z": 11.55,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 126,
             "z": 0
         }
     },
     {
         "id": "rock_21",
-        "x": 2.69,
-        "y": -0.01,
-        "z": 6.1,
         "model": "rock",
-        "collision": true,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": -11.55,
+        "y": 0.04,
+        "z": 4.78,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 189,
             "z": 0
         }
     },
     {
-        "id": "spawn_22",
-        "x": -14.46,
-        "y": 1,
-        "z": 13.79,
-        "model": "spawn",
-        "collision": false,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": false,
-        "seekerSpawn": true,
-        "hiderSpawn": false,
+        "id": "rock_22",
+        "model": "rock",
+        "x": -11.55,
+        "y": 0.04,
+        "z": -4.78,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 252,
             "z": 0
         }
     },
     {
-        "id": "spawn_23",
-        "x": -3.41,
-        "y": 1,
-        "z": 8.62,
-        "model": "spawn",
-        "collision": false,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": true,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "id": "rock_23",
+        "model": "rock",
+        "x": -4.78,
+        "y": 0.04,
+        "z": -11.55,
         "bottomY": 0,
         "scale": {
-            "x": 1,
-            "y": 1,
-            "z": 1
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": 315,
             "z": 0
         }
     },
     {
-        "id": "spawn_24",
-        "x": 1.27,
-        "y": 1,
-        "z": 37.56,
+        "id": "rock_24",
+        "model": "rock",
+        "x": 4.78,
+        "y": 0.04,
+        "z": -11.55,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 18,
+            "z": 0
+        }
+    },
+    {
+        "id": "rock_25",
+        "model": "rock",
+        "x": 11.55,
+        "y": 0.04,
+        "z": -4.78,
+        "bottomY": 0,
+        "scale": {
+            "x": 1.2,
+            "y": 1.2,
+            "z": 1.2
+        },
+        "rotation": {
+            "x": 0,
+            "y": 81,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_9",
+        "model": "wall",
+        "x": 7.5,
+        "y": 1.2,
+        "z": 3.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 6,
+            "y": 2.4,
+            "z": 0.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 45,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_10",
+        "model": "wall",
+        "x": -3.5,
+        "y": 1.2,
+        "z": 7.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 6,
+            "y": 2.4,
+            "z": 0.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 135,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_11",
+        "model": "wall",
+        "x": -7.5,
+        "y": 1.2,
+        "z": -3.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 6,
+            "y": 2.4,
+            "z": 0.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 225,
+            "z": 0
+        }
+    },
+    {
+        "id": "wall_12",
+        "model": "wall",
+        "x": 3.5,
+        "y": 1.2,
+        "z": -7.5,
+        "bottomY": 0,
+        "scale": {
+            "x": 6,
+            "y": 2.4,
+            "z": 0.5
+        },
+        "rotation": {
+            "x": 0,
+            "y": 315,
+            "z": 0
+        }
+    },
+    {
+        "id": "spawn_1",
         "model": "spawn",
-        "collision": false,
-        "climbable": false,
-        "hideSpot": false,
-        "spawnPoint": true,
-        "seekerSpawn": false,
-        "hiderSpawn": false,
+        "x": 0,
+        "y": 1,
+        "z": -19,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -573,6 +1348,114 @@ registerLevel('Arena', [
             "x": 0,
             "y": 0,
             "z": 0
-        }
+        },
+        "collision": false,
+        "hideSpot": false,
+        "seekerSpawn": true
+    },
+    {
+        "id": "spawn_2",
+        "model": "spawn",
+        "x": 17,
+        "y": 1,
+        "z": 8,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "collision": false,
+        "hideSpot": false,
+        "spawnPoint": true
+    },
+    {
+        "id": "spawn_3",
+        "model": "spawn",
+        "x": -8,
+        "y": 1,
+        "z": 17,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "collision": false,
+        "hideSpot": false,
+        "spawnPoint": true
+    },
+    {
+        "id": "spawn_4",
+        "model": "spawn",
+        "x": -17,
+        "y": 1,
+        "z": -8,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "collision": false,
+        "hideSpot": false,
+        "spawnPoint": true
+    },
+    {
+        "id": "spawn_5",
+        "model": "spawn",
+        "x": 8,
+        "y": 1,
+        "z": -17,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "collision": false,
+        "hideSpot": false,
+        "spawnPoint": true
+    },
+    {
+        "id": "spawn_6",
+        "model": "spawn",
+        "x": 0,
+        "y": 1,
+        "z": 18,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "collision": false,
+        "hideSpot": false,
+        "spawnPoint": true
     }
 ]);

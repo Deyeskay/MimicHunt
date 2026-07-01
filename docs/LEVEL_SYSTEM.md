@@ -23,10 +23,9 @@ Each calls `registerLevel('Name', [ ...prop objects... ])`. A prop object:
   spawnPoint?, seekerSpawn?, hiderSpawn? }      // spawn flags
 ```
 - Gameplay flags are optional; omitted ones fall back to the prefab
-  (see PROP_SYSTEM.md `resolveGameplay`). **forest.js** had its baked
-  `"climbable": false` lines stripped (rocks/bushes now inherit climbable from the
-  prefab). **arena.js still carries `climbable:false`** → its rocks/bushes aren't
-  climbable yet (TODO).
+  (see PROP_SYSTEM.md `resolveGameplay`). **forest.js** and the rebuilt **arena.js**
+  omit the baked `"climbable": false` lines, so rocks/bushes inherit climbable from the
+  prefab.
 - Only the level **name** crosses the wire (levels are bundled identically on every
   peer); prop data never transmits.
 
