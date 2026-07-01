@@ -43,9 +43,9 @@ registerLevel("Forest", [
         "z": 25.96,
         "bottomY": 0.01,
         "scale": {
-            "x": 3.71,
-            "y": 3.71,
-            "z": 3.71
+            "x": 2.86,
+            "y": 2.86,
+            "z": 2.86
         },
         "rotation": {
             "x": 180,
@@ -136,11 +136,11 @@ registerLevel("Forest", [
         "x": -15.67,
         "y": 0.04,
         "z": 5.81,
-        "bottomY": -0.02,
+        "bottomY": -0.01,
         "scale": {
-            "x": 1.78,
-            "y": 1.78,
-            "z": 1.78
+            "x": 1.49,
+            "y": 1.49,
+            "z": 1.49
         },
         "rotation": {
             "x": 0,
@@ -174,11 +174,11 @@ registerLevel("Forest", [
         "x": -26.73,
         "y": 0.04,
         "z": 21.87,
-        "bottomY": -0.08,
+        "bottomY": -0.03,
         "scale": {
-            "x": 3.19,
-            "y": 3.19,
-            "z": 3.19
+            "x": 2.03,
+            "y": 2.03,
+            "z": 2.03
         },
         "rotation": {
             "x": 0,
@@ -213,9 +213,9 @@ registerLevel("Forest", [
         "z": 19.94,
         "bottomY": 0.01,
         "scale": {
-            "x": 3.71,
-            "y": 3.71,
-            "z": 3.71
+            "x": 2.76,
+            "y": 2.76,
+            "z": 2.76
         },
         "rotation": {
             "x": 180,
@@ -285,11 +285,11 @@ registerLevel("Forest", [
         "x": -4.44,
         "y": 0.04,
         "z": 32.25,
-        "bottomY": -0.02,
+        "bottomY": -0.01,
         "scale": {
-            "x": 1.78,
-            "y": 1.78,
-            "z": 1.78
+            "x": 1.46,
+            "y": 1.46,
+            "z": 1.46
         },
         "rotation": {
             "x": 0,
@@ -1197,11 +1197,11 @@ registerLevel("Forest", [
         "x": -8.27,
         "y": 0.04,
         "z": 0.74,
-        "bottomY": -0.08,
+        "bottomY": -0.02,
         "scale": {
-            "x": 3.19,
-            "y": 3.19,
-            "z": 3.19
+            "x": 1.77,
+            "y": 1.77,
+            "z": 1.77
         },
         "rotation": {
             "x": 0,
@@ -1268,14 +1268,14 @@ registerLevel("Forest", [
     {
         "id": "rock_78",
         "model": "rock",
-        "x": 33.75,
+        "x": 34.16,
         "y": -0.01,
-        "z": 39.84,
+        "z": 39.86,
         "bottomY": 0.01,
         "scale": {
-            "x": 3.71,
-            "y": 3.71,
-            "z": 3.71
+            "x": 2.97,
+            "y": 2.97,
+            "z": 2.97
         },
         "rotation": {
             "x": 180,
@@ -2132,7 +2132,8 @@ registerLevel("Forest", [
             "x": 0,
             "y": 0,
             "z": 0
-        }
+        },
+        "texture": "rock_wall (1).png"
     },
     {
         "id": "wall_124",
@@ -2464,5 +2465,43 @@ registerLevel("Forest", [
             "y": 0,
             "z": 0
         }
+    },
+    {
+        "id": "cube_136",
+        "model": "cube",
+        "x": -1.84,
+        "y": 8.8,
+        "z": 16.48,
+        "bottomY": 8.3,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_137",
+        "model": "cube",
+        "x": -1.93,
+        "y": 10.74,
+        "z": 18.48,
+        "bottomY": 10.24,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
     }
 ]);

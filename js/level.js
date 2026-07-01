@@ -559,7 +559,7 @@ const Level = {
     createPlayerMesh: function(p) {
         // Disguised hider → the prop mesh (no character / no animation).
         if (p.role !== "Seeker" && p.disguiseType !== "player") {
-            const mesh = PropLevel.createDisguiseMesh(p.disguiseType, modelLibrary, p.propScale);
+            const mesh = PropLevel.createDisguiseMesh(p.disguiseType, modelLibrary, p.propScale, p.disguiseTexture);
             if (mesh) {
                 mesh.userData.meshKey = PropLevel.getDisguiseMeshKey(p);
                 return mesh;

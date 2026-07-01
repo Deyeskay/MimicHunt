@@ -176,7 +176,12 @@ const Mechanics = {
         const maxDist = rect.width / 2;
         if (dist > maxDist) { dx = (dx / dist) * maxDist; dy = (dy / dist) * maxDist; }
 
-        nub.style.transform = `translate(${dx}px, ${dy}px)`;
+        // dx/dy are screen pixels (rect is the SCALED size when the layout editor
+        // has resized the joystick). The nub lives INSIDE the scaled zone, so its
+        // own translate is multiplied by that scale — divide it back out so the nub
+        // tracks the finger 1:1. offsetWidth is the un-scaled layout width.
+        const scale = (zone.offsetWidth ? rect.width / zone.offsetWidth : 1) || 1;
+        nub.style.transform = `translate(${dx / scale}px, ${dy / scale}px)`;
         touchVector = { x: dx / maxDist, y: dy / maxDist };
     },
 
@@ -248,6 +253,7 @@ const Mechanics = {
         localDisguise.propHeight = prop.height;
         localDisguise.propRadius = prop.radius;
         localDisguise.propRotation = prop.rotation || null;
+        localDisguise.propTexture = prop.texture || null;   // cube disguise keeps its texture
 
         // Adopt the disguised prop's COMPOUND collider shape (e.g. tree = slim
         // trunk + wide canopy), in local coords with feet at y=0. Used by the dev
@@ -267,6 +273,7 @@ const Mechanics = {
         player.propHeight = localDisguise.propHeight;
         player.propRadius = localDisguise.propRadius;
         player.propRotation = localDisguise.propRotation;
+        player.disguiseTexture = localDisguise.propTexture;
     },
 
     // Radius of the collider piece(s) that sit at ground level (yMin≈0) — the part
@@ -289,6 +296,7 @@ const Mechanics = {
         localDisguise.propHeight = 2;
         localDisguise.propRadius = 1;
         localDisguise.propRotation = null;
+        localDisguise.propTexture = null;
         localDisguise.colliders = null;
         localDisguise.groundRadius = null;
 
@@ -299,6 +307,7 @@ const Mechanics = {
         player.propHeight = 2;
         player.propRadius = 1;
         player.propRotation = null;
+        player.disguiseTexture = null;
     },
 
     // Effective movement-collision radius: 1 as a player, else the disguised prop's
@@ -465,17 +474,19 @@ const Mechanics = {
         let pData = gameState.players[myId];
         if (!pData || pData.role !== 'Hider' || pData.isCaught) return;
 
-        if (this.isDisguised()) {
-            // Already disguised → Reset back to the default form.
+        // Disguise is locked for a few seconds after being hit (so a revealed
+        // hider can't instantly become another prop) — but resetting is always OK.
+        const locked = pData.disguiseLockUntil && Network.now() < pData.disguiseLockUntil;
+        const nearest = this.findNearestDisguiseProp();
+        if (nearest && !locked) {
+            // Beside a disguisable prop → disguise as it, OR switch straight to it
+            // from another disguise (e.g. rock → tree) without resetting first.
+            this.applyDisguiseFromProp(nearest);
+        } else if (this.isDisguised()) {
+            // Not beside a switchable prop (or locked) → Reset to the default form.
             this.clearDisguise();
         } else {
-            // Not disguised → disguise as the nearest prop (if any & not locked).
-            const nearest = this.findNearestDisguiseProp();
-            if (!nearest) return;   // not near a prop → button is disabled, no-op
-            // Disguise is locked for a few seconds after being hit (so a revealed
-            // hider can't instantly become another prop).
-            if (pData.disguiseLockUntil && Network.now() < pData.disguiseLockUntil) return;
-            this.applyDisguiseFromProp(nearest);
+            return;   // not disguised and no prop to become → no-op
         }
 
         // Disguising grows the player's collider to the prop's size, so if the

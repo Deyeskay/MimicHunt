@@ -163,7 +163,16 @@
 
         <!-- Edit Layout toolbar: shown only while dragging controls around. -->
         <div id="layout-editor" class="interactive" style="display:none;">
-            <span class="le-title">✥ EDIT LAYOUT — drag the controls, then Save</span>
+            <span class="le-title">✥ EDIT LAYOUT — tap a control, drag to move</span>
+            <div class="le-sliders">
+                <span class="le-sel-name" id="le-sel-name">—</span>
+                <label class="le-slider">Size
+                    <input type="range" id="le-size" min="0.6" max="1.6" step="0.05" value="1">
+                </label>
+                <label class="le-slider">Opacity
+                    <input type="range" id="le-opacity" min="0.2" max="1" step="0.05" value="1">
+                </label>
+            </div>
             <div class="le-actions">
                 <button id="btn-layout-reset" class="le-btn le-reset">Reset</button>
                 <button id="btn-layout-cancel" class="le-btn le-cancel">Cancel</button>

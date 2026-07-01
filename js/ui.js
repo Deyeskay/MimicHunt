@@ -437,17 +437,24 @@ const UI = {
                 };
                 const canAct = !me.isCaught && gameState.phase !== 'LOBBY';
                 const locked = canAct && me.disguiseLockUntil && Network.now() < me.disguiseLockUntil;
-                if (canAct && Mechanics.isDisguised()) {
-                    // Disguised → offer Reset (blue ring).
+                const near = canAct ? Mechanics.findNearestDisguiseProp() : null;
+                if (near && !locked) {
+                    // Near a disguisable prop (and not locked) → name + icon it (green
+                    // ring). Pressing disguises OR switches directly to it — so while
+                    // already disguised the button keeps showing the prop you're beside
+                    // (not RESET), and standing at a different prop lets you swap
+                    // straight to it (e.g. rock → tree) without resetting first.
+                    setBtn(null, 'assets/icons/refresh.png', this.propIcon(near.model),
+                           near.model.toUpperCase(), false);
+                } else if (canAct && Mechanics.isDisguised()) {
+                    // Disguised but not beside a switchable prop → offer Reset (blue ring).
                     setBtn('db-reset', 'assets/icons/refresh.png', 'assets/icons/face.png', 'RESET', false);
                 } else if (locked) {
                     // Hit recently → disguise locked; show the countdown (red ring).
                     setBtn('db-locked', '🔒', '⏳', ((me.disguiseLockUntil - Network.now()) / 1000).toFixed(1) + 's', true);
                 } else {
-                    // Not disguised → name + icon the prop only when near one (green ring).
-                    const near = canAct ? Mechanics.findNearestDisguiseProp() : null;
-                    setBtn(null, 'assets/icons/refresh.png', near ? this.propIcon(near.model) : '❓',
-                           near ? near.model.toUpperCase() : 'PROP', !near);
+                    // Not disguised & not near a prop → disabled placeholder (green ring).
+                    setBtn(null, 'assets/icons/refresh.png', '❓', 'PROP', true);
                 }
             }
         }

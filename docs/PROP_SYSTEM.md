@@ -15,8 +15,11 @@ tree:  { collision:true,  climbable:true,  hideSpot:false, canDisguise:true,
 rock:  { collision:true,  climbable:true,  hideSpot:true,  canDisguise:true },
 bush:  { collision:false, climbable:true,  hideSpot:true,  canDisguise:true },
 wall:  { collision:true,  climbable:false, hideSpot:false, canDisguise:false },
+cube:  { collision:true,  climbable:true,  hideSpot:false, canDisguise:true,  colliderShape:'box' },
 spawn: { collision:false, climbable:false, hideSpot:false, canDisguise:false },
 ```
+- **`cube`** is a procedural unit box (like `wall`) with a **per-instance texture** picked from
+  `assets/textures/` — climbable and disguisable. See "Cube textures" below.
 - **collision** blocks movement & occludes shots; **climbable** can be stood on;
   **hideSpot** counts as a hiding spot (also disguisable); **canDisguise** a hider
   can disguise as this type.
@@ -89,8 +92,40 @@ are still used by disguise sizing, climbing, spawns, and the hit radius — only
   rotation. `spawn` markers have no mesh (placement metadata only).
 - GLB props keep their own materials (why the scene needed brighter lights).
 
+## Per-instance textures (cube + wall)
+`cube` and `wall` are procedural `BoxGeometry` props (not GLBs) that support a per-**instance**
+`texture` filename resolved against `assets/textures/` (`PropLevel.TEXTURABLE_MODELS`):
+- `PropLevel.createCubeMesh(prop)` / `createWallMesh(prop)` → per-object `MeshLambertMaterial({ map })`,
+  `toneMapped:false`. The map comes from `getPropTexture(filename)` — a cache-by-filename
+  `TextureLoader` (shared texture objects, `RepeatWrapping`, **never disposed** on swap).
+- **Cube** always has a texture (default `PropLevel.DEFAULT_CUBE_TEXTURE` = `'crate.png'`).
+  **Wall** defaults to the *shared* wall texture (procedural brick → `wall.png` via `_wallMats`
+  global swap) and only takes a per-instance texture when overridden — in which case its material
+  is kept OUT of `_wallMats` (so a late `wall.png` load can't clobber it). Defaults live in
+  `props.js` (`DEFAULT_CUBE_TEXTURE`/`DEFAULT_WALL_TEXTURE`, `defaultTextureFor(model)`) because
+  the editor regenerates `prefabs.js`.
+- **Tiling:** each instance also carries `tileX`/`tileY` (texture `repeat`). `getPropTexture(file,
+  repeat)` caches per **(file, tilingX, tilingY)** — same file + tiling share one texture, a
+  different tiling gets its own copy (so per-instance tiling can't cross-talk). Defaults via
+  `defaultTilingFor(model)` → wall `2,2` (matches the shipped wall look), else `1,1`. Tiling only
+  works through the per-instance path, so a **tiled wall implies a `texture`** (default `wall.png`).
+- `PropLevel.applyPropTexture(mesh, filename, repeat)` live-swaps the map + tiling (editor picker);
+  for a wall it also removes the material from `_wallMats`.
+- `exportProp` emits `texture:"<file>"` for every cube, and for a wall **only when overridden**
+  (plain walls stay slim + keep the shared texture); `tileX`/`tileY` are emitted only when they
+  differ from the model default.
+- **Editor authoring:** the **Choose Texture** inspector panel (shown for a single cube/wall)
+  lists files by scanning `assets/textures/` via the dev server's directory index (Python
+  `http.server` etc.), with a **↻ Refresh** button (drop a new image in the folder → Refresh →
+  it appears). Falls back to a hardcoded list if the server serves no index.
+- **Disguise:** a hider disguised as a cube carries its texture via the `disguiseTexture` field
+  (threaded through the disguise network messages like `propRotation`); `getDisguiseMeshKey`
+  includes it and `createDisguiseMesh(type, lib, scale, texture)` rebuilds the box with it.
+  (Walls aren't disguisable, so wall textures never travel through disguise.)
+
 ## Disguise
-- `createDisguiseMesh(type, modelLibrary, scale)` builds the prop mesh a hider wears.
+- `createDisguiseMesh(type, modelLibrary, scale, texture)` builds the prop mesh a hider wears
+  (`texture` is only used by `cube`).
 - `canDisguiseAs(prop)` gates which props a hider can become.
 - See GAMEPLAY.md / PLAYER_STATE.md for disguise fields, lock, and forced-out.
 

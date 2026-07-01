@@ -103,14 +103,22 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
   (default `0.003`); camera stays where dragged on release. `touchend`/`touchcancel` clears
   the id, the glow, and the interval.
 - **Edit Layout** (`js/layout.js`, `LayoutEditor`): hamburger ☰ → `#game-menu` →
-  "Edit Layout" lets the player drag the joystick + jump/prop/shoot anywhere (pointer
-  events), Save/Cancel/Reset via `#layout-editor`. Positions persist in
-  `GAME_SETTINGS.controlLayout` as `{x,y}` viewport % (centre), re-applied at startup.
-  When `controlLayout` is empty, `LayoutEditor.effective()` falls back to
+  "Edit Layout" lets the player drag the joystick + jump/prop/shoot/**power** anywhere
+  (pointer events) AND tune each control's **Size** (scale 0.6–1.6) and **Opacity**
+  (0.2–1) via PUBG-style sliders in `#layout-editor` — **tap a control to bind it to the
+  sliders** (the bound control shows a green outline), then Save/Cancel/Reset. Positions +
+  size/opacity persist in `GAME_SETTINGS.controlLayout` per control as
+  `{x,y,scale,opacity}` (x/y = viewport % centre; scale/opacity default to 1 when absent,
+  so older `{x,y}` saves still load), re-applied at startup by `applyStyle`. When
+  `controlLayout` is empty, `LayoutEditor.effective()` falls back to
   `DEFAULT_CONTROL_LAYOUT` (`js/globals.js`) — joystick lower-left, JUMP upper-right,
-  PROP/SHOOT stacked lower-right; this is also what **Reset** restores.
-  The `isEditingLayout` global gates all the touch handlers above so dragging a control
-  doesn't also move/jump/shoot.
+  PROP/SHOOT stacked lower-right, POWER above them; this is also what **Reset** restores.
+  The **power button** (`#btn-action-power`, hider-only + normally shown only while
+  holding an airdrop power) is force-visible during editing via CSS so it can be placed.
+  Scale is a CSS `transform: … scale()` on the element centre (anchor doesn't move);
+  `handleJoystickTouch` divides the nub translate by the zone's rendered/layout width
+  ratio so a resized joystick still tracks the finger 1:1. The `isEditingLayout` global
+  gates all the touch handlers above so dragging a control doesn't also move/jump/shoot.
 
 ## Movement, collision, climbing (`handleLocalMovement`)
 - Speed `moveSpeed = 0.15`/tick (~9 u/s; was 0.3). World clamp ±100.

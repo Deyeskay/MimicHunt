@@ -19,8 +19,9 @@ let GAME_SETTINGS = {
     invertY: false,
     showMobileControls: true,
     playerName: '',
-    // PUBG-style custom control layout: per-control { x, y } as % of the
-    // viewport (centre of the element). Empty = use DEFAULT_CONTROL_LAYOUT.
+    // PUBG-style custom control layout: per-control { x, y, scale, opacity } —
+    // x/y are % of the viewport (centre of the element); scale/opacity default
+    // to 1 when absent (older saves). Empty = use DEFAULT_CONTROL_LAYOUT.
     // Edited via the Edit Layout mode (js/layout.js); see LayoutEditor.
     controlLayout: {}
 };
@@ -96,7 +97,8 @@ let localDisguise = {
     propScale: 1,
     propHeight: 2,
     propRadius: 1,
-    propRotation: null
+    propRotation: null,
+    propTexture: null
 };
 
 // Camera & Movement Params

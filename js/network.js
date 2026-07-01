@@ -57,6 +57,7 @@ const Network = {
             propHeight: 2,
             propRadius: 1,
             propRotation: null,
+            disguiseTexture: null,
             color: role === 'Seeker' ? 0xff4757 : 0x2ed573,
             // --- AIRDROP POWER-UPS (see Network.grantPower / processShot) ---
             heldPower: null,        // hider: 'heal'|'invis'|'shield' awaiting manual activation (E)
@@ -256,6 +257,7 @@ const Network = {
             propHeight: localDisguise.propHeight,
             propRadius: localDisguise.propRadius,
             propRotation: localDisguise.propRotation,
+            disguiseTexture: localDisguise.propTexture,
             color: localDisguise.color
         };
         if (isHost) {
@@ -354,7 +356,7 @@ const Network = {
                 if (tgt.disguiseType !== 'player') {
                     forcedOut = true;
                     tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
-                    tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null;
+                    tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null; tgt.disguiseTexture = null;
                     tgt.color = 0x2ed573;
                 }
                 health = tgt.health;
@@ -1021,6 +1023,7 @@ const Network = {
                     p.propHeight = data.propHeight ?? 2;
                     p.propRadius = data.propRadius ?? 1;
                     p.propRotation = data.propRotation ?? null;
+                    p.disguiseTexture = data.disguiseTexture ?? null;
                     p.color = data.color;
                     this.broadcastExcept({
                         type: 'disguise',
@@ -1031,6 +1034,7 @@ const Network = {
                         propHeight: p.propHeight,
                         propRadius: p.propRadius,
                         propRotation: p.propRotation,
+                        disguiseTexture: p.disguiseTexture,
                         color: p.color
                     }, conn.peer);
                 }
@@ -1317,6 +1321,7 @@ const Network = {
                     p.propHeight = data.propHeight;
                     p.propRadius = data.propRadius;
                     p.propRotation = data.propRotation;
+                    p.disguiseTexture = data.disguiseTexture ?? null;
                     p.color = data.color;
                 }
                 break;
@@ -1363,11 +1368,11 @@ const Network = {
                         if (data.forcedOut) {
                             tgt.disguiseType = 'player';
                             tgt.disguiseSize = 2; tgt.propScale = 1;
-                            tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null;
+                            tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null; tgt.disguiseTexture = null;
                             tgt.color = 0x2ed573;
                             if (data.targetId === myId) {
                                 localDisguise = { type: 'player', size: 2, color: 0x2ed573,
-                                    propScale: 1, propHeight: 2, propRadius: 1, propRotation: null };
+                                    propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null };
                             }
                         }
                     }
@@ -1556,7 +1561,7 @@ const Network = {
             p.color = p.role === 'Seeker' ? 0xff4757 : 0x2ed573;
             p.disguiseType = 'player';
             p.disguiseSize = 2;
-            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;
+            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null; p.disguiseTexture = null;
             // Airdrop power-up state — fresh each round.
             p.heldPower = null;
             p.invisUntil = 0;
@@ -1588,7 +1593,7 @@ const Network = {
         ammo = MAG_SIZE; reloading = false; reloadUntil = 0; lastShotAt = 0;
         localDisguise = {
             type: 'player', size: 2, color: host.color,
-            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null
+            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null
         };
 
         gameState.phase = 'HIDING';
@@ -1760,7 +1765,7 @@ const Network = {
             p.isReady = (id === myId);
             p.disguiseType = 'player';
             p.disguiseSize = 2;
-            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null;
+            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null; p.disguiseTexture = null;
             p.color = role === 'Seeker' ? 0xff4757 : 0x2ed573;
             delete p._lastMoveT;
         });
@@ -1769,7 +1774,7 @@ const Network = {
         if (me) { localPos = { x: me.x, y: me.y, z: me.z }; cameraYaw = 0; }
         localDisguise = {
             type: 'player', size: 2, color: 0x2ed573,
-            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null
+            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null
         };
 
         this.mintCodePeer();

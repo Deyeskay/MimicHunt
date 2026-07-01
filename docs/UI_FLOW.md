@@ -67,10 +67,14 @@ on a landed hit); mobile **SHOOT** (seeker) / circular **disguise/switch** butto
 
 **Disguise/switch button** (`#btn-action-disguise .disguise-btn`): a circular button
 with a glowing ring and stacked spans — `#db-swap` (🔄) / `#db-icon` (prop emoji via
-`UI.propIcon`) / `#db-label` / key hint `[F]`. State classes set in `updateHUD`:
-default green ring = near a prop (label = prop name, enabled); `.db-reset` blue =
-currently disguised (label RESET); `.db-locked` red = post-hit cooldown (label `N.Ns`,
-disabled, ring stays vivid); plain disabled/grey = not near any prop.
+`UI.propIcon`) / `#db-label` / key hint `[F]`. State precedence in `updateHUD` (driven
+by `Mechanics.findNearestDisguiseProp`): **near a disguisable prop & not locked** →
+green ring, label = prop name, enabled — pressing disguises OR switches straight to it
+(so a disguised hider standing beside a prop shows that prop, not RESET, and can go
+rock→tree without resetting); else **disguised** → `.db-reset` blue, label RESET; else
+**post-hit cooldown** → `.db-locked` red, label `N.Ns`, disabled, ring stays vivid; else
+disabled `PROP` placeholder (not near any prop). `handleDisguiseSwap` mirrors the same
+precedence (RESET still works while locked; only re-disguising is blocked).
 
 Top-center (`#disguise-cd`, Hider only): **disguise-cooldown alert** shown for the
 `DISGUISE_LOCK_MS` (5s) window after a hit, when `disguiseLockUntil > Network.now()`.
@@ -134,6 +138,18 @@ Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
   materials/textures baked in) as a new `.glb` via `THREE.GLTFExporter` (binary download).
   Material edits aren't in the undo stack and aren't stored in the level — persistence is
   the exported GLB. Hidden for multi-select / spawn / no material.
+- **Inspector → Choose Texture:** for a single selected **cube or wall**
+  (`PropLevel.TEXTURABLE_MODELS`), `refreshTextureSection` shows a `#cubeTexSelect` dropdown
+  of files scanned from `assets/textures/` (dir-index `fetch` in `listTextureFiles`, fallback
+  list if unserved) plus a **↻ Refresh** button to re-scan after copying in a new image.
+  Picking a texture calls `PropLevel.applyPropTexture` live and stores the filename on the
+  instance; **unlike Materials, this IS persisted** — `exportProp` writes `texture:"<file>"`
+  and the game loads it. Cubes default to `crate.png`; walls show `wall.png` and only export a
+  `texture` once overridden. Hidden for other prop types. A **Tiling X/Y** row
+  (`#texTileX`/`#texTileY`, Unity-style) sets the texture `repeat` per instance (`_dataTiling`
+  helper), with **drag-to-scrub** labels via `attachLabelScrub` (Tiling label = both axes, X/Y =
+  each; Shift = fine); editing tiling on a plain wall assigns its texture so the tiling takes effect.
+  `tileX/tileY` export only when they differ from the model default (wall `2,2`, else `1,1`).
 - **Prefab editor lock:** in the Edit Prefabs modal, when a type's `canDisguise` is on the
   `collision` flag is greyed/disabled with a red ⚠ "not recommended" note (disguised
   hiders rely on the collider); unchecking `canDisguise` re-enables it (`renderPrefabEditor`).

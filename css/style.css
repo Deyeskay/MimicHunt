@@ -656,17 +656,44 @@ body.layout-editing .mobile-controls {
     display: flex !important; visibility: visible !important; pointer-events: auto !important;
 }
 body.layout-editing #btn-action-shoot,
-body.layout-editing #btn-action-disguise { display: flex !important; }
+body.layout-editing #btn-action-disguise,
+body.layout-editing #btn-action-power { display: flex !important; }
+/* Editing forces buttons on-screen so they can be placed; the size/opacity
+   sliders drive the inline opacity, so we only neutralise the disabled GREYSCALE
+   here (not opacity, or the opacity preview wouldn't show). */
 body.layout-editing .action-btn:disabled,
-body.layout-editing .disguise-btn:disabled { opacity: 1 !important; filter: none !important; }
+body.layout-editing .disguise-btn:disabled { filter: none !important; }
 body.layout-editing #joystick-zone,
 body.layout-editing #btn-action-jump,
 body.layout-editing #btn-action-disguise,
-body.layout-editing #btn-action-shoot {
+body.layout-editing #btn-action-shoot,
+body.layout-editing #btn-action-power {
     z-index: 60; cursor: grab; touch-action: none;
     outline: 2px dashed rgba(255,255,255,0.85); outline-offset: 3px;
 }
-.le-dragging { cursor: grabbing !important; opacity: 0.9; z-index: 70 !important; }
+/* The control currently bound to the size/opacity sliders. */
+body.layout-editing .le-selected {
+    outline: 3px solid var(--accent-green) !important;
+    outline-offset: 3px;
+}
+.le-dragging { cursor: grabbing !important; z-index: 70 !important; }
+
+/* Size / opacity sliders in the Edit Layout bar (PUBG-style). */
+#layout-editor .le-sliders {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 0 4px; border-left: 1px solid rgba(255,255,255,0.15);
+    border-right: 1px solid rgba(255,255,255,0.15); margin: 0 4px;
+}
+#layout-editor .le-sel-name {
+    font-weight: 700; font-size: 0.8rem; letter-spacing: 1px;
+    color: var(--accent-green); min-width: 52px; text-align: center;
+}
+#layout-editor .le-slider {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px;
+    color: rgba(255,255,255,0.8); text-transform: uppercase;
+}
+#layout-editor .le-slider input[type="range"] { width: 92px; accent-color: var(--accent-green); }
 
 /* ============================================================= */
 /* Landscape-only: cover the screen with a rotate prompt in portrait. */

@@ -1,15 +1,33 @@
 const PropLevel = {
     WALL_COLOR: 0xc8b59a,
+    // Default texture filenames (in assets/textures/) for cube/wall. Kept here
+    // (not in prefabs.js) because the editor regenerates prefabs.js.
+    DEFAULT_CUBE_TEXTURE: 'crate.png',
+    DEFAULT_WALL_TEXTURE: 'wall.png',
+    // Prop models that support a per-instance `texture` (picked in the editor).
+    TEXTURABLE_MODELS: ['cube', 'wall'],
+    defaultTextureFor: function(model) {
+        return model === 'wall' ? this.DEFAULT_WALL_TEXTURE : this.DEFAULT_CUBE_TEXTURE;
+    },
+    // Default texture tiling (repeat) per model — walls tile 2× (matches the shipped
+    // wall look), cubes 1×. Used for slim export + the editor's Tiling X/Y defaults.
+    defaultTilingFor: function(model) {
+        return model === 'wall' ? { x: 2, y: 2 } : { x: 1, y: 1 };
+    },
     // Player collider (eye/center height & horizontal radius). Seeded from
     // PlayerCollider in prefabs.js so the editor can tune them; fall back to the
     // historical literals if that config isn't present.
     PLAYER_BASE_HEIGHT: (typeof PlayerCollider !== 'undefined' && PlayerCollider.height != null) ? PlayerCollider.height : 1.5,
     PLAYER_COLLIDER_RADIUS: (typeof PlayerCollider !== 'undefined' && PlayerCollider.radius != null) ? PlayerCollider.radius : 1,
 
-    createWallMesh: function() {
+    createWallMesh: function(prop) {
         // Per-wall material (so a disguised-as-wall hider's reveal blink doesn't
-        // tint every wall), all sharing the same map texture object.
-        const tex = this.getWallTexture();
+        // tint every wall). A wall with a per-instance `texture` uses that file and
+        // stays OUT of the shared wall.png swap list; a plain wall keeps the default
+        // wall texture (procedural brick → wall.png once loaded, swapped globally).
+        let tex, custom = prop && prop.texture;
+        if (custom) tex = this.getPropTexture(prop.texture, { x: prop.tileX || 2, y: prop.tileY || 2 });
+        else        tex = this.getWallTexture();
         const mat = tex
             ? new THREE.MeshLambertMaterial({ map: tex })
             : new THREE.MeshLambertMaterial({ color: this.WALL_COLOR });
@@ -18,7 +36,7 @@ const PropLevel = {
         // primaries toward white — great for foliage, washed-out for the rainbow walls.
         // No-op on Low (no tone mapping there). Per-material, so nothing else changes.
         mat.toneMapped = false;
-        if (tex) (this._wallMats = this._wallMats || []).push(mat);   // for image swap
+        if (tex && !custom) (this._wallMats = this._wallMats || []).push(mat);   // shared wall.png swap
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.scale.set(4, 3, 0.3);
         return mesh;
@@ -74,6 +92,56 @@ const PropLevel = {
         );
     },
 
+    // Load (and cache) a texture from assets/textures/ at a given tiling (repeat).
+    // THREE's TextureLoader.load() returns the Texture object synchronously and fills
+    // the image in on completion, so callers can assign it as a material map right away
+    // and it renders once decoded. Cached per (filename, tilingX, tilingY): props that
+    // share the same file AND tiling share ONE texture object (never disposed on swap);
+    // a different tiling gets its own copy so per-instance tiling can't cross-talk.
+    getPropTexture: function(filename, repeat) {
+        const name = filename || this.DEFAULT_CUBE_TEXTURE;
+        const rx = (repeat && repeat.x) || 1, ry = (repeat && repeat.y) || 1;
+        const key = name + '@' + rx + 'x' + ry;
+        this._propTexCache = this._propTexCache || {};
+        if (this._propTexCache[key]) return this._propTexCache[key];
+        if (typeof THREE === 'undefined' || !THREE.TextureLoader) return null;
+        const tex = new THREE.TextureLoader().load('assets/textures/' + name);
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        tex.repeat.set(rx, ry);
+        this._propTexCache[key] = tex;
+        return tex;
+    },
+
+    // A unit cube (1×1×1) textured from assets/textures/. Per-cube material (so a
+    // disguise blink or a per-instance texture swap doesn't touch other cubes) that
+    // shares the cached map texture object. toneMapped:false matches walls — keeps
+    // the texture vivid on the colour-managed (Medium/High) tiers.
+    createCubeMesh: function(prop) {
+        const rep = { x: (prop && prop.tileX) || 1, y: (prop && prop.tileY) || 1 };
+        const tex = this.getPropTexture((prop && prop.texture) || this.DEFAULT_CUBE_TEXTURE, rep);
+        const mat = tex
+            ? new THREE.MeshLambertMaterial({ map: tex })
+            : new THREE.MeshLambertMaterial({ color: this.WALL_COLOR });
+        mat.toneMapped = false;
+        return new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
+    },
+
+    // Live-swap a placed prop's texture (used by the editor's texture picker for
+    // cube + wall). Swaps the shared cached map; the old one is left intact for
+    // other props. For a wall this also drops the material out of the shared
+    // wall.png swap list so a late wall.png load can't clobber the custom pick.
+    applyPropTexture: function(mesh, filename, repeat) {
+        if (!mesh || !mesh.material) return;
+        const tex = this.getPropTexture(filename, repeat);
+        if (!tex) return;
+        if (this._wallMats) {
+            const i = this._wallMats.indexOf(mesh.material);
+            if (i >= 0) this._wallMats.splice(i, 1);
+        }
+        mesh.material.map = tex;
+        mesh.material.needsUpdate = true;
+    },
+
     applyScale: function(mesh, scale) {
         if (typeof scale === 'number') {
             mesh.scale.setScalar(scale);
@@ -113,7 +181,9 @@ const PropLevel = {
         let mesh;
 
         if (prop.model === 'wall') {
-            mesh = this.createWallMesh();
+            mesh = this.createWallMesh(prop);
+        } else if (prop.model === 'cube') {
+            mesh = this.createCubeMesh(prop);
         } else if (modelLibrary[prop.model]) {
             mesh = modelLibrary[prop.model].clone(true);
         } else {
@@ -124,9 +194,15 @@ const PropLevel = {
         return mesh;
     },
 
-    createDisguiseMesh: function(disguiseType, modelLibrary, scale) {
+    createDisguiseMesh: function(disguiseType, modelLibrary, scale, texture) {
         if (disguiseType === 'wall') {
             const mesh = this.createWallMesh();
+            this.applyScale(mesh, scale ?? 1);
+            return mesh;
+        }
+
+        if (disguiseType === 'cube') {
+            const mesh = this.createCubeMesh({ texture: texture });
             this.applyScale(mesh, scale ?? 1);
             return mesh;
         }
@@ -155,7 +231,7 @@ const PropLevel = {
     },
 
     getDisguiseMeshKey: function(player) {
-        return `${player.disguiseType}:${JSON.stringify(player.propScale ?? 1)}`;
+        return `${player.disguiseType}:${JSON.stringify(player.propScale ?? 1)}:${player.disguiseTexture || ''}`;
     },
 
     computeBounds: function(object) {
@@ -650,6 +726,20 @@ const PropLevel = {
         if (data.seekerSpawn) out.seekerSpawn = true;
         if (data.hiderSpawn) out.hiderSpawn = true;
         if (data.exitDoor) out.exitDoor = true;
+
+        // Persist the chosen texture filename + tiling so it renders in-game.
+        if (this.TEXTURABLE_MODELS.indexOf(data.model) !== -1) {
+            const dt = this.defaultTilingFor(data.model);
+            const tiled = (data.tileX != null && data.tileX !== dt.x) ||
+                          (data.tileY != null && data.tileY !== dt.y);
+            // Cubes always carry a texture (default crate.png). Walls only when
+            // overridden — but a non-default tiling forces the custom path, so emit
+            // a texture (default wall.png) for a tiled wall too. Plain walls stay slim.
+            if (data.model === 'cube') out.texture = data.texture || this.DEFAULT_CUBE_TEXTURE;
+            else if (data.texture || tiled) out.texture = data.texture || this.DEFAULT_WALL_TEXTURE;
+            // Tiling emitted only when it differs from the model default (keeps output slim).
+            if (tiled) { out.tileX = data.tileX ?? dt.x; out.tileY = data.tileY ?? dt.y; }
+        }
 
         return out;
     },

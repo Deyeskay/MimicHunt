@@ -3,6 +3,102 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-01
+
+- **Per-instance texture tiling (Unity-style Tiling X/Y) for cube + wall.** Files: `js/props.js`,
+  `editor.html`. Fixes the stretching compromise — a single texture copy was stretched across each
+  face (`repeat 1,1`).
+  - **`js/props.js`:** `getPropTexture(filename, repeat)` now caches per **(file, tilingX, tilingY)**
+    (key `name@RxXR`), so each unique tiling gets its own `THREE.Texture` while identical configs
+    still share one (50 crates @2×2 = one texture). `createCubeMesh`/`createWallMesh` pass the
+    instance's `tileX/tileY` (defaults via new `defaultTilingFor(model)` → wall `2,2`, else `1,1`);
+    `applyPropTexture(mesh, file, repeat)` takes the repeat. `exportProp` emits `tileX/tileY` only
+    when they differ from the model default, and — because tiling only works through the
+    per-instance path — a tiled wall also emits a `texture` (default `wall.png`). Plain walls stay slim.
+  - **`editor.html`:** the **Choose Texture** panel gained a **Tiling  X [ ]  Y [ ]** row
+    (`#texTileX`/`#texTileY`) with **drag-to-scrub** labels (reuses `attachLabelScrub`: the *Tiling*
+    label scrubs both axes, *X*/*Y* scrub each; Shift = fine). Editing it updates the prop live
+    (`_dataTiling` helper); on a plain wall, changing tiling assigns the current texture so it leaves
+    the shared `wall.png` and honors the tiling. `refreshTextureSection` syncs the inputs;
+    import/duplicate carry `tileX/tileY`. `onTile` listens on both `input` (typing/spinner) and
+    `change` (fired by the scrub gesture).
+  - **Scoped out:** cube *disguises* use default tiling (1,1) — tiling isn't threaded through the
+    disguise/network fields (niche; easy follow-up).
+
+- **Editor: W/E/R gizmo shortcuts no longer swallowed by a focused checkbox/button.**
+  File: `editor.html` (keydown handler). The guard that suppresses shortcuts while
+  typing was blocking on *any* focused `<input>`. Clicking the **Uniform Scale**
+  checkbox (or any checkbox/button) left it as `document.activeElement`, and since
+  hovering the scene doesn't move focus, W/E/R (Move/Rotate/Scale) stopped working.
+  The guard now only blocks for `TEXTAREA` and text-entry `INPUT`s (text/number/
+  search/etc.), letting `checkbox|radio|button|submit|reset|range|color|file`
+  through.
+
+- **New `cube` prop + per-instance selectable textures for cube AND wall (editor + runtime).**
+  Files: `js/prefabs.js` (cube prefab), `js/props.js` (mesh + texture + export), `editor.html`
+  (palette, picker, `?v=8`), disguise plumbing across `js/mechanics.js` / `js/network.js` /
+  `js/globals.js` / `js/level.js`.
+  - **Prefab:** `cube` = `collision:true, climbable:true, hideSpot:false, canDisguise:true,
+    colliderShape:'box'` — a climbable, disguisable box that reuses the wall OBB collider path.
+  - **Mesh/texture (`js/props.js`):** `createCubeMesh(prop)` / `createWallMesh(prop)` build a unit
+    `BoxGeometry` with a per-object `MeshLambertMaterial` (`toneMapped:false`) whose map comes from
+    `getPropTexture(filename)` — a cache-by-filename loader for `assets/textures/<file>` (shared
+    texture objects, never disposed on swap). `applyPropTexture(mesh, file)` live-swaps (renamed
+    from the cube-only `applyCubeTexture`). **Cubes** always carry a texture (default `crate.png`);
+    **walls** keep the shared `wall.png` (`_wallMats` global swap) unless overridden — an overridden
+    wall's material is kept OUT of `_wallMats` so a late `wall.png` load can't clobber it.
+    `createPropMesh` gained a `cube` branch + passes `prop` to `createWallMesh`; `exportProp` emits
+    `texture:"<file>"` for every cube and for walls **only when overridden** (plain walls stay slim).
+    Defaults + `TEXTURABLE_MODELS`/`defaultTextureFor()` live on `PropLevel`.
+  - **Editor:** new **Cube** palette button; a generic **Choose Texture** inspector panel (shown
+    for a single cube OR wall) with a `<select>` populated by scanning `assets/textures/` via the
+    dev server's directory index + a **↻ Refresh** button (copy a new image in, Refresh, it
+    appears). Falls back to a hardcoded list if no index is served. Picking a texture updates the
+    prop live and is stored on the instance for export. `cube` added to `PREFAB_TYPES` (editable in
+    Edit Prefabs); editor script loads bumped `?v=7`→`?v=8` so it sees the new `props.js`/`prefabs.js`.
+  - **Disguise:** a new `propTexture`/`disguiseTexture` field is threaded exactly like
+    `propRotation` (init, `sendDisguiseUpdate`, host + client apply, every forced-out/round reset)
+    so a hider disguised as a cube shows the correct texture on all peers;
+    `getDisguiseMeshKey` includes it and `createDisguiseMesh` takes a texture arg. (Walls aren't
+    disguisable.)
+
+- **Edit Layout: power button is now editable + per-control Size & Opacity (PUBG-style).**
+  Files: `js/layout.js` (`LayoutEditor` rework), `index.html` (sliders in `#layout-editor`),
+  `css/style.css` (force `#btn-action-power` visible/draggable while editing; `.le-sliders`
+  / `.le-selected` styles), `js/globals.js` (model comment), `js/mechanics.js`
+  (`handleJoystickTouch` scale fix).
+  - **Power button was undraggable** because the `.layout-editing` CSS only force-showed
+    shoot/prop/joystick/jump — `#btn-action-power` (hider-only, normally shown only while
+    holding a power) stayed hidden/unoutlined. It's now in both the force-visible and the
+    draggable-outline rules, so it can always be placed.
+  - **Size + Opacity sliders**: the layout model grew from `{x,y}` to `{x,y,scale,opacity}`
+    (scale/opacity default to 1, so older saves still load). **Tap a control** to bind it to
+    the Size (0.6–1.6) and Opacity (0.2–1) sliders — the bound control gets a green outline;
+    dragging still moves it. Size applies as a CSS `transform … scale()` about the element
+    centre (anchor stays put); opacity is inline. `applyStyle` restores both at startup;
+    Save persists them; Reset returns everything to `DEFAULT_CONTROL_LAYOUT` at scale/opacity 1.
+  - **Joystick nub scale fix**: the nub lives inside the (now scalable) zone, so its translate
+    was multiplied by the zone's scale — `handleJoystickTouch` divides `dx/dy` by
+    `rect.width / zone.offsetWidth` so a resized joystick tracks the finger 1:1 (movement
+    input `touchVector` was already correct — screen-space).
+
+- **Fix: disguise button now reflects the prop you're standing beside, not an instant
+  RESET.** Files: `js/ui.js` (`updateHUD` disguise-button branch) + `js/mechanics.js`
+  (`handleDisguiseSwap`). Previously, the moment you disguised, the mobile action button
+  flipped to RESET regardless of where you were. Now the button's target is driven by the
+  nearest disguisable prop (`Mechanics.findNearestDisguiseProp`):
+  - Disguise as a prop and **stay next to it** → the button keeps showing that prop (icon +
+    name), not RESET. Only when you **walk away** from every disguisable prop does it fall
+    back to RESET.
+  - Disguised as a rock and **move next to a tree** → the button now shows TREE and pressing
+    it switches you **straight from rock → tree** (no reset step). `applyDisguiseFromProp`
+    already overwrites `localDisguise` wholesale, so switching from one disguise to another
+    is clean.
+  Both the label (ui.js) and the action (mechanics.js) share the same precedence:
+  *near a prop & not locked* → (re)disguise/switch → else *disguised* → RESET → else *locked*
+  → countdown → else disabled `PROP`. RESET still works while the post-hit disguise lock is
+  active (only re-disguising is blocked).
+
 ## 2026-06-30
 
 - **Feature: ramps / tilted slabs are now walkable.** File: `js/mechanics.js`

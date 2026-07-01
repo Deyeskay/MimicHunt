@@ -409,6 +409,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
             <button class="propBtn" onclick="selectModel('rock',this)">Rock</button>
             <button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
             <button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
+            <button class="propBtn" onclick="selectModel('cube',this)">Cube</button>
             <button class="propBtn" onclick="selectModel('spawn',this)">Spawn</button>
             <button class="propBtn" onclick="selectModel('door',this)">Exit Door</button>
         </div>
@@ -483,6 +484,24 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
                 <label><input type="checkbox" id="chkSeekerSpawn"> Seeker Spawn</label>
                 <label><input type="checkbox" id="chkHiderSpawn"> Hider Spawn</label>
             </div>
+        </div>
+
+        <div class="field" id="cubeTextureField" style="display:none;">
+            <label class="mat-head">Choose Texture
+                <span class="mat-head-actions">
+                    <span id="cubeTexRefresh" class="mat-save" title="Rescan assets/textures/ for new files">↻</span>
+                </span>
+            </label>
+            <div class="mat-row">
+                <select id="cubeTexSelect" class="mat-select" style="flex:1;"></select>
+            </div>
+            <div class="mat-row"><span id="texTileLbl" title="drag to scrub (Shift = fine)">Tiling</span>
+                <span id="texTileXLbl" title="drag to scrub (Shift = fine)">X</span>
+                <input id="texTileX" type="number" step="0.5" min="0.1" style="width:52px;">
+                <span id="texTileYLbl" title="drag to scrub (Shift = fine)">Y</span>
+                <input id="texTileY" type="number" step="0.5" min="0.1" style="width:52px;">
+            </div>
+            <span id="cubeTexPreview" class="mat-thumb" style="margin-top:6px;"></span>
         </div>
 
         <div class="field" id="materialsField">
@@ -667,8 +686,8 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
-<script src="js/prefabs.js?v=7"></script>
-<script src="js/props.js?v=7"></script>
+<script src="js/prefabs.js?v=8"></script>
+<script src="js/props.js?v=8"></script>
 
 <script>
 //Globals
@@ -715,7 +734,7 @@ let collidersDirty = false;
 
 // --- Prefab editing (read PrefabLibrary → edit → export prefabs.js) ---
 const PREFABS_KEY = 'hnh_editor_prefabs';
-const PREFAB_TYPES = ['tree', 'rock', 'bush', 'wall', 'spawn'];
+const PREFAB_TYPES = ['tree', 'rock', 'bush', 'wall', 'cube', 'spawn'];
 const PREFAB_FLAGS = ['collision', 'climbable', 'hideSpot', 'canDisguise'];
 // Snapshot the original file defaults BEFORE applying any saved overrides (Reset).
 const PREFAB_DEFAULTS_ORIG = JSON.parse(JSON.stringify(PrefabLibrary));
@@ -1607,6 +1626,8 @@ function clearInspector() {
     const mc = document.getElementById('matControls'); if (mc) mc.style.display = 'none';
     const mn = document.getElementById('matNote'); if (mn) { mn.style.display = ''; mn.textContent = 'Select one object to edit materials.'; }
     _setMatDirtyUI(false);
+    // Cube texture picker → hidden when nothing is selected.
+    const cf = document.getElementById('cubeTextureField'); if (cf) cf.style.display = 'none';
 }
 
 //////////////////////////////////////////////////////
@@ -1781,6 +1802,128 @@ function wireMaterialControls() {
     });
 }
 wireMaterialControls();
+
+// ---------------------------------------------------------------------------
+// Prop texture picker — per-instance texture (cube + wall) from assets/textures/.
+// The list is discovered dynamically from the static server's directory index
+// (works with Python http.server & most dev servers); ↻ Refresh re-scans so a
+// newly-copied image shows up without editing code. Falls back to a known list
+// if the index isn't served. The chosen filename is stored on the prop's data
+// and exported by PropLevel.exportProp so it renders in-game.
+// ---------------------------------------------------------------------------
+const TEX_FALLBACK = ['crate.png', 'wall.png', 'grass.png', 'grass1.png',
+    'grass1.jpg', 'sky.png', 'sky1.png', 'background.png'];
+let textureFileList = TEX_FALLBACK.slice();
+
+// The single selected object IF it supports a per-instance texture (cube/wall).
+function _texturableSelected() {
+    const s = _singleSelected();
+    const m = s && s.userData.data && s.userData.data.model;
+    return (m && PropLevel.TEXTURABLE_MODELS.indexOf(m) !== -1) ? s : null;
+}
+
+async function listTextureFiles() {
+    try {
+        const res = await fetch('assets/textures/');
+        if (!res.ok) throw new Error('no index');
+        const html = await res.text();
+        const found = [];
+        const re = /href="([^"?]+\.(?:png|jpg|jpeg|webp|gif))"/gi;
+        let m;
+        while ((m = re.exec(html)) !== null) {
+            const name = decodeURIComponent(m[1].split('/').pop());
+            if (name && found.indexOf(name) === -1) found.push(name);
+        }
+        if (found.length) { textureFileList = found.sort(); return textureFileList; }
+    } catch (e) { /* server didn't serve a directory index — keep fallback */ }
+    textureFileList = TEX_FALLBACK.slice();
+    return textureFileList;
+}
+
+function _populateTexSelect(current) {
+    const sel = document.getElementById('cubeTexSelect');
+    if (!sel) return;
+    // Make sure the current selection is always listed even if not in the scan.
+    const list = textureFileList.slice();
+    if (current && list.indexOf(current) === -1) list.unshift(current);
+    sel.innerHTML = '';
+    list.forEach(name => {
+        const o = document.createElement('option');
+        o.value = name; o.textContent = name;
+        sel.appendChild(o);
+    });
+    if (current) sel.value = current;
+    const prev = document.getElementById('cubeTexPreview');
+    if (prev) prev.innerHTML = '<img src="assets/textures/' + sel.value +
+        '" style="width:48px;height:48px;object-fit:cover;border-radius:4px;">';
+}
+
+// The instance's current tiling (repeat), falling back to the model default.
+function _dataTiling(data) {
+    const dt = PropLevel.defaultTilingFor(data.model);
+    return { x: data.tileX != null ? data.tileX : dt.x,
+             y: data.tileY != null ? data.tileY : dt.y };
+}
+
+// Show the picker only for a single texturable prop; sync the dropdown + Tiling X/Y
+// to that prop's texture/tiling (falling back to the model defaults when unset).
+function refreshTextureSection() {
+    const field = document.getElementById('cubeTextureField');
+    if (!field) return;
+    const s = _texturableSelected();
+    field.style.display = s ? '' : 'none';
+    if (!s) return;
+    const d = s.userData.data;
+    _populateTexSelect(d.texture || PropLevel.defaultTextureFor(d.model));
+    const t = _dataTiling(d);
+    const tx = document.getElementById('texTileX'), ty = document.getElementById('texTileY');
+    if (tx) tx.value = t.x;
+    if (ty) ty.value = t.y;
+}
+
+(function wireTextureControls() {
+    const sel = document.getElementById('cubeTexSelect');
+    const refresh = document.getElementById('cubeTexRefresh');
+    const txEl = document.getElementById('texTileX'), tyEl = document.getElementById('texTileY');
+
+    if (sel) sel.addEventListener('change', () => {
+        const s = _texturableSelected();
+        if (!s) return;
+        s.userData.data.texture = sel.value;
+        PropLevel.applyPropTexture(s, sel.value, _dataTiling(s.userData.data));
+        _populateTexSelect(sel.value);   // refresh the preview thumb
+    });
+
+    const onTile = () => {
+        const s = _texturableSelected();
+        if (!s) return;
+        const d = s.userData.data;
+        const vx = parseFloat(txEl.value), vy = parseFloat(tyEl.value);
+        if (!isNaN(vx)) d.tileX = Math.max(0.1, vx);
+        if (!isNaN(vy)) d.tileY = Math.max(0.1, vy);
+        // Tiling only takes effect via the per-instance texture path — a plain wall
+        // needs a texture assigned so it leaves the shared wall.png (fixed 2×2).
+        if (!d.texture) d.texture = sel ? sel.value : PropLevel.defaultTextureFor(d.model);
+        PropLevel.applyPropTexture(s, d.texture, _dataTiling(d));
+    };
+    // 'input' = typing/spinner; 'change' = also fired by the label-scrub gesture.
+    [txEl, tyEl].forEach(el => { if (el) { el.addEventListener('input', onTile); el.addEventListener('change', onTile); } });
+    // Unity-style click+drag on the labels to scrub the tiling (Shift = fine).
+    const tileLbl = document.getElementById('texTileLbl');
+    const xLbl = document.getElementById('texTileXLbl'), yLbl = document.getElementById('texTileYLbl');
+    if (txEl && tyEl && tileLbl) attachLabelScrub(tileLbl, [txEl, tyEl], 0.05);  // both axes
+    if (xLbl && txEl) attachLabelScrub(xLbl, [txEl], 0.05);                       // X only
+    if (yLbl && tyEl) attachLabelScrub(yLbl, [tyEl], 0.05);                       // Y only
+
+    if (refresh) refresh.addEventListener('click', async () => {
+        await listTextureFiles();
+        const s = _texturableSelected();
+        _populateTexSelect(s ? (s.userData.data.texture ||
+            PropLevel.defaultTextureFor(s.userData.data.model)) : null);
+    });
+    // Kick off an initial scan so the dropdown is populated before first use.
+    listTextureFiles();
+})();
 
 // Restore every material of the selected object to its pristine (as-loaded) values.
 function resetMaterials() {
@@ -2223,7 +2366,9 @@ window.addEventListener(
 
                     hiderSpawn:false,
 
-                    exitDoor:selectedModel === "door"
+                    exitDoor:selectedModel === "door",
+
+                    texture:selectedModel === "cube" ? PropLevel.DEFAULT_CUBE_TEXTURE : undefined
                 }
         };
 
@@ -2536,6 +2681,7 @@ function updateInspectorFields() {
     _setChkField('chkHiderSpawn', _commonBool('hiderSpawn'));
 
     refreshMaterialsSection();
+    refreshTextureSection();
 }
 
 
@@ -2578,9 +2724,16 @@ function duplicateSelected()
                 spawnPoint:source.spawnPoint,
                 seekerSpawn:source.seekerSpawn,
                 hiderSpawn:source.hiderSpawn,
-                exitDoor:source.exitDoor
+                exitDoor:source.exitDoor,
+                texture:source.texture,
+                tileX:source.tileX,
+                tileY:source.tileY
             }
         };
+
+        // Carry the source prop's custom texture + tiling onto the duplicate's material.
+        if(source.texture)
+            PropLevel.applyPropTexture(clone, source.texture, _dataTiling(clone.userData.data));
 
         PropLevel.syncBoundsToData(clone);
         clone.traverse(child => { child.userData.editorObject = true; });
@@ -2688,9 +2841,15 @@ window.addEventListener(
     e =>
     {
         // Don't fire W/E/R/Q/F/Delete/Ctrl+D while typing in a text field
-        // (e.g. the hierarchy search box).
+        // (e.g. the hierarchy search box or a numeric inspector field). But a
+        // focused checkbox/button/etc. shouldn't swallow the shortcuts — after
+        // clicking e.g. the Uniform Scale checkbox it keeps focus, and hovering
+        // the scene doesn't move it, so W/E/R would otherwise stop working.
         const ae = document.activeElement;
-        if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+        const nonTextInput = ae && ae.tagName === "INPUT" &&
+            /^(checkbox|radio|button|submit|reset|range|color|file)$/i.test(ae.type);
+        if (ae && (ae.tagName === "TEXTAREA" ||
+                   (ae.tagName === "INPUT" && !nonTextInput))) return;
 
         if(!selectedObject)
             return;
@@ -2879,6 +3038,9 @@ function createEditorMesh(model)
     if(model === "wall")
         return PropLevel.createWallMesh();
 
+    if(model === "cube")
+        return PropLevel.createCubeMesh({ texture: PropLevel.DEFAULT_CUBE_TEXTURE });
+
     if(model === "spawn")
         return createSpawnMarkerMesh();
 
@@ -2937,9 +3099,20 @@ function buildEditorObject(prop)
                 spawnPoint:  prop.spawnPoint   ?? false,
                 seekerSpawn: prop.seekerSpawn  ?? false,
                 hiderSpawn:  prop.hiderSpawn   ?? false,
-                exitDoor:    prop.exitDoor     ?? false
+                exitDoor:    prop.exitDoor     ?? false,
+                // Cubes always carry a texture (default crate.png); walls only when
+                // the level file overrode the shared wall texture. Tiling is carried
+                // through when present (a tiled wall implies a texture — see exportProp).
+                texture:     prop.model === "cube" ? (prop.texture ?? PropLevel.DEFAULT_CUBE_TEXTURE)
+                           : (prop.model === "wall" ? prop.texture : undefined),
+                tileX:       prop.tileX,
+                tileY:       prop.tileY
             }
     };
+
+    // Imported props render with their saved texture + tiling (createEditorMesh used a default).
+    if(clone.userData.data.texture)
+        PropLevel.applyPropTexture(clone, clone.userData.data.texture, _dataTiling(clone.userData.data));
 
     PropLevel.syncBoundsToData(clone);
 
