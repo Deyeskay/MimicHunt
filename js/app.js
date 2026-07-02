@@ -238,8 +238,32 @@ document.getElementById('btn-lobby-action').addEventListener('click', () => {
 });
 
 // --- RENDER LOOP ---
+// --- FPS meter ---
+// Averages frame count over ~0.5s windows so the number is readable (not jittering
+// every frame). Only touches the DOM when SHOW_FPS is on. The #fps-meter element is
+// hidden in markup; reveal it once here based on the flag.
+let _fpsFrames = 0, _fpsLast = performance.now();
+(function initFps() {
+    const el = document.getElementById('fps-meter');
+    if (el) el.style.display = SHOW_FPS ? 'block' : 'none';
+})();
+function updateFps() {
+    if (!SHOW_FPS) return;
+    _fpsFrames++;
+    const now = performance.now();
+    const elapsed = now - _fpsLast;
+    if (elapsed >= 500) {
+        const fps = Math.round((_fpsFrames * 1000) / elapsed);
+        const val = document.getElementById('fps-value');
+        if (val) val.textContent = fps;
+        _fpsFrames = 0;
+        _fpsLast = now;
+    }
+}
+
 function animate() {
     requestAnimationFrame(animate);
+    updateFps();
     if (gameState.phase !== 'LOBBY' && document.getElementById('gameCanvas').style.display === 'block') {
         Level.render();
     }

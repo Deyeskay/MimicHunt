@@ -3,6 +3,17 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-03
+
+- **FPS counter in the HUD.** Files: `index.html`, `css/style.css`, `js/globals.js`,
+  `js/app.js`. New `#fps-meter` pinned top-right, directly below the ☰ menu icon (absolute,
+  `top:100%` of `.hud-header`, so it doesn't reflow the header row). Gated by a `const
+  SHOW_FPS = true` in `globals.js` — flip to `false` to hide; later this hooks into the
+  Settings screen. `js/app.js` gained `updateFps()`, called each `animate()` frame; it
+  averages frame count over ~0.5 s windows and writes `#fps-value`. `initFps()` reveals/
+  hides `#fps-meter` once at load based on the flag. (Meter lives inside `#ui-layer`, so it
+  only shows while the in-game HUD is up.)
+
 ## 2026-07-02
 
 - **Boot loading screen — swipeable wallpaper carousel + press-enter gate.** Files:

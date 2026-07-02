@@ -5,6 +5,11 @@
 // or Level.setDeveloper(true/false) from the console.
 let developer = false;
 
+// --- FPS COUNTER ---
+// Show a live frames-per-second readout in the HUD (top-right, below the ☰ icon).
+// Simple const flag for now — later this gets wired into the Settings screen.
+const SHOW_FPS = true;
+
 // --- CONFIGURATION ---
 let GAME_SETTINGS = {
     hidingTime: 20,

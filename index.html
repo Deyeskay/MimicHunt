@@ -114,6 +114,9 @@
                 <span class="hud-div"></span>
                 <button id="btn-leave" class="interactive hud-icon-btn" title="Menu">☰</button>
             </div>
+            <!-- FPS counter: top-right, just below the ☰ menu icon. Toggle via the
+                 SHOW_FPS flag in globals.js (later wired to the Settings screen). -->
+            <div id="fps-meter" style="display:none;"><span id="fps-value">--</span> FPS</div>
             <!-- Hamburger dropdown: opened by ☰ (btn-leave). -->
             <div id="game-menu" class="game-menu interactive" style="display:none;">
                 <button id="btn-edit-layout" class="game-menu-item">✥ Edit Layout</button>
