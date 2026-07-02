@@ -5,6 +5,23 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **Boot loading screen — swipeable wallpaper carousel + press-enter gate.** Files:
+  `index.html`, `css/style.css`, `js/level.js`, `js/app.js`. As the prop-model set grew
+  (`Level.loadModels` now pulls ~22 GLBs + 2 character rigs, ~14 MB), the menu was
+  appearing over a half-loaded model library. Added a full-screen `#loading-screen`
+  (z 200, above the menu and everything): a horizontal **carousel** of the wallpapers in
+  `assets/images/` (`loading_screen*.jpg`) that the user can navigate manually — **swipe/
+  drag** (pointer events), the **‹ ›** arrows, the **dots**, or **←/→** keys — with a
+  gentle 6 s auto-advance that pauses/reschedules around any manual interaction. A live
+  candy-green progress bar sits over it. `Level.loadModels(callback, onProgress)` gained
+  an optional `onProgress(loaded, total)` hook called after each asset resolves (success
+  **or** failure, so it always reaches 100%). `#menu-screen` now starts `display:none`.
+  When loading finishes the bar is replaced by a blinking **PRESS ENTER TO CONTINUE**
+  button; the menu is revealed only when the player presses **Enter** or **taps that
+  button** (tap-anywhere is intentionally NOT used, since swipes own taps). Carousel +
+  gate live in `app.js` (`LoadingScreen` module); add files to its `SLIDES` array to
+  extend. Boot-only, no protocol change.
+
 - **Prefab preview: clickable ViewGizmo + in-preview collider transform gizmo (W/E/R).**
   File: `editor.html`. Added (1) the same **Unity-style ViewGizmo** the scene editor has
   (the `.view-gizmo` CSS was generalized from `#viewGizmo` so both the scene and the preview

@@ -317,6 +317,146 @@ if ('serviceWorker' in navigator &&
     (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
+// --- Boot loading screen: swipeable wallpaper carousel + progress, then a
+// "PRESS ENTER TO CONTINUE" gate. The menu is revealed only when the player
+// presses Enter or taps Continue — not automatically when assets finish.
+// Navigation: swipe/drag, the ‹ › arrows, the dots, or ←/→ keys. A gentle
+// auto-advance runs but pauses/reschedules around any manual interaction. ---
+const LoadingScreen = (function () {
+    const el         = document.getElementById('loading-screen');
+    const track      = document.getElementById('ls-track');
+    const dotsHost   = document.getElementById('ls-dots');
+    const prevBtn    = document.getElementById('ls-prev');
+    const nextBtn    = document.getElementById('ls-next');
+    const barEl      = document.getElementById('loading-bar');
+    const pctEl      = document.getElementById('loading-pct');
+    const loadingUI  = document.getElementById('ls-loading');
+    const continueEl = document.getElementById('ls-continue');
+
+    // Wallpapers in the carousel (add more files here to extend).
+    const SLIDES = [
+        'assets/images/loading_screen1.jpg',
+        'assets/images/loading_screen2.jpg',
+        'assets/images/loading_screen3.jpg'
+    ];
+    const AUTO_MS = 6000;
+
+    let idx = 0, count = 0, auto = null, ready = false, dismissed = false, onDone = null;
+
+    // Build the slides + dot indicators.
+    if (track) {
+        SLIDES.forEach((src, i) => {
+            const s = document.createElement('div');
+            s.className = 'ls-slide';
+            s.style.backgroundImage = "url('" + src + "')";
+            track.appendChild(s);
+            if (dotsHost) {
+                const dot = document.createElement('button');
+                dot.className = 'ls-dot' + (i === 0 ? ' active' : '');
+                dot.addEventListener('click', () => goTo(i, true));
+                dotsHost.appendChild(dot);
+            }
+        });
+        count = SLIDES.length;
+    }
+
+    function render() {
+        if (track) track.style.transform = 'translateX(' + (-idx * 100) + '%)';
+        if (dotsHost) for (let i = 0; i < dotsHost.children.length; i++)
+            dotsHost.children[i].classList.toggle('active', i === idx);
+    }
+    function goTo(i, manual) {
+        if (!count) return;
+        idx = (i % count + count) % count;
+        render();
+        if (manual) restartAuto();
+    }
+    const next = (m) => goTo(idx + 1, m);
+    const prev = (m) => goTo(idx - 1, m);
+
+    function startAuto()   { if (count > 1 && !dismissed) auto = setInterval(() => next(false), AUTO_MS); }
+    function stopAuto()    { if (auto) { clearInterval(auto); auto = null; } }
+    function restartAuto() { stopAuto(); startAuto(); }
+
+    if (prevBtn) prevBtn.addEventListener('click', () => prev(true));
+    if (nextBtn) nextBtn.addEventListener('click', () => next(true));
+
+    // --- Swipe / drag (pointer events) ---
+    let dragging = false, startX = 0, dx = 0, w = 0;
+    function onDown(e) {
+        if (!count) return;
+        dragging = true; startX = e.clientX; dx = 0;
+        w = (el ? el.clientWidth : window.innerWidth) || 1;
+        stopAuto();
+        if (track) {
+            track.classList.add('dragging');
+            if (track.setPointerCapture) { try { track.setPointerCapture(e.pointerId); } catch (_) {} }
+        }
+    }
+    function onMove(e) {
+        if (!dragging) return;
+        dx = e.clientX - startX;
+        if (track) track.style.transform = 'translateX(calc(' + (-idx * 100) + '% + ' + dx + 'px))';
+    }
+    function onUp() {
+        if (!dragging) return;
+        dragging = false;
+        if (track) track.classList.remove('dragging');
+        const threshold = Math.min(80, w * 0.15);
+        if (dx <= -threshold) next(false);
+        else if (dx >= threshold) prev(false);
+        else render();
+        restartAuto();
+    }
+    if (track) {
+        track.addEventListener('pointerdown', onDown);
+        track.addEventListener('pointermove', onMove);
+        track.addEventListener('pointerup', onUp);
+        track.addEventListener('pointercancel', onUp);
+    }
+
+    // --- Keyboard: arrows navigate, Enter continues ---
+    function onKey(e) {
+        if (e.key === 'ArrowLeft')       prev(true);
+        else if (e.key === 'ArrowRight') next(true);
+        else if (e.key === 'Enter')      dismiss();
+    }
+    window.addEventListener('keydown', onKey);
+
+    function dismiss() {
+        if (!ready || dismissed) return;   // only after assets are ready, once
+        dismissed = true;
+        stopAuto();
+        window.removeEventListener('keydown', onKey);
+        if (el) {
+            el.classList.add('hidden');
+            setTimeout(() => { el.style.display = 'none'; }, 550);   // after the fade
+        }
+        if (onDone) onDone();
+    }
+    if (continueEl) continueEl.addEventListener('click', dismiss);
+
+    render();
+    startAuto();
+
+    return {
+        setProgress: function (loaded, total) {
+            const pct = Math.round((loaded / total) * 100);
+            if (barEl) barEl.style.width = pct + '%';
+            if (pctEl) pctEl.textContent = pct + '%';
+        },
+        // Assets loaded → swap the bar for the press-enter prompt; cb runs on dismiss.
+        markReady: function (cb) {
+            onDone = cb;
+            ready = true;
+            if (barEl) barEl.style.width = '100%';
+            if (pctEl) pctEl.textContent = '100%';
+            if (loadingUI) loadingUI.style.display = 'none';
+            if (continueEl) continueEl.style.display = 'flex';
+        }
+    };
+})();
+
 // Load all level files (registry.js → LEVEL_FILES) before init reads LEVELS.
 loadLevelScripts().then(() =>
 {
@@ -325,7 +465,12 @@ loadLevelScripts().then(() =>
         Level.init();
         Mechanics.initInputs();
         animate();
-    });
+        // Assets ready → show "PRESS ENTER TO CONTINUE"; reveal the menu only when
+        // the player confirms (Enter / tap), handled inside LoadingScreen.
+        LoadingScreen.markReady(() => {
+            document.getElementById('menu-screen').style.display = 'flex';
+        });
+    }, (loaded, total) => LoadingScreen.setProgress(loaded, total));
 });
 
 const savedSettings = localStorage.getItem('hidehunt_settings');

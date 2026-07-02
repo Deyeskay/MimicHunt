@@ -490,7 +490,9 @@ const Level = {
         return group;
     },
 
-    loadModels: function(callback) {
+    // onProgress(loaded, total) — optional; called after each asset resolves
+    // (success OR failure) so the boot loading screen can show real progress.
+    loadModels: function(callback, onProgress) {
         const loader = new THREE.GLTFLoader();
         const files = [
             { key: "tree", path: "assets/models/tree1.glb" },
@@ -524,7 +526,11 @@ const Level = {
 
         const total = files.length + 2;   // + the two animated characters (player + hunter)
         let loaded = 0;
-        const done = () => { loaded++; if (loaded === total) callback(); };
+        const done = () => {
+            loaded++;
+            if (typeof onProgress === 'function') onProgress(loaded, total);
+            if (loaded === total) callback();
+        };
 
         files.forEach(file => {
             loader.load(

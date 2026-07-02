@@ -32,6 +32,41 @@
 </head>
 <body>
 
+    <!-- Boot loading screen: shown first (over everything) while Level.loadModels
+         pulls the prop models + character rigs. app.js drives the bar from real
+         asset-load progress, then fades this out and reveals the menu. -->
+    <div id="loading-screen">
+        <!-- Swipeable wallpaper carousel. app.js injects the .ls-slide layers (from
+             assets/images/) into the track and the .ls-dot indicators. -->
+        <div class="ls-carousel">
+            <div id="ls-track" class="ls-track"></div>
+        </div>
+        <div class="ls-scrim"></div>
+
+        <!-- Manual navigation: arrows (desktop) + dots; swipe / ←→ keys also work. -->
+        <button id="ls-prev" class="ls-nav ls-prev" aria-label="Previous wallpaper">‹</button>
+        <button id="ls-next" class="ls-nav ls-next" aria-label="Next wallpaper">›</button>
+
+        
+        <div id="ls-dots" class="ls-dots"></div>
+
+        <div class="ls-content">
+            <!-- While loading: progress bar + %. -->
+            <div id="ls-loading">
+                <div class="loading-bar-track"><div id="loading-bar" class="loading-bar-fill"></div></div>
+                <p id="loading-pct" class="loading-pct">0%</p>
+                <p id="loading-hint" class="loading-hint">Loading assets…</p>
+            </div>
+            <!-- Once ready: press-enter / tap-Continue prompt (revealed by app.js).
+                 Dismissing it (Enter key or tapping this button) fades the screen out
+                 and shows the menu. Tap-anywhere is NOT used — swipes navigate. -->
+            <button id="ls-continue" class="ls-continue" style="display:none;">
+                <span class="ls-continue-main">PRESS ENTER TO CONTINUE</span>
+                <span class="ls-continue-sub">tap here to continue</span>
+            </button>
+        </div>
+    </div>
+
     <!-- Shown only in portrait — the game is landscape-only. -->
     <div id="rotate-overlay">
         <div class="rotate-icon">⟳</div>
@@ -211,7 +246,9 @@
         </div>
     </div>
 
-    <div id="menu-screen" class="menu-screen">
+    <!-- Hidden at boot — app.js reveals it once loadModels finishes (see the
+         loading-screen above). -->
+    <div id="menu-screen" class="menu-screen" style="display:none;">
         <button id="btn-fullscreen-menu" class="fs-btn fs-float fs-toggle" title="Fullscreen">⛶</button>
         <div class="menu-card">
             <button id="btn-settings" class="gear-corner" title="Settings">⚙</button>

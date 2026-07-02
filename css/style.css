@@ -67,6 +67,116 @@ body {
     background-position: center, center;
     background-repeat: no-repeat, no-repeat;
 }
+/* --- Boot loading screen (swipeable wallpaper carousel) --- */
+/* Full-screen, above everything (z 200). The first wallpaper is set as a CSS
+   background so art shows on first paint before app.js builds the slides; fades
+   out (.hidden) once the player presses Enter / taps Continue. */
+#loading-screen {
+    position: absolute; inset: 0; z-index: 200; overflow: hidden;
+    background: #000 url('../assets/images/loading_screen1.jpg') center/cover no-repeat;
+    font-family: "Fredoka", "Baloo 2", system-ui, sans-serif;
+    transition: opacity 0.5s ease;
+}
+#loading-screen.hidden { opacity: 0; pointer-events: none; }
+
+/* Horizontal carousel: a flex track of full-width slides moved by translateX.
+   Swipe (pointer drag), the ‹ › arrows, the dots, or ←/→ keys navigate. */
+.ls-carousel { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y; }
+.ls-track {
+    display: flex; width: 100%; height: 100%;
+    transition: transform 0.45s ease; will-change: transform; cursor: grab;
+}
+.ls-track.dragging { transition: none; cursor: grabbing; }
+.ls-slide {
+    flex: 0 0 100%; width: 100%; height: 100%;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+}
+
+/* Vignette + bottom scrim so the title/progress/prompt stay legible over art. */
+.ls-scrim {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0) 26%,
+                                        rgba(0,0,0,0) 52%, rgba(0,0,0,0.78) 100%);
+}
+
+/* Prev/next arrows — vertically centred on the side edges. */
+.ls-nav {
+    position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+    width: 52px; height: 52px; border-radius: 50%; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; line-height: 1; color: var(--cream);
+    background: rgba(0,0,0,0.38); border: 2px solid rgba(255,255,255,0.35);
+    padding-bottom: 4px; transition: background 0.15s ease, transform 0.1s ease;
+}
+.ls-nav:hover { background: rgba(0,0,0,0.62); }
+.ls-nav:active { transform: translateY(-50%) scale(0.92); }
+.ls-prev { left: 16px; }
+.ls-next { right: 16px; }
+
+/* Dot indicators — just above the loading UI. */
+.ls-dots {
+    position: absolute; left: 0; right: 0; bottom: 22%; z-index: 3;
+    display: flex; gap: 9px; justify-content: center;
+}
+.ls-dot {
+    width: 11px; height: 11px; border-radius: 50%; cursor: pointer; padding: 0;
+    background: rgba(255,255,255,0.35); border: 1.5px solid rgba(0,0,0,0.4);
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.ls-dot.active { background: var(--candy-green-1); transform: scale(1.25); }
+
+.ls-title {
+    position: absolute; top: 6%; left: 0; right: 0; z-index: 2;
+    text-align: center; font-size: 2.6rem;
+}
+
+.ls-content {
+    position: absolute; left: 0; right: 0; bottom: 9%; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; padding: 0 20px;
+    pointer-events: none;   /* only the Continue button inside is interactive */
+}
+/* Recessed wooden track with a candy-green fill sweeping to the loaded %. */
+.loading-bar-track {
+    width: min(460px, 82vw); height: 20px; margin: 0 0 12px; overflow: hidden;
+    border-radius: 12px; border: 3px solid var(--wood-edge);
+    background: linear-gradient(180deg, #2c1b0d, #3e2812);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
+}
+.loading-bar-fill {
+    height: 100%; width: 0%; border-radius: 8px;
+    background: linear-gradient(180deg, var(--candy-green-1), var(--candy-green-2));
+    box-shadow: 0 0 10px rgba(155,220,84,0.6);
+    transition: width 0.25s ease;
+}
+.loading-pct {
+    font-size: 1.3rem; font-weight: 700; color: var(--cream); text-align: center;
+    -webkit-text-stroke: 1.5px var(--wood-edge); paint-order: stroke fill;
+    text-shadow: 0 2px 0 var(--wood-edge);
+}
+.loading-hint {
+    color: var(--cream-dim); font-size: 0.78rem; font-weight: 600; text-align: center;
+    letter-spacing: 1px; margin-top: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+
+/* Press-enter / tap-Continue prompt shown once assets are ready (a reset button). */
+.ls-continue {
+    display: flex; flex-direction: column; align-items: center;
+    background: none; border: none; padding: 8px 16px; cursor: pointer;
+    font-family: inherit; pointer-events: auto;
+}
+.ls-continue-main {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--cream);
+    -webkit-text-stroke: 1.5px var(--wood-edge); paint-order: stroke fill;
+    text-shadow: 0 2px 0 var(--wood-edge), 0 0 18px rgba(255,255,255,0.35);
+    animation: ls-blink 1.4s ease-in-out infinite;
+}
+.ls-continue-sub {
+    margin-top: 8px; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px;
+    color: var(--cream-dim); text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+@keyframes ls-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
 /* Chunky wooden plank panel with corner bolts + bevel. */
 .menu-card {
     position: relative; width: 100%; max-width: 420px;
