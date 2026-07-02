@@ -1,2 +1,5 @@
 # Local manual-testing artifacts (staging notes, screenshots) — not shipped.
 testing/
+
+# Local model working folder — not shipped.
+assets/models/env_modals/
