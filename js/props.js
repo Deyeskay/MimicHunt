@@ -142,6 +142,42 @@ const PropLevel = {
         mesh.material.needsUpdate = true;
     },
 
+    // Apply a material preset to every material of a mesh. `preset` is EITHER a string
+    // (a MaterialLibrary preset name) OR an inline values object { albedo, opacity,
+    // emission, emissionIntensity, metalness, roughness, texture, tileX, tileY } — so
+    // ad-hoc editor edits (not saved to the library) can travel inline in the level file.
+    // Materials are CLONED first so GLB instances (which share their template's materials)
+    // don't leak the look; marks them `_customPreset` so foliage-tinting + the wall.png
+    // swap leave them alone. Returns true if a preset was resolved + applied.
+    applyMaterialPreset: function(mesh, preset) {
+        if (!mesh || !preset) return false;
+        const p = (typeof preset === 'string')
+            ? ((typeof MaterialLibrary !== 'undefined' && MaterialLibrary) ? MaterialLibrary[preset] : null)
+            : preset;
+        if (!p) return false;
+        const paint = (m) => {
+            const nm = m.clone();
+            nm.userData = Object.assign({}, m.userData, { _customPreset: true });
+            if (p.albedo && nm.color) nm.color.set(p.albedo);
+            if (p.opacity != null) { nm.opacity = p.opacity; nm.transparent = p.opacity < 1; }
+            if (p.emission && nm.emissive) nm.emissive.set(p.emission);
+            if (p.emissionIntensity != null && 'emissiveIntensity' in nm) nm.emissiveIntensity = p.emissionIntensity;
+            if (p.metalness != null && 'metalness' in nm) nm.metalness = p.metalness;
+            if (p.roughness != null && 'roughness' in nm) nm.roughness = p.roughness;
+            if (p.texture) {
+                const tex = this.getPropTexture(p.texture, { x: p.tileX || 1, y: p.tileY || 1 });
+                if (tex) nm.map = tex;
+            }
+            nm.needsUpdate = true;
+            return nm;
+        };
+        mesh.traverse(o => {
+            if (!o.isMesh || !o.material) return;
+            o.material = Array.isArray(o.material) ? o.material.map(paint) : paint(o.material);
+        });
+        return true;
+    },
+
     applyScale: function(mesh, scale) {
         if (typeof scale === 'number') {
             mesh.scale.setScalar(scale);
@@ -740,6 +776,11 @@ const PropLevel = {
             // Tiling emitted only when it differs from the model default (keeps output slim).
             if (tiled) { out.tileX = data.tileX ?? dt.x; out.tileY = data.tileY ?? dt.y; }
         }
+
+        // Material chosen/edited in the editor (any model): either a MaterialLibrary
+        // preset NAME (string) or an inline values OBJECT for ad-hoc edits. The game
+        // applies either form on spawn via applyMaterialPreset.
+        if (data.material) out.material = data.material;
 
         return out;
     },

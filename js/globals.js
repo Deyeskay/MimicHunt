@@ -451,6 +451,28 @@ const Sound = {
         osc.connect(gain).connect(ctx.destination);
         osc.start(t);
         osc.stop(t + 0.3);
+    },
+    // Warm health-restore chime: a soft rising major arpeggio (C5-E5-G5-C6) on pure
+    // sine waves with a gentle bell-like swell + decay. Reads as "healing / restored",
+    // distinct from the bright chiptune coin (pickup) and the sci-fi zaps.
+    heal() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50];   // C5 · E5 · G5 · C6
+        notes.forEach((f, i) => {
+            const dt = i * 0.09;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, t + dt);
+            gain.gain.setValueAtTime(0.0001, t + dt);
+            gain.gain.exponentialRampToValueAtTime(0.12, t + dt + 0.03);   // soft swell
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.55); // bell decay
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(t + dt);
+            osc.stop(t + dt + 0.57);
+        });
     }
 };
 

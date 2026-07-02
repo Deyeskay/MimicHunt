@@ -20,8 +20,17 @@ Each calls `registerLevel('Name', [ ...prop objects... ], options?)`. A prop obj
 { id, model:'tree'|'rock'|'bush'|'wall'|'spawn', x, y, z, bottomY,
   scale:{x,y,z}, rotation:{x,y,z},            // degrees
   collision?, climbable?, hideSpot?,           // optional per-instance gameplay overrides
-  spawnPoint?, seekerSpawn?, hiderSpawn? }      // spawn flags
+  spawnPoint?, seekerSpawn?, hiderSpawn?,       // spawn flags
+  texture?, tileX?, tileY?,                     // cube/wall per-instance texture + tiling
+  material? }                                   // a MaterialLibrary preset name (any model)
 ```
+- `material` is **either** a preset NAME (string) from `js/materiallibrary.js` **or** an
+  inline values OBJECT `{ albedo, opacity, emission, emissionIntensity, metalness,
+  roughness, texture?, tileX?, tileY? }`. The game paints either form on spawn via
+  `PropLevel.applyMaterialPreset` (clones the mesh's materials so instances don't share).
+  In the editor, **Apply**-ing a 📚 Library preset stores the name; **ad-hoc slider edits**
+  are captured inline (so they export even without saving to the library). Uploaded image
+  maps can't be inlined — use Save-to-`.glb` or a library texture for those.
 - Gameplay flags are optional; omitted ones fall back to the prefab
   (see PROP_SYSTEM.md `resolveGameplay`). **forest.js** and the rebuilt **arena.js**
   omit the baked `"climbable": false` lines, so rocks/bushes inherit climbable from the

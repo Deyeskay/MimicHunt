@@ -51,7 +51,13 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8731/index.html)",
       "Bash(node -e \"const fs=require\\('fs'\\);const h=fs.readFileSync\\('editor.html','utf8'\\);const m=[...h.matchAll\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\)].map\\(x=>x[1]\\).join\\('\\\\n;\\\\n'\\);const vm=require\\('vm'\\);try{new vm.Script\\(m\\);console.log\\('editor inline JS: OK'\\)}catch\\(e\\){console.log\\('editor JS ERROR:',e.message\\)}\")",
       "Bash(node -e ' *)",
-      "mcp__chrome-devtools__list_pages"
+      "mcp__chrome-devtools__list_pages",
+      "Bash(node --check testing/shader-tuner.js)",
+      "Bash(node --check testing/dev-harness.js)",
+      "Bash(node \"C:/Users/dindi/AppData/Local/Temp/claude/c--Users-dindi-Downloads-HIdeNHunt/2f558094-148d-4ded-8abf-59c7df97708b/scratchpad/gen_arena.js\")",
+      "Bash(node --check js/levels/arena.js)",
+      "Bash(git commit -m '@ *)",
+      "PowerShell(git add -A -- docs editor.html js \"assets/textures/color_rock_wall \\(1\\).png\" \"assets/textures/rock_wall \\(1\\).png\" assets/textures/color_rock_wall.png assets/textures/rock_wall.png)"
     ],
     "additionalDirectories": [
       "C:\\Users\\dindi"

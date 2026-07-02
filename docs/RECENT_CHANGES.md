@@ -5,6 +5,36 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **"Seeker" renamed to "Hunter" in the UI (display-only).** Files: `js/ui.js`, `js/level.js`.
+  New `UI.roleLabel(role)` maps `Seeker → Hunter`; used by the lobby role toggle + chip,
+  the in-game role badge, the players list, and the lobby warning. Nameplate fallback shows
+  `HUNTER`. The internal role id stays `'Seeker'` everywhere (logic/protocol unchanged).
+
+- **Heal power now plays a proper restore chime.** Files: `js/globals.js`, `js/network.js`.
+  Added `Sound.heal()` — a warm rising major arpeggio (C5-E5-G5-C6, sine, bell decay) —
+  played to the local player when the heal power restores health (with the existing
+  "HEALTH RESTORED" flash). Previously the only power-use audio was the pickup coin blip.
+
+- **Material Library — named material presets (editor → export → game).** Files:
+  `js/materiallibrary.js` (new), `index.html`, `editor.html`, `js/props.js`, `js/level.js`.
+  - New `js/materiallibrary.js` defines `MaterialLibrary` = named presets
+    `{ albedo, opacity, emission, emissionIntensity, metalness, roughness, texture,
+    tileX, tileY }`. Loaded before `props.js` in both `index.html` and `editor.html`.
+  - `PropLevel.applyMaterialPreset(mesh, name)` clones the mesh's materials (so GLB
+    instances don't leak the look) and paints them; marks `_customPreset` so foliage-tint
+    leaves them alone. `exportProp` emits `prop.material`; `spawnProp` applies it on load.
+  - **Editor:** Materials panel gained a **Library** dropdown + **Apply**, and a 📚 button
+    opening a **Material Library** modal (click a preset to paint the selection · *Save
+    current material as <name>* · **Export** the drop-in `materiallibrary.js` text to paste
+    back into the file — same flow as Export Level / prefabs.js). Import restores
+    `prop.material`.
+  - **Ad-hoc edits export too:** `prop.material` may be a preset NAME (string) OR an inline
+    values OBJECT. Live slider/colour tweaks (not saved to the library) are captured into an
+    inline `data.material` (`_afterMaterialEdit` → `_presetFromMaterial`) so they travel with
+    the level export; `applyMaterialPreset` accepts either form; **Reset** clears it.
+    (Uploaded image maps still need Save-to-`.glb` / a library texture — a data-URL can't be
+    inlined.)
+
 - **Airdrop-beam schedule now derived from match length.** Files: `js/globals.js`,
   `js/network.js`, `js/ui.js`. Replaced the fixed `GOLD_BEAM_TIMES=[120,360,600]` /
   `PURPLE_BEAM_TIMES=[180,420,660]` lists with `computeBeamSchedule(huntLen)`, which

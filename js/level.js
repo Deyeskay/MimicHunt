@@ -193,6 +193,7 @@ const Level = {
                 const mats = Array.isArray(o.material) ? o.material : [o.material];
                 mats.forEach(m => {
                     if (!m.color) return;
+                    if (m.userData && m.userData._customPreset) return;   // custom material wins
                     if (!m.userData) m.userData = {};
                     if (!m.userData._foliageBase) m.userData._foliageBase = m.color.clone();
                     const b = m.userData._foliageBase;
@@ -464,6 +465,8 @@ const Level = {
         }
 
         PropLevel.enrichProp(prop, mesh);
+        // A level-authored material preset overrides the model's own materials.
+        if (prop.material) PropLevel.applyMaterialPreset(mesh, prop.material);
         mesh.userData.propData = prop;
         // Props both cast and RECEIVE shadows so they're grounded with contact
         // shadows on the grass (and on each other) instead of looking like they float.
@@ -1660,7 +1663,7 @@ const Level = {
             return;
         }
 
-        const label = p.name || (p.role === 'Seeker' ? 'SEEKER' : 'HIDER');
+        const label = p.name || (p.role === 'Seeker' ? 'HUNTER' : 'HIDER');
         if (sprite && (sprite.userData.text !== label || sprite.userData.color !== color)) {
             mesh.remove(sprite);            // name OR color changed → rebuild
             if (sprite.userData.tex) sprite.userData.tex.dispose();

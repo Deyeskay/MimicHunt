@@ -238,6 +238,10 @@ const UI = {
         this.updateStatus("");
     },
 
+    // Player-facing display name for a role. The internal role id stays 'Seeker'
+    // everywhere in the logic/protocol; only what the UI shows changes.
+    roleLabel: function(role) { return role === 'Seeker' ? 'Hunter' : role; },
+
     updateLobby: function() {
         const container = document.getElementById('player-list-container');
         container.innerHTML = "";
@@ -270,7 +274,7 @@ const UI = {
                 roleWrap.className = 'role-toggle';
                 ['Hider', 'Seeker'].forEach(r => {
                     const b = document.createElement('button');
-                    b.textContent = `${ROLE_ICONS[r]} ${r}`;
+                    b.textContent = `${ROLE_ICONS[r]} ${this.roleLabel(r)}`;
                     b.dataset.role = r;
                     b.className = 'role-btn' + (p.role === r ? ' role-active' : '');
                     b.onclick = () => Network.setLocalRole(r);
@@ -280,7 +284,7 @@ const UI = {
             } else {
                 const roleSpan = document.createElement('span');
                 roleSpan.className = 'role-tag role-tag-' + (p.role === 'Seeker' ? 'seeker' : 'hider');
-                roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${p.role}`;
+                roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${this.roleLabel(p.role)}`;
                 item.appendChild(roleSpan);
             }
 
@@ -297,7 +301,7 @@ const UI = {
         const composOk = seekers >= 1 && hiders >= 1;
         const allReady = total > 0 && readyCount === total;
         let warning = '';
-        if (!composOk) warning = 'Need at least 1 Hider and 1 Seeker to start.';
+        if (!composOk) warning = 'Need at least 1 Hider and 1 Hunter to start.';
         else if (!allReady) warning = 'Waiting for all players to be ready.';
         const warnEl = document.getElementById('lobby-warning');
         if (warnEl) warnEl.textContent = warning;
@@ -343,7 +347,7 @@ const UI = {
 
             const roleSpan = document.createElement('span');
             roleSpan.className = 'role-tag role-tag-' + (p.role === 'Seeker' ? 'seeker' : 'hider');
-            roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${p.role}`;
+            roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${this.roleLabel(p.role)}`;
             item.appendChild(roleSpan);
 
             const statusSpan = document.createElement('span');
@@ -377,7 +381,7 @@ const UI = {
 
         const isSeeker = me.role === 'Seeker';
         const suffix = (!isSeeker && me.isCaught) ? ' (ELIMINATED)' : '';
-        document.getElementById('role-badge').innerText = `YOU — ${me.role.toUpperCase()}${suffix}`;
+        document.getElementById('role-badge').innerText = `YOU — ${this.roleLabel(me.role).toUpperCase()}${suffix}`;
         document.getElementById('role-badge').style.color = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';
         const roleCard = document.getElementById('role-card');
         if (roleCard) roleCard.style.borderColor = isSeeker ? 'var(--accent-red)' : 'var(--accent-green)';

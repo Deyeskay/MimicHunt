@@ -354,6 +354,12 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 .mat-row{ display:flex; align-items:center; gap:8px; margin:5px 0; font-size:12px; color:var(--muted); }
 .mat-row > span:first-child{ flex:0 0 64px; }
 .mat-row input[type=range]{ flex:1; }
+/* A .btn defaults to width:100% (full-width sidebar buttons); inline in a mat-row that
+   would swallow the whole row and squash the adjacent field. Keep inline buttons natural
+   and let the select/text field (flex:1) fill the remaining space. */
+.mat-row .btn{ width:auto; flex:0 0 auto; }
+.mat-row .mat-select{ flex:1; min-width:0; margin-bottom:0; }
+.mat-row .modal-input{ flex:1; min-width:0; margin-bottom:0; }
 .mat-row input[type=color]{ width:34px; height:24px; border:1px solid var(--border);
     background:transparent; cursor:pointer; padding:0; border-radius:4px; }
 .mat-val{ flex:0 0 34px; text-align:right; font-style:normal; color:var(--text); }
@@ -527,12 +533,17 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
         <div class="field" id="materialsField">
             <label class="mat-head">Materials
                 <span class="mat-head-actions">
+                    <span id="matLibOpen" class="mat-save" title="Material library — choose / save / export">📚</span>
                     <span id="matResetBtn" class="mat-save" title="Reset materials to original values" style="display:none;">↺</span>
                     <span id="matSaveBtn" class="mat-save" title="Save edited material to a new .glb" style="display:none;">💾</span>
                 </span>
             </label>
-            <div id="matNote" class="pf-empty">Select one object to edit materials.</div>
+            <div id="matNote" class="pf-empty">Select an object to edit materials.</div>
             <div id="matControls" style="display:none;">
+                <div class="mat-row"><span>Library</span>
+                    <select id="matLibSelect" class="mat-select" style="flex:1;"></select>
+                    <button class="btn btn-mini" id="matLibApplyBtn" title="Apply this material to the selection">Apply</button>
+                </div>
                 <select id="matSelect" class="mat-select" style="display:none;"></select>
                 <div class="mat-row"><span>Albedo</span><input id="matColor" type="color"></div>
                 <div class="mat-row"><span>Opacity</span>
@@ -589,6 +600,31 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 
     </div>
 
+</div>
+
+<!-- Material Library modal -->
+<div id="matLibModal" class="help-modal">
+    <div class="help-card">
+        <h2>Material Library</h2>
+
+        <label class="modal-label">Apply to selection</label>
+        <div id="matLibList" class="modal-list" style="max-height:180px; overflow:auto;"></div>
+
+        <label class="modal-label">Save current material as</label>
+        <div class="mat-row">
+            <input id="matLibName" class="modal-input" type="text" placeholder="e.g. Mossy Green" maxlength="40" style="flex:1;">
+            <button class="btn" onclick="saveCurrentMaterialToLibrary()">💾 Save</button>
+        </div>
+        <div id="matLibStatus" class="modal-status"></div>
+
+        <label class="modal-label">Export → paste into <code>js/materiallibrary.js</code></label>
+        <textarea id="matLibExportText" class="modal-textarea" spellcheck="false" readonly></textarea>
+
+        <div class="modal-actions">
+            <button class="btn btn-primary" onclick="copyMaterialLibrary()">📋 Copy</button>
+            <button class="btn" onclick="closeModal('matLibModal')">Close</button>
+        </div>
+    </div>
 </div>
 
 <!-- Save / Export Level modal -->
@@ -707,6 +743,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 <script src="js/prefabs.js?v=8"></script>
+<script src="js/materiallibrary.js?v=8"></script>
 <script src="js/props.js?v=8"></script>
 
 <script>
@@ -1736,6 +1773,36 @@ function _markMatDirty() {
     _setMatDirtyUI(true);
 }
 
+// Read a Three.js material into a plain inline-preset object (rounded, slim). Used to
+// bake ad-hoc slider edits into the prop's data so they export even without the library.
+function _presetFromMaterial(m) {
+    const r = (v, n) => Number(Number(v).toFixed(n));
+    const p = {
+        albedo: m.color ? '#' + m.color.getHexString() : '#ffffff',
+        opacity: r(m.opacity != null ? m.opacity : 1, 2),
+        emission: m.emissive ? '#' + m.emissive.getHexString() : '#000000',
+        emissionIntensity: r(m.emissiveIntensity != null ? m.emissiveIntensity : 0, 2)
+    };
+    if ('metalness' in m) p.metalness = r(m.metalness, 2);
+    if ('roughness' in m) p.roughness = r(m.roughness, 2);
+    return p;
+}
+
+// Called after a live slider/colour edit: snapshot each edited object's current material
+// into an INLINE data.material object (replacing any library-name string) so the tweak
+// travels with the level on export, then mark dirty. (Uploaded maps can't be inlined —
+// use Save-to-.glb or the library for those.)
+function _afterMaterialEdit() {
+    const objs = selectedObjects.length ? selectedObjects
+               : (_singleSelected() ? [_singleSelected()] : []);
+    objs.forEach(o => {
+        if (o.userData && o.userData.data && o.userData.data.model === 'spawn') return;
+        const m = getObjectMaterials(o)[0];
+        if (m) o.userData.data.material = _presetFromMaterial(m);
+    });
+    _markMatDirty();
+}
+
 // Rebuild the Materials section for the current selection (single object only).
 function refreshMaterialsSection() {
     const note = document.getElementById('matNote');
@@ -1777,6 +1844,12 @@ function refreshMaterialsSection() {
     } else {
         sel.style.display = 'none';
         s.userData._matIdx = 0;
+    }
+    // Reflect the lead's applied library material (if any) in the inline dropdown.
+    const libSel = document.getElementById('matLibSelect');
+    if (libSel && s.userData.data && s.userData.data.material &&
+        _matLibNames().indexOf(s.userData.data.material) !== -1) {
+        libSel.value = s.userData.data.material;
     }
     _populateMatControls();
 }
@@ -1822,32 +1895,32 @@ function wireMaterialControls() {
     byId('matColor').addEventListener('input', e => {
         let any = false;
         _matEditTargets().forEach(m => { if (m.color) { m.color.set(e.target.value); m.needsUpdate = true; any = true; } });
-        if (any) _markMatDirty();
+        if (any) _afterMaterialEdit();
     });
     byId('matOpacity').addEventListener('input', e => {
         const v = parseFloat(e.target.value); const t = _matEditTargets(); if (!t.length) return;
         t.forEach(m => { m.opacity = v; m.transparent = v < 1; m.needsUpdate = true; });
-        byId('matOpacityVal').textContent = v.toFixed(2); _markMatDirty();
+        byId('matOpacityVal').textContent = v.toFixed(2); _afterMaterialEdit();
     });
     byId('matEmissive').addEventListener('input', e => {
         let any = false;
         _matEditTargets().forEach(m => { if (m.emissive) { m.emissive.set(e.target.value); m.needsUpdate = true; any = true; } });
-        if (any) _markMatDirty();
+        if (any) _afterMaterialEdit();
     });
     byId('matEmissiveInt').addEventListener('input', e => {
         const v = parseFloat(e.target.value); let any = false;
         _matEditTargets().forEach(m => { if (m.emissiveIntensity != null) { m.emissiveIntensity = v; m.needsUpdate = true; any = true; } });
-        if (any) _markMatDirty();
+        if (any) _afterMaterialEdit();
     });
     byId('matMetalness').addEventListener('input', e => {
         const v = parseFloat(e.target.value); let any = false;
         _matEditTargets().forEach(m => { if ('metalness' in m) { m.metalness = v; m.needsUpdate = true; any = true; } });
-        byId('matMetalnessVal').textContent = v.toFixed(2); if (any) _markMatDirty();
+        byId('matMetalnessVal').textContent = v.toFixed(2); if (any) _afterMaterialEdit();
     });
     byId('matRoughness').addEventListener('input', e => {
         const v = parseFloat(e.target.value); let any = false;
         _matEditTargets().forEach(m => { if ('roughness' in m) { m.roughness = v; m.needsUpdate = true; any = true; } });
-        byId('matRoughnessVal').textContent = v.toFixed(2); if (any) _markMatDirty();
+        byId('matRoughnessVal').textContent = v.toFixed(2); if (any) _afterMaterialEdit();
     });
 
     byId('matMapUploadBtn').addEventListener('click', () => byId('matMapFile').click());
@@ -1881,6 +1954,155 @@ function wireMaterialControls() {
     });
 }
 wireMaterialControls();
+
+// ---------------------------------------------------------------------------
+// Material Library — named material presets (js/materiallibrary.js). Pick one to
+// paint the selection, save the current material as a new preset, and export the
+// whole library as a drop-in materiallibrary.js (just like Export Level / prefabs.js).
+// ---------------------------------------------------------------------------
+function _matLibNames() {
+    return (typeof MaterialLibrary !== 'undefined' && MaterialLibrary) ? Object.keys(MaterialLibrary) : [];
+}
+
+// Fill the inline Library dropdown; keep the current pick if still present.
+function refreshMatLibSelect() {
+    const sel = document.getElementById('matLibSelect');
+    if (!sel) return;
+    const prev = sel.value;
+    const names = _matLibNames();
+    sel.innerHTML = '';
+    if (!names.length) {
+        const o = document.createElement('option');
+        o.value = ''; o.textContent = '(no materials — save one)';
+        sel.appendChild(o);
+        return;
+    }
+    names.forEach(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); });
+    if (prev && names.indexOf(prev) !== -1) sel.value = prev;
+}
+
+// Apply a preset to every selected object: store the name on its data + paint it live.
+function applyLibraryMaterialToSelection(name) {
+    if (!name || !selectedObjects.length) return;
+    let applied = 0;
+    selectedObjects.forEach(o => {
+        if (o.userData && o.userData.data && o.userData.data.model === 'spawn') return;
+        o.userData.data.material = name;
+        if (PropLevel.applyMaterialPreset(o, name)) applied++;
+    });
+    if (applied) { _markMatDirty(); refreshMaterialsSection(); }
+    return applied;
+}
+
+// Read the panel's current (display) material into a preset object.
+function _currentMaterialPreset() {
+    const m = _displayMat();
+    if (!m) return null;
+    const preset = {
+        albedo: m.color ? '#' + m.color.getHexString() : '#ffffff',
+        opacity: (m.opacity != null ? m.opacity : 1),
+        emission: m.emissive ? '#' + m.emissive.getHexString() : '#000000',
+        emissionIntensity: (m.emissiveIntensity != null ? m.emissiveIntensity : 0),
+        metalness: ('metalness' in m) ? m.metalness : 0,
+        roughness: ('roughness' in m) ? m.roughness : 1
+    };
+    // Carry a per-instance texture (cube/wall) if the lead object has one.
+    const lead = _matLead();
+    const d = lead && lead.userData && lead.userData.data;
+    if (d && d.texture) { preset.texture = d.texture; preset.tileX = d.tileX || 1; preset.tileY = d.tileY || 1; }
+    return preset;
+}
+
+function saveCurrentMaterialToLibrary() {
+    const status = document.getElementById('matLibStatus');
+    const name = (document.getElementById('matLibName').value || '').trim();
+    if (!name) { if (status) status.textContent = 'Enter a material name.'; return; }
+    const preset = _currentMaterialPreset();
+    if (!preset) { if (status) status.textContent = 'Select an object with an editable material first.'; return; }
+    if (typeof MaterialLibrary === 'undefined' || !MaterialLibrary) window.MaterialLibrary = {};
+    const existed = Object.prototype.hasOwnProperty.call(MaterialLibrary, name);
+    MaterialLibrary[name] = preset;
+    refreshMatLibSelect();
+    document.getElementById('matLibSelect').value = name;
+    _buildMatLibList();
+    document.getElementById('matLibExportText').value = buildMaterialLibraryFileString();
+    if (status) status.textContent = (existed ? 'Updated ' : 'Saved ') + '"' + name + '" ✓';
+}
+
+// The drop-in materiallibrary.js text (header preserved + the current library).
+function buildMaterialLibraryFileString() {
+    const header =
+'/*=====================================================================\n' +
+'  materiallibrary.js – Material library (named material presets)\n' +
+'  ---------------------------------------------------------------\n' +
+'  Generated by the level editor\'s Materials -> Library tool.\n' +
+'  Apply to a prop via prop.material = "<name>"; the game paints it on\n' +
+'  spawn (PropLevel.applyMaterialPreset). Fields: albedo, opacity,\n' +
+'  emission, emissionIntensity, metalness, roughness, texture, tileX, tileY.\n' +
+'=====================================================================*/\n\n';
+    const lib = (typeof MaterialLibrary !== 'undefined' && MaterialLibrary) ? MaterialLibrary : {};
+    return header +
+        'const MaterialLibrary = ' + JSON.stringify(lib, null, 4) + ';\n\n' +
+        "if (typeof module !== 'undefined' && module.exports) {\n" +
+        '    module.exports = { MaterialLibrary };\n' +
+        '}\n';
+}
+
+// Clickable list of library materials inside the modal → apply to the selection.
+function _buildMatLibList() {
+    const list = document.getElementById('matLibList');
+    if (!list) return;
+    const names = _matLibNames();
+    list.innerHTML = '';
+    if (!names.length) { list.innerHTML = '<div class="modal-list-empty">No materials yet — save one below.</div>'; return; }
+    names.forEach(name => {
+        const item = document.createElement('div');
+        item.className = 'modal-list-item';
+        const p = MaterialLibrary[name] || {};
+        const sw = document.createElement('span');
+        sw.style.cssText = 'display:inline-block;width:16px;height:16px;border-radius:4px;margin-right:8px;vertical-align:middle;border:1px solid rgba(255,255,255,.25);background:' + (p.albedo || '#888') + ';';
+        const label = document.createElement('span');
+        label.className = 'lvl-name';
+        label.appendChild(sw);
+        label.appendChild(document.createTextNode(name));
+        item.appendChild(label);
+        item.onclick = () => {
+            const n = applyLibraryMaterialToSelection(name);
+            const status = document.getElementById('matLibStatus');
+            if (status) status.textContent = n ? ('Applied "' + name + '" to ' + n + ' object(s).')
+                                               : 'Select one or more objects first.';
+        };
+        list.appendChild(item);
+    });
+}
+
+function openMatLibModal() {
+    _buildMatLibList();
+    document.getElementById('matLibExportText').value = buildMaterialLibraryFileString();
+    document.getElementById('matLibStatus').textContent = '';
+    const nameInput = document.getElementById('matLibName');
+    if (nameInput) nameInput.value = '';
+    openModal('matLibModal');
+}
+
+function copyMaterialLibrary() {
+    const ta = document.getElementById('matLibExportText');
+    ta.style.display = 'block'; ta.focus(); ta.select();
+    const status = document.getElementById('matLibStatus');
+    try { document.execCommand('copy'); if (status) status.textContent = 'Copied — paste into js/materiallibrary.js ✓'; }
+    catch (e) { if (status) status.textContent = 'Copy failed — select the text and copy manually.'; }
+}
+
+(function wireMaterialLibrary() {
+    const apply = document.getElementById('matLibApplyBtn');
+    const open = document.getElementById('matLibOpen');
+    if (apply) apply.addEventListener('click', () => {
+        const sel = document.getElementById('matLibSelect');
+        if (sel && sel.value) applyLibraryMaterialToSelection(sel.value);
+    });
+    if (open) open.addEventListener('click', openMatLibModal);
+    refreshMatLibSelect();
+})();
 
 // ---------------------------------------------------------------------------
 // Prop texture picker — per-instance texture (cube + wall) from assets/textures/.
@@ -2130,6 +2352,8 @@ function resetMaterials() {
             m.needsUpdate = true;
         });
         s.userData.materialDirty = false;
+        // Drop any inline/library material so the reset prop exports clean.
+        if (s.userData.data) delete s.userData.data.material;
     });
     _setMatDirtyUI(false);
     _populateMatControls();
@@ -3315,13 +3539,18 @@ function buildEditorObject(prop)
                 texture:     prop.model === "cube" ? (prop.texture ?? PropLevel.DEFAULT_CUBE_TEXTURE)
                            : (prop.model === "wall" ? prop.texture : undefined),
                 tileX:       prop.tileX,
-                tileY:       prop.tileY
+                tileY:       prop.tileY,
+                material:    prop.material || undefined
             }
     };
 
     // Imported props render with their saved texture + tiling (createEditorMesh used a default).
     if(clone.userData.data.texture)
         PropLevel.applyPropTexture(clone, clone.userData.data.texture, _dataTiling(clone.userData.data));
+
+    // Restore a level-authored material preset so the imported prop looks as saved.
+    if(clone.userData.data.material)
+        PropLevel.applyMaterialPreset(clone, clone.userData.data.material);
 
     PropLevel.syncBoundsToData(clone);
 

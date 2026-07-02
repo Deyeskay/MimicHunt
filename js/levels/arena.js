@@ -1,75 +1,87 @@
-registerLevel('Arena', [
+registerLevel("Arena", [
     {
         "id": "wall_1",
         "model": "wall",
         "x": 0,
-        "y": 3,
+        "y": 4.78,
         "z": 22,
-        "bottomY": 0,
+        "bottomY": -0.16,
         "scale": {
             "x": 46,
-            "y": 6,
+            "y": 9.88,
             "z": 0.6
         },
         "rotation": {
             "x": 0,
             "y": 0,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 20,
+        "tileY": 2
     },
     {
         "id": "wall_2",
         "model": "wall",
         "x": -22,
-        "y": 3,
+        "y": 4.78,
         "z": 0,
-        "bottomY": 0,
+        "bottomY": -0.16,
         "scale": {
             "x": 46,
-            "y": 6,
+            "y": 9.88,
             "z": 0.6
         },
         "rotation": {
             "x": 0,
             "y": 90,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 20,
+        "tileY": 2
     },
     {
         "id": "wall_3",
         "model": "wall",
         "x": 0,
-        "y": 3,
+        "y": 4.78,
         "z": -22,
-        "bottomY": 0,
+        "bottomY": -0.16,
         "scale": {
             "x": 46,
-            "y": 6,
+            "y": 9.88,
             "z": 0.6
         },
         "rotation": {
-            "x": 0,
-            "y": 180,
-            "z": 0
-        }
+            "x": -180,
+            "y": 0,
+            "z": -180
+        },
+        "texture": "rock_wall.png",
+        "tileX": 20,
+        "tileY": 2
     },
     {
         "id": "wall_4",
         "model": "wall",
         "x": 22,
-        "y": 3,
+        "y": 4.78,
         "z": 0,
-        "bottomY": 0,
+        "bottomY": -0.16,
         "scale": {
             "x": 46,
-            "y": 6,
+            "y": 9.88,
             "z": 0.6
         },
         "rotation": {
             "x": 0,
-            "y": 270,
+            "y": -90,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 20,
+        "tileY": 2
     },
     {
         "id": "cube_1",
@@ -138,7 +150,7 @@ registerLevel('Arena', [
         "x": 6.5,
         "y": 0.04,
         "z": 1,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.4,
             "y": 1.4,
@@ -156,7 +168,7 @@ registerLevel('Arena', [
         "x": -6.2,
         "y": 0.04,
         "z": -1.3,
-        "bottomY": 0,
+        "bottomY": -0.02,
         "scale": {
             "x": 1.6,
             "y": 1.6,
@@ -212,7 +224,7 @@ registerLevel('Arena', [
         "x": 13.5,
         "y": 0.04,
         "z": 16.5,
-        "bottomY": 0,
+        "bottomY": -0.07,
         "scale": {
             "x": 2.6,
             "y": 2.6,
@@ -230,7 +242,7 @@ registerLevel('Arena', [
         "x": 16.5,
         "y": 0.04,
         "z": 12.8,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 2.2,
             "y": 2.2,
@@ -248,7 +260,7 @@ registerLevel('Arena', [
         "x": 12.6,
         "y": 0.04,
         "z": 13.4,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.1,
             "y": 1.1,
@@ -266,7 +278,7 @@ registerLevel('Arena', [
         "x": 14.8,
         "y": 0.04,
         "z": 14.2,
-        "bottomY": 0,
+        "bottomY": -0.02,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -284,7 +296,7 @@ registerLevel('Arena', [
         "x": 11.6,
         "y": 0.04,
         "z": 16.8,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -340,7 +352,7 @@ registerLevel('Arena', [
         "x": -16.5,
         "y": 0.04,
         "z": 13.5,
-        "bottomY": 0,
+        "bottomY": -0.07,
         "scale": {
             "x": 2.6,
             "y": 2.6,
@@ -358,7 +370,7 @@ registerLevel('Arena', [
         "x": -12.8,
         "y": 0.04,
         "z": 16.5,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 2.2,
             "y": 2.2,
@@ -376,7 +388,7 @@ registerLevel('Arena', [
         "x": -13.4,
         "y": 0.04,
         "z": 12.6,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.1,
             "y": 1.1,
@@ -394,7 +406,7 @@ registerLevel('Arena', [
         "x": -14.2,
         "y": 0.04,
         "z": 14.8,
-        "bottomY": 0,
+        "bottomY": -0.02,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -412,7 +424,7 @@ registerLevel('Arena', [
         "x": -16.8,
         "y": 0.04,
         "z": 11.6,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -468,7 +480,7 @@ registerLevel('Arena', [
         "x": -13.5,
         "y": 0.04,
         "z": -16.5,
-        "bottomY": 0,
+        "bottomY": -0.07,
         "scale": {
             "x": 2.6,
             "y": 2.6,
@@ -486,7 +498,7 @@ registerLevel('Arena', [
         "x": -16.5,
         "y": 0.04,
         "z": -12.8,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 2.2,
             "y": 2.2,
@@ -504,7 +516,7 @@ registerLevel('Arena', [
         "x": -12.6,
         "y": 0.04,
         "z": -13.4,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.1,
             "y": 1.1,
@@ -522,7 +534,7 @@ registerLevel('Arena', [
         "x": -14.8,
         "y": 0.04,
         "z": -14.2,
-        "bottomY": 0,
+        "bottomY": -0.02,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -540,7 +552,7 @@ registerLevel('Arena', [
         "x": -11.6,
         "y": 0.04,
         "z": -16.8,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -596,16 +608,16 @@ registerLevel('Arena', [
         "x": 16.5,
         "y": 0.04,
         "z": -13.5,
-        "bottomY": 0,
+        "bottomY": -0.07,
         "scale": {
             "x": 2.6,
             "y": 2.6,
             "z": 2.6
         },
         "rotation": {
-            "x": 0,
-            "y": 105,
-            "z": 0
+            "x": -180,
+            "y": 75,
+            "z": -180
         }
     },
     {
@@ -614,16 +626,16 @@ registerLevel('Arena', [
         "x": 12.8,
         "y": 0.04,
         "z": -16.5,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 2.2,
             "y": 2.2,
             "z": 2.2
         },
         "rotation": {
-            "x": 0,
-            "y": 120,
-            "z": 0
+            "x": -180,
+            "y": 60,
+            "z": -180
         }
     },
     {
@@ -632,7 +644,7 @@ registerLevel('Arena', [
         "x": 13.4,
         "y": 0.04,
         "z": -12.6,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.1,
             "y": 1.1,
@@ -650,7 +662,7 @@ registerLevel('Arena', [
         "x": 14.2,
         "y": 0.04,
         "z": -14.8,
-        "bottomY": 0,
+        "bottomY": -0.02,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -668,7 +680,7 @@ registerLevel('Arena', [
         "x": 16.8,
         "y": 0.04,
         "z": -11.6,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -696,7 +708,10 @@ registerLevel('Arena', [
             "x": 0,
             "y": 0,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "rock_10",
@@ -704,7 +719,7 @@ registerLevel('Arena', [
         "x": -5.5,
         "y": 0.04,
         "z": 15.2,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.6,
             "y": 1.6,
@@ -722,7 +737,7 @@ registerLevel('Arena', [
         "x": 5.5,
         "y": 0.04,
         "z": 15.2,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -769,7 +784,10 @@ registerLevel('Arena', [
             "x": 0,
             "y": 90,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "rock_12",
@@ -777,7 +795,7 @@ registerLevel('Arena', [
         "x": -15.2,
         "y": 0.04,
         "z": -5.5,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.6,
             "y": 1.6,
@@ -795,7 +813,7 @@ registerLevel('Arena', [
         "x": -15.2,
         "y": 0.04,
         "z": 5.5,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -839,10 +857,13 @@ registerLevel('Arena', [
             "z": 0.6
         },
         "rotation": {
-            "x": 0,
-            "y": 180,
-            "z": 0
-        }
+            "x": -180,
+            "y": 0,
+            "z": -180
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "rock_14",
@@ -850,7 +871,7 @@ registerLevel('Arena', [
         "x": 5.5,
         "y": 0.04,
         "z": -15.2,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.6,
             "y": 1.6,
@@ -868,16 +889,16 @@ registerLevel('Arena', [
         "x": -5.5,
         "y": 0.04,
         "z": -15.2,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.5,
             "y": 1.5,
             "z": 1.5
         },
         "rotation": {
-            "x": 0,
-            "y": 110,
-            "z": 0
+            "x": -180,
+            "y": 70,
+            "z": -180
         }
     },
     {
@@ -893,9 +914,9 @@ registerLevel('Arena', [
             "z": 2
         },
         "rotation": {
-            "x": 0,
-            "y": 180,
-            "z": 0
+            "x": -180,
+            "y": 0,
+            "z": -180
         },
         "texture": "crate.png"
     },
@@ -913,9 +934,12 @@ registerLevel('Arena', [
         },
         "rotation": {
             "x": 0,
-            "y": 270,
+            "y": -90,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "rock_16",
@@ -923,7 +947,7 @@ registerLevel('Arena', [
         "x": 15.2,
         "y": 0.04,
         "z": 5.5,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.6,
             "y": 1.6,
@@ -941,16 +965,16 @@ registerLevel('Arena', [
         "x": 15.2,
         "y": 0.04,
         "z": -5.5,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.5,
             "y": 1.5,
             "z": 1.5
         },
         "rotation": {
-            "x": 0,
-            "y": 165,
-            "z": 0
+            "x": -180,
+            "y": 15,
+            "z": -180
         }
     },
     {
@@ -967,7 +991,7 @@ registerLevel('Arena', [
         },
         "rotation": {
             "x": 0,
-            "y": 270,
+            "y": -90,
             "z": 0
         },
         "texture": "crate.png"
@@ -978,7 +1002,7 @@ registerLevel('Arena', [
         "x": 9.5,
         "y": 0.04,
         "z": 0,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -996,7 +1020,7 @@ registerLevel('Arena', [
         "x": 6.72,
         "y": 0.04,
         "z": 6.72,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -1014,16 +1038,16 @@ registerLevel('Arena', [
         "x": 0,
         "y": 0.04,
         "z": 9.5,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
             "z": 1.5
         },
         "rotation": {
-            "x": 0,
-            "y": 94,
-            "z": 0
+            "x": -180,
+            "y": 86,
+            "z": -180
         }
     },
     {
@@ -1032,16 +1056,16 @@ registerLevel('Arena', [
         "x": -6.72,
         "y": 0.04,
         "z": 6.72,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
             "z": 1.5
         },
         "rotation": {
-            "x": 0,
-            "y": 141,
-            "z": 0
+            "x": -180,
+            "y": 39,
+            "z": -180
         }
     },
     {
@@ -1050,16 +1074,16 @@ registerLevel('Arena', [
         "x": -9.5,
         "y": 0.04,
         "z": 0,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
             "z": 1.5
         },
         "rotation": {
-            "x": 0,
-            "y": 188,
-            "z": 0
+            "x": -180,
+            "y": -8,
+            "z": -180
         }
     },
     {
@@ -1068,16 +1092,16 @@ registerLevel('Arena', [
         "x": -6.72,
         "y": 0.04,
         "z": -6.72,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
             "z": 1.5
         },
         "rotation": {
-            "x": 0,
-            "y": 235,
-            "z": 0
+            "x": -180,
+            "y": -55,
+            "z": -180
         }
     },
     {
@@ -1086,7 +1110,7 @@ registerLevel('Arena', [
         "x": 0,
         "y": 0.04,
         "z": -9.5,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -1094,7 +1118,7 @@ registerLevel('Arena', [
         },
         "rotation": {
             "x": 0,
-            "y": 282,
+            "y": -78,
             "z": 0
         }
     },
@@ -1104,7 +1128,7 @@ registerLevel('Arena', [
         "x": 6.72,
         "y": 0.04,
         "z": -6.72,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.5,
             "y": 1.5,
@@ -1112,7 +1136,7 @@ registerLevel('Arena', [
         },
         "rotation": {
             "x": 0,
-            "y": 329,
+            "y": -31,
             "z": 0
         }
     },
@@ -1122,7 +1146,7 @@ registerLevel('Arena', [
         "x": 11.55,
         "y": 0.04,
         "z": 4.78,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
@@ -1140,7 +1164,7 @@ registerLevel('Arena', [
         "x": 4.78,
         "y": 0.04,
         "z": 11.55,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
@@ -1158,16 +1182,16 @@ registerLevel('Arena', [
         "x": -4.78,
         "y": 0.04,
         "z": 11.55,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
             "z": 1.2
         },
         "rotation": {
-            "x": 0,
-            "y": 126,
-            "z": 0
+            "x": -180,
+            "y": 54,
+            "z": -180
         }
     },
     {
@@ -1176,16 +1200,16 @@ registerLevel('Arena', [
         "x": -11.55,
         "y": 0.04,
         "z": 4.78,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
             "z": 1.2
         },
         "rotation": {
-            "x": 0,
-            "y": 189,
-            "z": 0
+            "x": -180,
+            "y": -9,
+            "z": -180
         }
     },
     {
@@ -1194,16 +1218,16 @@ registerLevel('Arena', [
         "x": -11.55,
         "y": 0.04,
         "z": -4.78,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
             "z": 1.2
         },
         "rotation": {
-            "x": 0,
-            "y": 252,
-            "z": 0
+            "x": -180,
+            "y": -72,
+            "z": -180
         }
     },
     {
@@ -1212,7 +1236,7 @@ registerLevel('Arena', [
         "x": -4.78,
         "y": 0.04,
         "z": -11.55,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
@@ -1220,7 +1244,7 @@ registerLevel('Arena', [
         },
         "rotation": {
             "x": 0,
-            "y": 315,
+            "y": -45,
             "z": 0
         }
     },
@@ -1230,7 +1254,7 @@ registerLevel('Arena', [
         "x": 4.78,
         "y": 0.04,
         "z": -11.55,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
@@ -1248,7 +1272,7 @@ registerLevel('Arena', [
         "x": 11.55,
         "y": 0.04,
         "z": -4.78,
-        "bottomY": 0,
+        "bottomY": 0.05,
         "scale": {
             "x": 1.2,
             "y": 1.2,
@@ -1276,7 +1300,10 @@ registerLevel('Arena', [
             "x": 0,
             "y": 45,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "wall_10",
@@ -1291,10 +1318,13 @@ registerLevel('Arena', [
             "z": 0.5
         },
         "rotation": {
-            "x": 0,
-            "y": 135,
-            "z": 0
-        }
+            "x": -180,
+            "y": 45,
+            "z": -180
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "wall_11",
@@ -1309,10 +1339,13 @@ registerLevel('Arena', [
             "z": 0.5
         },
         "rotation": {
-            "x": 0,
-            "y": 225,
-            "z": 0
-        }
+            "x": -180,
+            "y": -45,
+            "z": -180
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "wall_12",
@@ -1328,9 +1361,12 @@ registerLevel('Arena', [
         },
         "rotation": {
             "x": 0,
-            "y": 315,
+            "y": -45,
             "z": 0
-        }
+        },
+        "texture": "rock_wall.png",
+        "tileX": 6,
+        "tileY": 1
     },
     {
         "id": "spawn_1",
@@ -1349,8 +1385,6 @@ registerLevel('Arena', [
             "y": 0,
             "z": 0
         },
-        "collision": false,
-        "hideSpot": false,
         "seekerSpawn": true
     },
     {
@@ -1370,8 +1404,6 @@ registerLevel('Arena', [
             "y": 0,
             "z": 0
         },
-        "collision": false,
-        "hideSpot": false,
         "spawnPoint": true
     },
     {
@@ -1391,8 +1423,6 @@ registerLevel('Arena', [
             "y": 0,
             "z": 0
         },
-        "collision": false,
-        "hideSpot": false,
         "spawnPoint": true
     },
     {
@@ -1412,8 +1442,6 @@ registerLevel('Arena', [
             "y": 0,
             "z": 0
         },
-        "collision": false,
-        "hideSpot": false,
         "spawnPoint": true
     },
     {
@@ -1433,8 +1461,6 @@ registerLevel('Arena', [
             "y": 0,
             "z": 0
         },
-        "collision": false,
-        "hideSpot": false,
         "spawnPoint": true
     },
     {
@@ -1454,8 +1480,12 @@ registerLevel('Arena', [
             "y": 0,
             "z": 0
         },
-        "collision": false,
-        "hideSpot": false,
         "spawnPoint": true
     }
-]);
+], {
+    "ground": {
+        "texture": "grass1.jpg",
+        "tileX": 80,
+        "tileY": 80
+    }
+});

@@ -733,9 +733,13 @@ const Network = {
             if (data.playerId === myId) p.heldPower = null;
         }
         if (data.playerId === myId) {
-            // Instant powers (heal) have no duration — flash a brief "HEALTH RESTORED" in the
-            // active-effect indicator (countdown/toggle powers render from their state instead).
-            if (data.power === 'heal' && UI.flashEffect) UI.flashEffect('❤️', 'HEALTH RESTORED', 1500);
+            // Instant powers (heal) have no duration — play a warm restore chime + flash a
+            // brief "HEALTH RESTORED" in the active-effect indicator (countdown/toggle
+            // powers render from their state instead).
+            if (data.power === 'heal') {
+                Sound.heal();
+                if (UI.flashEffect) UI.flashEffect('❤️', 'HEALTH RESTORED', 1500);
+            }
         }
     },
 
