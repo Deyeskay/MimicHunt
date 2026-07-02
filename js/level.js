@@ -704,7 +704,11 @@ const Level = {
         // Animated character: group origin = feet, so drop by the player base
         // height (primitives were centered on p.y). Face the movement direction.
         if (mesh.userData.isCharacter) {
-            mesh.position.set(p.x, p.y - PropLevel.PLAYER_BASE_HEIGHT, p.z);
+            // Local player only: lift the mesh so its base clears a ramp's uphill ground
+            // (cosmetic; localMeshLift is 0 on flat ground and for remote players).
+            const lift = (typeof localMeshLift !== 'undefined' && typeof myId !== 'undefined'
+                && mesh === playerMeshes[myId]) ? localMeshLift : 0;
+            mesh.position.set(p.x, p.y - PropLevel.PLAYER_BASE_HEIGHT + lift, p.z);
             mesh.rotation.set(0, p.rotY + (this.PLAYER_YAW_OFFSET || 0), 0);
             return;
         }

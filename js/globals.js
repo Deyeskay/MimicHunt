@@ -108,7 +108,28 @@ let localRotY = 0;   // character facing = MOVEMENT direction (PUBG-style), not 
 let velocityY = 0;
 const GRAVITY = -0.015;
 const JUMP_STRENGTH = 0.35;
+// Auto step-up (Unity CharacterController `stepOffset` analog): the tallest upright
+// ledge/curb/stair the player climbs seamlessly while walking, without jumping.
+// Player capsule half-height is PLAYER_BASE_HEIGHT (1.5), so this is ~0.47 of that.
+// Sized to also clear the RADIUS-INDUCED apparent step where a ramp meets a flush
+// platform at its top: the collider (r≈0.7) stops the player's centre ~0.7 short of
+// the platform's front face while the feet are still on lower ramp, so a near-flush
+// junction reads as a ~0.63 step on our steepest (~38°) ramp. 0.6 left the player
+// wedged at the ramp→platform seam by 0.03; 0.7 clears it with ~0.07 margin (robust
+// vs. per-tick feet jitter). Side effect: a handful of small ~0.69–0.7 rock props
+// (1 in Forest, 4 in Arena) now step-over instead of hard-stopping — acceptable
+// (knee-height on a ~3-unit player). Everything taller (bushes ~1.1+, crate steps 2,
+// walls) is unaffected.
+const STEP_HEIGHT = 0.7;
+// Ground-snap: while walking (not jumping), stick to the floor if it drops by ≤ this
+// per tick, so descending a ramp/step glides instead of bouncing airborne. Must exceed
+// the steepest ramp's per-tick drop (moveSpeed·slope ≈ 0.12) yet stay below a real
+// ledge so intentional drops still fall.
+const GROUND_SNAP = 0.35;
 let isGrounded = false;
+// Render-only upward nudge for the LOCAL character mesh so its upright body doesn't
+// sink into a ramp's rising uphill ground (set each tick in handleLocalMovement).
+let localMeshLift = 0;
 const MOUSE_SENSITIVITY = 0.002;
 const INVERT_Y = false;
 const CAMERA_MAX_LOOK_UP = 70 * Math.PI / 180;

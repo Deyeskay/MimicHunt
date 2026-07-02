@@ -124,12 +124,33 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
 - Speed `moveSpeed = 0.15`/tick (~9 u/s; was 0.3). World clamp ±100.
 - **Per-axis wall sliding**: X then Z tested independently via `blockedAt` (compound
   collider test) so you slide along surfaces instead of sticking.
+- **Auto step-up** (Unity `stepOffset` analog): when an axis move is blocked but the
+  player is grounded, it retries `blockedAt(…, STEP_HEIGHT)` — the same capsule lifted
+  `STEP_HEIGHT` (0.7) — and if THAT is clear it's a low curb/stair, not a wall, so the
+  move is allowed. The `blockedAt` `yLift` param raises `pBottom`/`pTop` together, so
+  the lift doubles as a **headroom check** (a step under a low ceiling still blocks).
+  The floor model then seats the player on the step's top. Result: short ledges/stairs
+  are walked over seamlessly without jumping; anything taller than `STEP_HEIGHT` blocks.
+  `STEP_HEIGHT` is 0.7 (not 0.6) specifically so a player walking up a ramp onto a flush
+  platform at its top doesn't wedge: the collider radius (≈0.7) makes a near-flush
+  ramp→platform seam read as a ~0.63 step, which 0.6 missed by a hair.
+  (Continuous **slopes/ramps** already worked via the tilted-box ray-cast in
+  `_propBlocks`/`_climbFloor`; step-up covers the discrete-height case.)
+- **Ramp crest**: `_propBlocks` (blocking) samples a 17-point ring, but `_climbFloor`
+  (seating) used a single centre ray — so when the player's centre crossed the slab's
+  top edge the ray missed, `floorY` collapsed to the ground, and the player un-seated,
+  fell, lost `isGrounded` (disabling step-up), re-mounted lower, and oscillated ("stuck
+  at the top edge"). `_climbFloor` now **prefers the centre ray** (mid-ramp seating
+  unchanged) and **falls back to the highest reachable ring sample only when the centre
+  misses**, holding you at the top edge through the crossover so you crest cleanly. The
+  `onSlope` bypass + ramp seating graces are both `STEP_HEIGHT` (was 0.3).
 - **Climbing (floor model)**: each frame finds the **highest climbable surface** the
   player is horizontally over (`isClimbable`, within `radius+myRadius`, and at/above
-  it with a 0.3 tolerance) → `floorY`. Gravity then lands the player on `floorY` (or
-  world ground). This lets you **jump onto and stand on rocks/bushes** and fall when
-  walking off; the old code required being within 0.15u of the exact top (couldn't
-  land). `velocityY/GRAVITY/JUMP_STRENGTH/isGrounded` drive the jump arc.
+  it within `STEP_HEIGHT`) → `floorY`. Gravity then
+  lands the player on `floorY` (or world ground). This lets you **jump onto and stand
+  on rocks/bushes** and fall when walking off; the old code required being within
+  0.15u of the exact top (couldn't land). `velocityY/GRAVITY/JUMP_STRENGTH/isGrounded`
+  drive the jump arc.
 
 ## Landscape-only + responsive (see UI_FLOW.md)
 - Portrait shows a full-screen `#rotate-overlay` (CSS `@media (orientation: portrait)`)

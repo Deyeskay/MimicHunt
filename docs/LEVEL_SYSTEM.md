@@ -7,7 +7,7 @@ enumerate a folder, so a manifest + loader injects them.
 ```js
 const LEVELS = [];                         // [{ name, props, options }]
 function registerLevel(name, props, options) { LEVELS.push({ name, props, options: options||{} }); }
-const LEVEL_FILES = ['forest.js', 'arena.js'];   // <-- the ONE place to add a level
+const LEVEL_FILES = ['forest.js', 'arena.js', 'ruins.js'];   // <-- the ONE place to add a level
 function loadLevelScripts() { /* inject each js/levels/<file>?v=N sequentially */ }
 ```
 - Loaded **sequentially** so `LEVELS[0]` is the deterministic default map (Forest).

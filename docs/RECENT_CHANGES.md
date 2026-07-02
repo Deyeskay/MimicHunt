@@ -5,6 +5,90 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **Movement-smoothness fix — ramp descent no longer bounces; mesh lift no longer pops.**
+  Files: `js/globals.js`, `js/mechanics.js`. Two causes of the jerkiness introduced by
+  the ramp work: (1) **Descent bounce** (pre-existing, exposed by testing) — walking DOWN
+  a ramp the floor drops faster per tick than gravity, so the player launched airborne →
+  landed → airborne = a bouncy, uneven descent. Added **ground-snap** (`GROUND_SNAP =
+  0.35`): if the player was grounded, isn't rising (not a jump), and the floor dropped by
+  ≤ `GROUND_SNAP` this tick, stick to it instead of free-falling. Bigger drops (real
+  ledges) still fall; jumps are unaffected (`velocityY > 0` skips the snap). Descent is
+  now fully grounded and constant-rate. (2) **Mesh-lift flicker** — `localMeshLift` was
+  computed only while grounded, so during the bouncy descent it snapped 0↔0.545 every
+  few ticks (visible mesh pop); it also popped in one tick when stepping on/off a ramp.
+  Now it eases toward its target (`+= (target−cur)·0.2`), so transitions are smooth; with
+  ground-snap keeping you grounded on descents it also no longer flickers. Verified
+  in-browser: descent `airborneTicks` 0 (was ~all), lift holds steady then eases out,
+  jump still rises+lands, flat ground stays lift 0.
+
+- **Auto step-up — seamless walking over low ledges/stairs (Unity `stepOffset`).**
+  Files: `js/globals.js`, `js/mechanics.js`, `docs/CAMERA_AND_CONTROLS.md`. Added
+  `STEP_HEIGHT` (**0.7**). `blockedAt` gained an optional `yLift` param that raises the
+  tested capsule (`pBottom`/`pTop`) by that much. In `handleLocalMovement`, each axis
+  now retries the block test lifted by `STEP_HEIGHT` when grounded — if the lifted
+  capsule is clear, the obstacle is a mountable step (not a wall) and the move commits;
+  lifting `pTop` too means a step under a low ceiling still blocks (headroom check).
+  The `_climbFloor` grace for **upright** surfaces (box + cylinder tops) widened from
+  `0.3` → `STEP_HEIGHT` so the floor pass seats the player on the step. Net: curbs/single
+  stairs are walked over without jumping, anything taller still blocks. Local-only move
+  resolution → no protocol change.
+  - **Value = 0.7, not 0.6:** verified in-game (Forest ramp) that a player walking UP a
+    ramp onto a flush platform at its top wedged at the seam. Cause: the collider radius
+    (≈0.7) stops the player's centre ~0.7 short of the platform's front face while the
+    feet are still on lower ramp, so a near-flush junction reads as a **~0.63 step** on
+    the steepest (~38°) ramp — 0.6 missed it by 0.03. 0.7 clears with margin. Side effect:
+    a few ~0.69–0.7 rock props (1 Forest, 4 Arena) now step-over instead of hard-stopping
+    (knee-height — acceptable); everything taller is unaffected.
+
+- **Ramp-crest fix — no more stick/oscillation at the top edge of a ramp.** File:
+  `js/mechanics.js`. Root cause was an **asymmetry** between the two ramp functions:
+  `_propBlocks` (blocking) samples a **17-point ring** so you're never blocked while any
+  part of you is over the slope, but `_climbFloor` (seating) cast a **single centre
+  ray**. The instant the player's *centre* crossed the slab's top edge that lone ray
+  missed → `_climbFloor` returned the ground → `floorY` collapsed → the player un-seated
+  and fell → `isGrounded` went false (which also disabled step-up) → they re-entered the
+  slab lower and re-seated → repeat: a visible oscillation that read as "stuck at the top
+  edge." Fix: `_climbFloor`'s tilted-box branch now **prefers the centre ray** (so mid-
+  ramp seating is unchanged — no hover) and **falls back to the highest reachable ring
+  sample only when the centre misses**, so a trailing sample holds you at the top edge
+  through the crossover and you crest cleanly. Also the `onSlope` bypass grace and the
+  ramp seating grace were unified to `STEP_HEIGHT` (0.7, was 0.3). Verified in-browser
+  first against a synthetic tilted slab (crest: old seating → ground 1.5, new → top ~7.2)
+  and then **live in-game on the real Forest ramp**: driving the actual `handleLocalMovement`
+  up the ramp climbs monotonically, crests, AND steps onto the platform at the top (x 8.5
+  → 22, y → 8.63), grounded throughout, zero drop-outs.
+
+- **Cosmetic: local character no longer sinks into a ramp's uphill ground.** Files:
+  `js/globals.js`, `js/mechanics.js`, `js/level.js`. An upright character stands at the
+  CENTRE ground contact, so a ramp's higher uphill ground pokes up through its lower
+  body. Added `localMeshLift` (render-only global): each tick `handleLocalMovement`
+  samples the ramp surface at ±radius (x,z) and sets the lift = the uphill rise across
+  the footprint (clamped 0–0.6, 0 on flat ground). `updatePlayerMeshTransform` adds it
+  to the **local** character mesh only (`mesh === playerMeshes[myId]`) so its base clears
+  the slope. Chose the simple "nudge up" over slope-aligning the character (per user).
+  Verified: lift 0 on flat/platform, ~0.545 across the Forest ramp (≈ slope×radius). Does
+  NOT touch localPos → collision, camera, and networking are unaffected; remote players
+  (interpolated, far) are left as-is. Note: with no lean, the downhill side floats a bit
+  — the accepted trade of the nudge approach.
+
+- **New "Ruins" level — large 88×88 compound (~4× Arena's area).** Files:
+  `js/levels/ruins.js` (new, 130 props), `js/levels/registry.js` (added `ruins.js` to
+  `LEVEL_FILES`), generator `testing/tools/gen_ruins.js` (new). A jump-proof perimeter
+  (height-10 `rock_wall.png`) encloses a **central "broken rotunda"** — a climbable stone
+  dais (two skewed steps → a vantage) topped by a tall spire, ringed by ruined columns of
+  uneven heights with scattered rubble rocks (a distinct stone landmark, deliberately NOT a
+  crate pyramid like Arena's). Around it: an **inner keep** (square wall ring with a gate on
+  each side + rock/bush rubble bastions) whose courtyard rings the centre with identical
+  bushes/rocks for disguise, and **four themed outer districts** — grove (trees+bushes),
+  boulder field (rocks), an irregular **crate yard**, thicket (dense mix) — one per quadrant,
+  so the corners read distinctly while the layout stays 4-fold symmetric. **Crates are the
+  exception to the symmetry**: none are placed by rotation — the depot is a hand-scattered
+  heap and a few strays sit off it, so crates never read as a mirrored set. Seeker spawns at
+  the south gate; 8 hider `spawnPoint`s ring the road/districts. Ground = `grass1.jpg`.
+  Verified: only the 4 perimeter walls touch the edge, 0 crates have a rotated twin, and no
+  climbable crate near the wall tops above ~5 (so the height-10 wall stays un-hoppable given
+  the ~4-unit jump).
+
 - **"Seeker" renamed to "Hunter" in the UI (display-only).** Files: `js/ui.js`, `js/level.js`.
   New `UI.roleLabel(role)` maps `Seeker → Hunter`; used by the lobby role toggle + chip,
   the in-game role badge, the players list, and the lobby warning. Nameplate fallback shows

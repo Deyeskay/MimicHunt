@@ -389,10 +389,17 @@ const Mechanics = {
         // the tangential component still applies and the player slides along the
         // surface rather than sticking. X is committed first, then Z is tested
         // against the updated X to avoid clipping around corners.
-        if (!this.blockedAt(targetX, localPos.z, myRadius)) {
+        // Each axis: take the direct move if clear; else, while grounded, retry with
+        // the feet lifted STEP_HEIGHT — if THAT is clear it's a low step (curb/stair),
+        // not a wall, so let the move through. The floorY pass below then seats the
+        // player on the step's surface (its grace matches STEP_HEIGHT), so short ledges
+        // are climbed seamlessly while walking — tall walls still block.
+        if (!this.blockedAt(targetX, localPos.z, myRadius) ||
+            (isGrounded && !this.blockedAt(targetX, localPos.z, myRadius, STEP_HEIGHT))) {
             localPos.x = targetX;
         }
-        if (!this.blockedAt(localPos.x, targetZ, myRadius)) {
+        if (!this.blockedAt(localPos.x, targetZ, myRadius) ||
+            (isGrounded && !this.blockedAt(localPos.x, targetZ, myRadius, STEP_HEIGHT))) {
             localPos.z = targetZ;
         }
 
@@ -413,12 +420,23 @@ const Mechanics = {
             floorY = this._climbFloor(dyn[i], baseHeight, myRadius, floorY);
         }
 
+        const wasGrounded = isGrounded;
         velocityY += GRAVITY;
         localPos.y += velocityY;
         if (localPos.y <= floorY) {
             localPos.y = floorY;
             // Touched down after being airborne (with real downward speed) → thud.
             if (!isGrounded && velocityY < -0.05) Sound.land();
+            velocityY = 0;
+            isGrounded = true;
+        } else if (wasGrounded && velocityY <= 0 && (localPos.y - floorY) <= GROUND_SNAP) {
+            // Walking DOWN a ramp/step: the floor drops faster per tick than gravity, so
+            // the naive test would launch the player into a bouncy free-fall (airborne →
+            // land → airborne = jerky descent, and it made the cosmetic mesh-lift flicker
+            // on/off). If we were grounded, aren't rising (not a jump), and the drop is
+            // small (≤ GROUND_SNAP — a ramp step, not a ledge), stick to the surface.
+            // Bigger drops (real ledges) exceed GROUND_SNAP and still fall normally.
+            localPos.y = floorY;
             velocityY = 0;
             isGrounded = true;
         } else {
@@ -438,6 +456,43 @@ const Mechanics = {
         } else {
             this._lastStepAt = 0;
         }
+
+        // Cosmetic slope nudge (render-only; does NOT affect collision/camera which
+        // use localPos). On a tilted ramp the upright character stands at the CENTRE
+        // ground contact, so the higher uphill ground pokes up through its lower body.
+        // Lift the render mesh by the uphill ground rise across the player's radius so
+        // its base clears the slope. Zero on flat ground (all samples equal the feet).
+        // Applied only to the local character mesh in updatePlayerMeshTransform.
+        //
+        // Compute a TARGET, then ease `localMeshLift` toward it — a hard per-tick value
+        // popped the mesh when the target jumped (stepping on/off a ramp, or the old
+        // grounded/airborne flicker during a bouncy descent, now also fixed by ground-
+        // snap above). The lerp makes those transitions smooth.
+        let targetLift = 0;
+        if (isGrounded) {
+            const feet = localPos.y - baseHeight;
+            let hi = feet;
+            const R = myRadius, pts = [[R,0],[-R,0],[0,R],[0,-R]];
+            for (let a = 0; a < pts.length; a++) {
+                const sx = localPos.x + pts[a][0], sz = localPos.z + pts[a][1];
+                for (let i = 0; i < mapProps3D.length; i++) {
+                    const prop = mapProps3D[i];
+                    if (!PropLevel.isClimbable(prop)) continue;
+                    const pieces = PropLevel.getColliders(prop);
+                    for (let j = 0; j < pieces.length; j++) {
+                        const c = pieces[j];
+                        if (c.shape === 'box' && c.ay && Math.abs(c.ay[1]) <= 0.999) {
+                            const sY = c.yMax + 10, t = PropLevel.rayBox(sx, sY, sz, 0, -1, 0, c);
+                            // Only the ramp under us (within 1u of the feet), not a distant one.
+                            if (isFinite(t)) { const s = sY - t; if (s > hi && s - feet < 1.0) hi = s; }
+                        }
+                    }
+                }
+            }
+            targetLift = Math.min(hi - feet, 0.6);
+        }
+        localMeshLift += (targetLift - localMeshLift) * 0.2;
+        if (Math.abs(localMeshLift) < 0.001) localMeshLift = 0;   // snap tiny residuals to flat
     },
 
     // The nearest disguisable prop within reach of the local player, or null.
@@ -510,12 +565,17 @@ const Mechanics = {
     // while a floating canopy (high yMin) lets a grounded player pass under, and
     // anything the player has climbed above no longer blocks. Single-cylinder
     // props (no template) behave exactly as before.
-    blockedAt: function(x, z, myRadius) {
+    // `yLift` (default 0) raises the tested capsule by that many units — used by the
+    // step-up probe: if the move is blocked at the current feet height but CLEAR with
+    // the feet lifted STEP_HEIGHT (the obstacle top is below the raised feet, and the
+    // raised body clears any ceiling above the step), it's a mountable step, not a wall.
+    blockedAt: function(x, z, myRadius, yLift) {
+        yLift = yLift || 0;
         const half = (localDisguise.type === 'player')
             ? PropLevel.PLAYER_BASE_HEIGHT
             : (localDisguise.size / 2);
-        const pBottom = localPos.y - half;
-        const pTop = localPos.y + half;
+        const pBottom = localPos.y - half + yLift;
+        const pTop = localPos.y + half + yLift;
 
         for (let i = 0; i < mapProps3D.length; i++) {
             if (this._propBlocks(mapProps3D[i], x, z, myRadius, pBottom, pTop)) return true;
@@ -552,6 +612,13 @@ const Mechanics = {
                     // block you from ever stepping on. The half-radius samples catch the low
                     // edge before the slope has risen out of reach. If any sample finds
                     // slope surface at/below the feet, you're mounting/walking it.
+                    //
+                    // CREST tolerance = STEP_HEIGHT (not 0.3): near the top the surface
+                    // rises faster per tick than a tight grace, and the leading samples
+                    // have already walked off the slab's top edge (ray misses), so only
+                    // the high trailing samples remain — a 0.3 grace lets them fall just
+                    // out of reach and wedges you at the very top edge. STEP_HEIGHT widens
+                    // the window so you crest smoothly (same const that governs step-up).
                     const r = myRadius, h = myRadius * 0.5, d = myRadius * 0.7071, e = h * 0.7071;
                     const offs = [[0, 0],
                         [r, 0], [-r, 0], [0, r], [0, -r], [d, d], [d, -d], [-d, d], [-d, -d],
@@ -559,7 +626,7 @@ const Mechanics = {
                     let onSlope = false;
                     for (let k = 0; k < offs.length; k++) {
                         const td = PropLevel.rayBox(x + offs[k][0], sY, z + offs[k][1], 0, -1, 0, c);
-                        if (isFinite(td) && pBottom >= (sY - td) - 0.3) { onSlope = true; break; }
+                        if (isFinite(td) && pBottom >= (sY - td) - STEP_HEIGHT) { onSlope = true; break; }
                     }
                     if (onSlope) continue;
                 }
@@ -604,22 +671,42 @@ const Mechanics = {
                     // direction (the rock/tree "sink in and get stuck"). The mesh top clears
                     // c.yMax with margin → flush, free to move.
                     if (PropLevel.pointBoxDist2(localPos.x, c.yMax, localPos.z, c) < myRadius * myRadius) {
-                        if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
+                        if (localPos.y >= propTop - STEP_HEIGHT && propTop > best) best = propTop;
                     }
                 } else {
-                    // TILTED box (ramp): stand on the ACTUAL slope under the player so you
-                    // can walk UP it — cast straight down onto the slab and use that point.
-                    // Paired with the ramp bypass in _propBlocks so you're not wedged in
-                    // the AABB band while on the slope.
+                    // TILTED box (ramp): seat on the ACTUAL slope under the player so you
+                    // can walk UP it. PREFER the centre ray (feet meet the slope right
+                    // under you — no hover). But the instant the player's centre crosses
+                    // the slab's TOP edge that single ray MISSES, and floorY collapses to
+                    // the ground → you un-seat at the crest → fall → lose isGrounded (which
+                    // also disables step-up) → re-enter the slab lower → repeat: the player
+                    // oscillates and looks "stuck" at the ramp's top edge. So if the centre
+                    // misses, fall back to the HIGHEST reachable slope point under the
+                    // footprint (the same 17-pt ring the _propBlocks onSlope bypass uses) —
+                    // a trailing sample stays on the slab through the crossover and holds
+                    // you at the top edge, so you crest cleanly. Grace = STEP_HEIGHT, so
+                    // blocking (_propBlocks) and seating agree tick-for-tick.
                     const sY = c.yMax + 10;
-                    const t = PropLevel.rayBox(localPos.x, sY, localPos.z, 0, -1, 0, c);
-                    if (isFinite(t)) {
-                        const surf = (sY - t) + baseHeight;
-                        if (localPos.y >= surf - 0.3 && surf > best) best = surf;
+                    let surf = NaN;
+                    const tc = PropLevel.rayBox(localPos.x, sY, localPos.z, 0, -1, 0, c);
+                    if (isFinite(tc)) {
+                        surf = (sY - tc) + baseHeight;
+                    } else {
+                        const r = myRadius, h = myRadius * 0.5, d = myRadius * 0.7071, e = h * 0.7071;
+                        const offs = [
+                            [r, 0], [-r, 0], [0, r], [0, -r], [d, d], [d, -d], [-d, d], [-d, -d],
+                            [h, 0], [-h, 0], [0, h], [0, -h], [e, e], [e, -e], [-e, e], [-e, -e]];
+                        let hi = -Infinity;
+                        for (let k = 0; k < offs.length; k++) {
+                            const t = PropLevel.rayBox(localPos.x + offs[k][0], sY, localPos.z + offs[k][1], 0, -1, 0, c);
+                            if (isFinite(t)) { const s = (sY - t) + baseHeight; if (s > hi) hi = s; }
+                        }
+                        if (hi > -Infinity) surf = hi;
                     }
+                    if (surf === surf && localPos.y >= surf - STEP_HEIGHT && surf > best) best = surf;
                 }
             } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
-                if (localPos.y >= propTop - 0.3 && propTop > best) best = propTop;
+                if (localPos.y >= propTop - STEP_HEIGHT && propTop > best) best = propTop;
             }
         }
         return best;
