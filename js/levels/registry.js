@@ -25,7 +25,7 @@ function registerLevel(name, props, options) {
 
 // --- The only place you edit to add a level ---
 const LEVEL_FILES = [
-    'forest.js',
+    'rainbowWoods.js',
     'arena.js',
     'ruins.js',
     'bazaar.js'

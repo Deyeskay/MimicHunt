@@ -122,7 +122,25 @@ const PrefabLibrary = {
         "collision": true,
         "climbable": true,
         "hideSpot": true,
-        "canDisguise": true
+        "canDisguise": true,
+        "colliders": [
+            {
+                "shape": "cylinder",
+                "position": {
+                    "x": 0,
+                    "y": 0.5,
+                    "z": 0
+                },
+                "rotation": {
+                    "y": 0
+                },
+                "scale": {
+                    "x": 0.864,
+                    "y": 0.912,
+                    "z": 1
+                }
+            }
+        ]
     },
     "crate": {
         "collision": true,
@@ -135,7 +153,25 @@ const PrefabLibrary = {
         "collision": true,
         "climbable": false,
         "hideSpot": true,
-        "canDisguise": true
+        "canDisguise": true,
+        "colliders": [
+            {
+                "shape": "cylinder",
+                "position": {
+                    "x": -0.232,
+                    "y": 0.628,
+                    "z": -0.072
+                },
+                "rotation": {
+                    "y": 0
+                },
+                "scale": {
+                    "x": 0.512,
+                    "y": 0.64,
+                    "z": 1
+                }
+            }
+        ]
     },
     "cart": {
         "collision": true,
@@ -174,13 +210,135 @@ const PrefabLibrary = {
         "climbable": true,
         "hideSpot": false,
         "canDisguise": false,
-        "colliderShape": "box"
+        "colliderShape": "box",
+        "colliders": [
+            {
+                "shape": "box",
+                "position": {
+                    "x": 0,
+                    "y": 0.28,
+                    "z": 0.09
+                },
+                "rotation": {
+                    "x": -148.373,
+                    "y": 0,
+                    "z": -180
+                },
+                "scale": {
+                    "x": 0.993,
+                    "y": 0.184,
+                    "z": 0.648
+                }
+            },
+            {
+                "shape": "box",
+                "position": {
+                    "x": 0,
+                    "y": 0.326,
+                    "z": -0.517
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "scale": {
+                    "x": 0.992,
+                    "y": 0.711,
+                    "z": 0.121
+                }
+            }
+        ]
     },
     "entrance": {
         "collision": false,
         "climbable": false,
         "hideSpot": false,
         "canDisguise": false
+    },
+    "amphora": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "fruitcrate": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliderShape": "box"
+    },
+    "hay": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "sack": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliders": [
+            {
+                "shape": "box",
+                "position": {
+                    "x": 0,
+                    "y": 0.444,
+                    "z": 0
+                },
+                "rotation": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0
+                },
+                "scale": {
+                    "x": 0.851,
+                    "y": 0.769,
+                    "z": 0.5
+                }
+            }
+        ]
+    },
+    "sackpile": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "table": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliderShape": "box"
+    },
+    "tent": {
+        "collision": false,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false
+    },
+    "lamppost": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false
+    },
+    "hut": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false,
+        "colliderShape": "box"
+    },
+    "house": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false,
+        "colliderShape": "box"
     },
     "door": {
         "collision": false,

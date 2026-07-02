@@ -508,7 +508,18 @@ const Level = {
             { key: "bush3",    path: "assets/models/bush3.glb" },
             { key: "fence",    path: "assets/models/fence2.glb" },
             { key: "steps",    path: "assets/models/steps.glb" },
-            { key: "entrance", path: "assets/models/entrance.glb" }
+            { key: "entrance", path: "assets/models/entrance.glb" },
+            // Market/village props (Bazaar v2). Grounded on load like the rest.
+            { key: "amphora",    path: "assets/models/amphora.glb" },
+            { key: "fruitcrate", path: "assets/models/fruitcrate.glb" },
+            { key: "hay",        path: "assets/models/hay.glb" },
+            { key: "sack",       path: "assets/models/sack.glb" },
+            { key: "sackpile",   path: "assets/models/sackpile.glb" },
+            { key: "table",      path: "assets/models/table.glb" },
+            { key: "tent",       path: "assets/models/tent.glb" },
+            { key: "lamppost",   path: "assets/models/lamppost.glb" },
+            { key: "hut",        path: "assets/models/hut.glb" },
+            { key: "house",      path: "assets/models/house.glb" }
         ];
 
         const total = files.length + 2;   // + the two animated characters (player + hunter)

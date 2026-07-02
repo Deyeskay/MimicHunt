@@ -7,14 +7,14 @@ enumerate a folder, so a manifest + loader injects them.
 ```js
 const LEVELS = [];                         // [{ name, props, options }]
 function registerLevel(name, props, options) { LEVELS.push({ name, props, options: options||{} }); }
-const LEVEL_FILES = ['forest.js', 'arena.js', 'ruins.js'];   // <-- the ONE place to add a level
+const LEVEL_FILES = ['rainbowWoods.js', 'arena.js', 'ruins.js', 'bazaar.js'];   // <-- the ONE place to add a level
 function loadLevelScripts() { /* inject each js/levels/<file>?v=N sequentially */ }
 ```
-- Loaded **sequentially** so `LEVELS[0]` is the deterministic default map (Forest).
+- Loaded **sequentially** so `LEVELS[0]` is the deterministic default map (Rainbow Woods).
 - `app.js` awaits `loadLevelScripts()` before `Level.init()` so `LEVELS` is populated.
 - Cache `?v=` for level files lives in this loader (keep in sync with `index.html`).
 
-## Level files — `js/levels/forest.js`, `arena.js`
+## Level files — `js/levels/rainbowWoods.js`, `arena.js`, `ruins.js`, `bazaar.js`
 Each calls `registerLevel('Name', [ ...prop objects... ], options?)`. A prop object:
 ```
 { id, model:'tree'|'rock'|'bush'|'wall'|'spawn', x, y, z, bottomY,
@@ -32,7 +32,7 @@ Each calls `registerLevel('Name', [ ...prop objects... ], options?)`. A prop obj
   are captured inline (so they export even without saving to the library). Uploaded image
   maps can't be inlined — use Save-to-`.glb` or a library texture for those.
 - Gameplay flags are optional; omitted ones fall back to the prefab
-  (see PROP_SYSTEM.md `resolveGameplay`). **forest.js** and the rebuilt **arena.js**
+  (see PROP_SYSTEM.md `resolveGameplay`). **rainbowWoods.js** and the rebuilt **arena.js**
   omit the baked `"climbable": false` lines, so rocks/bushes inherit climbable from the
   prefab.
 - Only the level **name** crosses the wire (levels are bundled identically on every

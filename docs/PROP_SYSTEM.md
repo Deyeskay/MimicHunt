@@ -30,9 +30,12 @@ Each `colliders` entry has a **shape** (`'cylinder' | 'box' | 'sphere'`) and a
 **transform in fractions of the placed instance's bounds**:
 - `position {x,y,z}` — x/z × R (rotated by the instance's `rotation.y`); y × H, the
   piece **center** measured up from the prop's bottom.
-- `rotation {y}` — extra Y spin in **degrees**, added to the instance's (box only;
-  ignored by round shapes). Only `rotation.y` is authored — the 2.5D solver has no
-  tilt, so x/z rotation are intentionally not exposed.
+- `rotation {x,y,z}` — extra spin in **degrees**, composed on top of the instance's
+  rotation for the piece's **axes**. **Box** pieces honor all three (so a box piece can
+  be TILTED into an oriented box = a walkable ramp/slab); **cylinder/sphere** pieces
+  honor only `y` — the 2.5D solver keeps round footprints upright, so their x/z tilt is
+  ignored. The editor's collider panel shows x/y/z rotation for Square pieces, y-only
+  for round.
 - `scale {x,y,z}` — x/z × R (cylinder/sphere radius, box half-extents); y × H (the
   piece's full height).
 

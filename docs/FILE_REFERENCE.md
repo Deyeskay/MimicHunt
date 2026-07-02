@@ -17,7 +17,7 @@ js/
   app.js              boot: DOM wiring, settings, startup sequence, animate()
   levels/
     registry.js       LEVELS[], registerLevel(), LEVEL_FILES[], loadLevelScripts()
-    forest.js         registerLevel('Forest', [...props])  (default map = LEVELS[0])
+    rainbowWoods.js   registerLevel('Rainbow Woods', [...props])  (default map = LEVELS[0])
     arena.js          registerLevel('Arena', [...props])
 docs/                 this documentation
 assets/models/        tree1/rock1/bush1/player.glb

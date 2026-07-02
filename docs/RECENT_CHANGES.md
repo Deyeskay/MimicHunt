@@ -5,6 +5,65 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **Prefab preview: clickable ViewGizmo + in-preview collider transform gizmo (W/E/R).**
+  File: `editor.html`. Added (1) the same **Unity-style ViewGizmo** the scene editor has
+  (the `.view-gizmo` CSS was generalized from `#viewGizmo` so both the scene and the preview
+  can host one; `#pfViewGizmo` sits in the preview's top-right). Click an axis ball to snap
+  the view (`pfSnapView`), the hub for iso, and the **Persp/Iso** label to toggle projection;
+  the pitch clamp widened to ±1.5 rad so the ±Y snaps are drag-reachable too. (Replaced the
+  earlier passive AxesHelper triad.) And (2) a **TransformControls collider gizmo** like the
+  scene editor: click a
+  yellow collider wireframe to select it (highlights cyan), then **W/E/R** = move/rotate/
+  scale. `objectChange` writes the piece's live world transform back to its fraction-of-
+  bounds `position`/`scale`/`rotation` (`writeSelectedPieceFromMesh`, using the unrotated
+  preview prop's frame = center + radius/height); box pieces get x/y/z rotation, round pieces
+  y-only. Orbit is suppressed while a handle is dragged; on release it persists + rebuilds
+  the wireframes and re-attaches. Clicking a prop that only has its implicit auto collider
+  first materializes that piece so it's editable. NEEDS in-browser testing (TransformControls
+  integration + viewport math can't be verified headless).
+
+- **Prefab preview: iso/perspective toggle + zoom no longer resets on edit.** File:
+  `editor.html`. Added a 🎥 Persp / 📐 Iso toggle button on the Edit-Prefabs preview
+  (`togglePfProjection` swaps the camera between `PerspectiveCamera` and an
+  `OrthographicCamera` whose frustum tracks `pfDist`, so wheel-zoom works in both). Fixed
+  the preview snapping back to the default view whenever a collider value was edited:
+  `buildPrefabPreviewContent` now only auto-frames the camera (`pfTarget`/`pfDist`) when the
+  selected prefab actually **changes** (tracked via `pfFramedFor`), so editing values keeps
+  your current zoom/rotation. Reframes on modal open and on picking a different prop.
+
+- **Collider box pieces can now TILT on X/Z (not just Y).** Files: `js/props.js`
+  (`resolveColliders`), `editor.html` (collider panel), `docs/PROP_SYSTEM.md`. A template
+  box piece's `rotation` now composes `x`/`y`/`z` (via `_propQuat`) into its axes, so a
+  Square collider can be angled into an oriented box / walkable ramp — the OBB math
+  (`_obbPiece` axes + world-AABB band) already supported it; only `rotation.y` was being
+  read. The Edit-Prefabs collider editor shows **x/y/z rotation for Square pieces**,
+  **y-only** for Cylinder/Sphere (the 2.5D solver keeps round footprints upright). No
+  change for existing prefabs (x/z default 0); walls' auto-box path is unaffected.
+
+- **Renamed the default "Forest" level to "Rainbow Woods".** Files: `js/levels/forest.js`
+  → `js/levels/rainbowWoods.js` (git rename), `js/levels/registry.js` (`LEVEL_FILES`),
+  `docs/LEVEL_SYSTEM.md`, `docs/FILE_REFERENCE.md`. The `registerLevel("Forest", …)` call
+  is now `registerLevel("Rainbow Woods", …)`; since the lobby carousel shows the registered
+  name directly (`LEVELS[].name`) and the default map is `LEVELS[0]`, the level still loads
+  first/by-default and simply displays as **Rainbow Woods**. No protocol change (levelName
+  is just a string). Older changelog entries below still say "Forest" — that was its name
+  at the time.
+
+- **Bazaar v2 — variety pass (+10 more prop types).** Files: `js/levels/bazaar.js`
+  (regenerated, 132 props), `js/level.js` (10 more `loadModels` entries), `js/prefabs.js`
+  (10 more prefab defs), `testing/tools/gen_bazaar.js` (expanded `SCALE`/`PALETTE` + new
+  sections). Moved 12 light GLBs out of `env_modals/` into `assets/models/` and wired the
+  usable ones: `amphora fruitcrate hay sack sackpile table` (disguise-crowd variety —
+  hideSpot/canDisguise), `tent` (see-under canopy), `lamppost` (thin vertical accent),
+  `hut`/`house` (edge-only solid buildings). Result: **disguise variety 4 → 13 types**,
+  market tables in every stall, lamp posts down the street, huts + tents at the edges.
+  The generator's **R3 `PALETTE`** now spans the new goods, so piles AND gap-fills mix them
+  automatically. NOTE: `rug1.glb` (modeled as a vertical tapestry) and `rug2.glb` (a giant
+  132×76 plane) were left in `env_modals/` — unusable as floor rugs; `MarketStand_2.fbx` is
+  FBX (loader is GLTF-only) → convert to `.glb` to use. Several new models are modeled very
+  small/large so their `SCALE` values are big/tiny compensations flagged `~` in the
+  generator — **verify hay/sack/tent/lamppost/house sizes in `editor.html`**.
+
 - **New "Bazaar" level + 10 new env prop types.** Files: `js/levels/bazaar.js` (new,
   116 props), `js/level.js` (`loadModels` + new `groundModel`), `js/prefabs.js` (10 new
   prefab defs), `js/levels/registry.js` (added `bazaar.js`), generator

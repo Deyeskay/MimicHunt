@@ -117,7 +117,7 @@ const JUMP_STRENGTH = 0.35;
 // junction reads as a ~0.63 step on our steepest (~38°) ramp. 0.6 left the player
 // wedged at the ramp→platform seam by 0.03; 0.7 clears it with ~0.07 margin (robust
 // vs. per-tick feet jitter). Side effect: a handful of small ~0.69–0.7 rock props
-// (1 in Forest, 4 in Arena) now step-over instead of hard-stopping — acceptable
+// (1 in Rainbow Woods, 4 in Arena) now step-over instead of hard-stopping — acceptable
 // (knee-height on a ~3-unit player). Everything taller (bushes ~1.1+, crate steps 2,
 // walls) is unaffected.
 const STEP_HEIGHT = 0.7;

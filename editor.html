@@ -228,7 +228,25 @@ button{
 .btn-danger:hover{ background:rgba(239,68,68,.24); }
 
 /* prop palette */
-.prop-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.prop-search{
+    width:100%; box-sizing:border-box; margin-bottom:8px;
+    padding:8px 10px; font-size:12px;
+    background:var(--panel-2); border:1px solid var(--border);
+    border-radius:8px; color:inherit; outline:none;
+}
+.prop-search:focus{ border-color:var(--accent); }
+.prop-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:6px;
+    max-height:232px; overflow-y:auto; padding-right:4px;
+}
+.prop-empty{ grid-column:1/-1; text-align:center; font-size:11px; opacity:.55; padding:10px 0; }
+.pf-proj-toggle{
+    float:right; font-size:11px; font-weight:600;
+    padding:2px 9px;
+    background:var(--panel-2); border:1px solid var(--border);
+    border-radius:6px; color:inherit; cursor:pointer;
+}
+.pf-proj-toggle:hover{ background:#33333f; border-color:var(--accent); }
 .propBtn{
     padding:11px 4px;
     background:var(--panel-2);
@@ -311,7 +329,7 @@ button{
 #prefabModal .help-card{ width:min(820px,96vw); max-height:90vh; overflow-y:auto; }
 .pf-layout{ display:flex; gap:18px; align-items:flex-start; }
 .pf-edit{ flex:1; min-width:0; }
-.pf-preview{ width:300px; flex:none; }
+.pf-preview{ width:300px; flex:none; position:relative; }
 #prefabPreviewCanvas{ width:300px; height:340px; display:block; background:#11141a;
     border:1px solid var(--border); border-radius:10px; cursor:grab; }
 #prefabPreviewCanvas:active{ cursor:grabbing; }
@@ -369,27 +387,30 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 .btn-mini{ padding:4px 9px; font-size:11px; }
 
 /* ---------- View gizmo (Unity-style axis snap + Persp/Iso toggle) ---------- */
-#viewGizmo{ position:fixed; top:18px; right:320px; width:104px; height:104px; z-index:120; user-select:none; }
-#viewGizmo .vg-disc{ position:absolute; inset:0; border-radius:50%; background:rgba(20,22,28,0.5); border:1px solid rgba(255,255,255,0.08); }
-#viewGizmo .vg-line{ position:absolute; left:52px; top:52px; height:2px; width:38px; transform-origin:0 50%; background:rgba(255,255,255,0.22); }
+/* Base is a shared class so the scene AND the prefab preview can each have one. */
+.view-gizmo{ width:104px; height:104px; user-select:none; }
+#viewGizmo{ position:fixed; top:18px; right:320px; z-index:120; }
+#pfViewGizmo{ position:absolute; top:34px; right:8px; z-index:6; transform:scale(0.8); transform-origin:top right; }
+.view-gizmo .vg-disc{ position:absolute; inset:0; border-radius:50%; background:rgba(20,22,28,0.5); border:1px solid rgba(255,255,255,0.08); }
+.view-gizmo .vg-line{ position:absolute; left:52px; top:52px; height:2px; width:38px; transform-origin:0 50%; background:rgba(255,255,255,0.22); }
 .vg-line.vg-lx{ transform:translateY(-1px) rotate(0deg); }
 .vg-line.vg-ly{ transform:translateY(-1px) rotate(-90deg); }
 .vg-line.vg-lz{ width:34px; transform:translateY(-1px) rotate(135deg); }
-#viewGizmo .vg-axis{ position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
+.view-gizmo .vg-axis{ position:absolute; width:22px; height:22px; margin:-11px 0 0 -11px; border-radius:50%;
     display:flex; align-items:center; justify-content:center; font:bold 11px/1 system-ui,sans-serif; color:#fff;
     cursor:pointer; border:1.5px solid transparent; transition:transform .08s; }
-#viewGizmo .vg-axis:hover{ transform:scale(1.18); }
-#viewGizmo .vg-axis.vg-neg{ width:13px; height:13px; margin:-6.5px 0 0 -6.5px; background:transparent !important; }
+.view-gizmo .vg-axis:hover{ transform:scale(1.18); }
+.view-gizmo .vg-axis.vg-neg{ width:13px; height:13px; margin:-6.5px 0 0 -6.5px; background:transparent !important; }
 .vg-x{ background:#e5484d; }  .vg-xn{ border-color:#e5484d; }
 .vg-y{ background:#3fb950; }  .vg-yn{ border-color:#3fb950; }
 .vg-z{ background:#4493f8; }  .vg-zn{ border-color:#4493f8; }
-#viewGizmo .vg-hub{ position:absolute; left:52px; top:52px; width:14px; height:14px; margin:-7px 0 0 -7px;
+.view-gizmo .vg-hub{ position:absolute; left:52px; top:52px; width:14px; height:14px; margin:-7px 0 0 -7px;
     border-radius:50%; background:rgba(255,255,255,0.85); cursor:pointer; }
-#viewGizmo .vg-hub:hover{ background:#fff; }
-#vgPersp{ position:absolute; left:50%; bottom:-22px; transform:translateX(-50%); font:bold 11px/1 system-ui,sans-serif;
+.view-gizmo .vg-hub:hover{ background:#fff; }
+.vg-persp{ position:absolute; left:50%; bottom:-22px; transform:translateX(-50%); font:bold 11px/1 system-ui,sans-serif;
     color:#cfd3dc; cursor:pointer; background:rgba(20,22,28,0.7); padding:5px 11px; border-radius:11px;
     border:1px solid rgba(255,255,255,0.1); white-space:nowrap; }
-#vgPersp:hover{ color:#fff; border-color:rgba(255,255,255,0.25); }
+.vg-persp:hover{ color:#fff; border-color:rgba(255,255,255,0.25); }
 
 /* ---------- Responsive ---------- */
 @media (max-width:760px){
@@ -410,15 +431,9 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 
     <div class="section">
         <div class="section-label">Props</div>
-        <div class="prop-grid">
-            <button class="propBtn" onclick="selectModel('tree',this)">Tree</button>
-            <button class="propBtn" onclick="selectModel('rock',this)">Rock</button>
-            <button class="propBtn" onclick="selectModel('bush',this)">Bush</button>
-            <button class="propBtn" onclick="selectModel('wall',this)">Wall</button>
-            <button class="propBtn" onclick="selectModel('cube',this)">Cube</button>
-            <button class="propBtn" onclick="selectModel('spawn',this)">Spawn</button>
-            <button class="propBtn" onclick="selectModel('door',this)">Exit Door</button>
-        </div>
+        <input id="propSearch" class="prop-search" type="text" placeholder="🔍 Search props…"
+               oninput="filterProps(this.value)" autocomplete="off">
+        <div id="propGrid" class="prop-grid"><!-- buttons built by buildPropPalette() --></div>
     </div>
 
     <div class="section">
@@ -669,6 +684,8 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
         <div class="pf-layout">
             <div class="pf-edit">
                 <label class="modal-label">Prop type</label>
+                <input id="prefabSearch" class="prop-search" type="text" placeholder="🔍 Search prop types…"
+                       oninput="renderPrefabTypeRow()" autocomplete="off">
                 <div id="prefabTypeRow" class="prop-grid"></div>
 
                 <label id="prefabGameplayLabel" class="modal-label" style="margin-top:14px;">Gameplay</label>
@@ -693,8 +710,22 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
             <div class="pf-preview">
                 <label class="modal-label">Preview</label>
                 <canvas id="prefabPreviewCanvas"></canvas>
+                <div id="pfViewGizmo" class="view-gizmo" title="Click an axis to snap the view">
+                    <div class="vg-disc"></div>
+                    <div class="vg-line vg-lx"></div>
+                    <div class="vg-line vg-ly"></div>
+                    <div class="vg-line vg-lz"></div>
+                    <div class="vg-axis vg-zn vg-neg" data-view="-z" style="left:76px;top:30px" title="Back (-Z)"></div>
+                    <div class="vg-axis vg-xn vg-neg" data-view="-x" style="left:14px;top:52px" title="Left (-X)"></div>
+                    <div class="vg-axis vg-yn vg-neg" data-view="-y" style="left:52px;top:90px" title="Bottom (-Y)"></div>
+                    <div class="vg-hub" data-view="iso" title="Isometric / default angle"></div>
+                    <div class="vg-axis vg-z" data-view="z" style="left:28px;top:74px" title="Front (+Z)">Z</div>
+                    <div class="vg-axis vg-x" data-view="x" style="left:90px;top:52px" title="Right (+X)">X</div>
+                    <div class="vg-axis vg-y" data-view="y" style="left:52px;top:14px" title="Top (+Y)">Y</div>
+                    <div id="pfVgPersp" class="vg-persp" title="Toggle Perspective / Orthographic">Persp</div>
+                </div>
                 <div id="prefabPreviewMsg" class="pf-preview-msg"></div>
-                <div class="pf-preview-hint">drag to rotate · scroll to zoom</div>
+                <div class="pf-preview-hint">drag to rotate · scroll to zoom · click a collider → W/E/R to move/rotate/scale</div>
             </div>
         </div>
 
@@ -709,7 +740,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 </div>
 
 <!-- Unity-style view gizmo: click an axis to snap to that view; Persp toggles Ortho. -->
-<div id="viewGizmo" title="Click an axis to snap the view">
+<div id="viewGizmo" class="view-gizmo" title="Click an axis to snap the view">
     <div class="vg-disc"></div>
     <div class="vg-line vg-lx"></div>
     <div class="vg-line vg-ly"></div>
@@ -721,7 +752,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
     <div class="vg-axis vg-z" data-view="z" style="left:28px;top:74px" title="Front (+Z)">Z</div>
     <div class="vg-axis vg-x" data-view="x" style="left:90px;top:52px" title="Right (+X)">X</div>
     <div class="vg-axis vg-y" data-view="y" style="left:52px;top:14px" title="Top (+Y)">Y</div>
-    <div id="vgPersp" title="Toggle Perspective / Orthographic">Persp</div>
+    <div id="vgPersp" class="vg-persp" title="Toggle Perspective / Orthographic">Persp</div>
 </div>
 
 <!-- Export the selected object (with edited materials) as a new .glb -->
@@ -794,7 +825,9 @@ let collidersDirty = false;
 
 // --- Prefab editing (read PrefabLibrary → edit → export prefabs.js) ---
 const PREFABS_KEY = 'hnh_editor_prefabs';
-const PREFAB_TYPES = ['tree', 'rock', 'bush', 'wall', 'cube', 'spawn'];
+// Every prefab in the library is editable (auto-includes new ones like the
+// Bazaar props). Renders into the scrollable .prop-grid type row.
+const PREFAB_TYPES = Object.keys(PrefabLibrary);
 const PREFAB_FLAGS = ['collision', 'climbable', 'hideSpot', 'canDisguise'];
 // Snapshot the original file defaults BEFORE applying any saved overrides (Reset).
 const PREFAB_DEFAULTS_ORIG = JSON.parse(JSON.stringify(PrefabLibrary));
@@ -1087,26 +1120,41 @@ function openPrefabModal() {
     openModal('prefabModal');
     // Init AFTER the modal is shown so the canvas has a non-zero size.
     initPrefabPreview();
+    pfFramedFor = null;        // frame the camera fresh on open
+    deselectPfPiece();         // no collider gizmo attached until one is clicked
+    updatePfProjBtn();
     buildPrefabPreviewContent();
     startPrefabPreviewLoop();
 }
 
 function closePrefabModal() {
+    deselectPfPiece();
     stopPrefabPreviewLoop();
     closeModal('prefabModal');
 }
 
 function renderPrefabTypeRow() {
     const row = document.getElementById('prefabTypeRow');
+    const searchEl = document.getElementById('prefabSearch');
+    const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
     row.innerHTML = '';
+    let shown = 0;
     // 'player' is a pseudo-type (the local player's own collider, not a prop).
     PREFAB_TYPES.concat('player').forEach(type => {
+        if (q && type.toLowerCase().indexOf(q) === -1) return;   // search filter
         const b = document.createElement('button');
         b.className = 'propBtn' + (type === activePrefab ? ' active' : '');
         b.textContent = type.charAt(0).toUpperCase() + type.slice(1);
-        b.onclick = () => { activePrefab = type; renderPrefabTypeRow(); renderPrefabEditor(); };
+        b.onclick = () => { deselectPfPiece(); activePrefab = type; renderPrefabTypeRow(); renderPrefabEditor(); };
         row.appendChild(b);
+        shown++;
     });
+    if (!shown) {
+        const e = document.createElement('div');
+        e.className = 'prop-empty';
+        e.textContent = 'No props match';
+        row.appendChild(e);
+    }
 }
 
 // Player pseudo-type: radius + height fields (absolute world units), no flags/
@@ -1233,8 +1281,8 @@ const PF_SHAPE_LABEL = { cylinder: 'Cylinder', box: 'Square', sphere: 'Sphere' }
 
 // The implicit collider when a prop has no explicit `colliders`: one cylinder
 // filling the full bounds (position centered, scale 1 = R radius / H height).
-function defaultColliderPiece() {
-    return { shape: 'cylinder', position: { x: 0, y: 0.5, z: 0 },
+function defaultColliderPiece(shape) {
+    return { shape: shape || 'cylinder', position: { x: 0, y: 0.5, z: 0 },
              rotation: { y: 0 }, scale: { x: 1, y: 1, z: 1 } };
 }
 
@@ -1286,16 +1334,6 @@ function renderPrefabColliderRows() {
         const e = document.createElement('div');
         e.className = 'pf-empty';
         e.textContent = 'No collider — this prop type doesn’t block movement.';
-        wrap.appendChild(e);
-        return;
-    }
-
-    // Walls use an auto oriented box from the bounds (resolveColliders short-circuits
-    // on colliderShape:'box'), so there are no per-piece values to edit here.
-    if (def.colliderShape === 'box') {
-        const e = document.createElement('div');
-        e.className = 'pf-empty';
-        e.textContent = 'Auto oriented box — full bounds, rotates with the prop.';
         wrap.appendChild(e);
         return;
     }
@@ -1384,21 +1422,28 @@ function renderPrefabColliderRows() {
             del.title = 'Remove piece';
         };
 
+        // Box pieces can tilt on all axes (-> oriented box / ramp); cylinders &
+        // spheres stay upright in the 2.5D solver, so only their Y spin is shown.
+        const rotKeys = (c.shape === 'box') ? ['x', 'y', 'z'] : ['y'];
         card.appendChild(makeVecGroup(c, 'position', 'position', ['x', 'y', 'z'], commit));
-        card.appendChild(makeVecGroup(c, 'rotation', 'rotation', ['y'], commit));
+        card.appendChild(makeVecGroup(c, 'rotation', 'rotation', rotKeys, commit));
         card.appendChild(makeVecGroup(c, 'scale', 'scale', ['x', 'y', 'z'], commit));
 
         wrap.appendChild(card);
     };
 
     const list = def.colliders || [];
+    // The implicit collider is an auto box for colliderShape:'box' props (wall/cube/
+    // crate/table/…), else a full-bounds cylinder. Shown as an editable ghost.
+    const defShape = (def.colliderShape === 'box') ? 'box' : 'cylinder';
     if (!list.length) {
-        // No explicit pieces → show the implicit auto cylinder as an editable ghost.
         const hint = document.createElement('div');
         hint.className = 'pf-empty';
-        hint.textContent = 'No explicit pieces — single auto cylinder (full bounds). Edit below to customize.';
+        hint.textContent = (defShape === 'box')
+            ? 'No explicit pieces — single auto oriented box (full bounds). Edit below to customize.'
+            : 'No explicit pieces — single auto cylinder (full bounds). Edit below to customize.';
         wrap.appendChild(hint);
-        buildCard(defaultColliderPiece(), { ghost: true });
+        buildCard(defaultColliderPiece(defShape), { ghost: true });
         return;
     }
 
@@ -1485,6 +1530,126 @@ let pfModel = null, pfGizmos = [], pfRaf = null;
 let pfYaw = 0.7, pfPitch = 0.5, pfDist = 8;
 let pfTarget = new THREE.Vector3(0, 1, 0);
 let pfDragging = false, pfLastX = 0, pfLastY = 0, pfAutoRotate = true;
+let pfOrtho = false;        // false = perspective, true = isometric (orthographic)
+let pfFramedFor = null;     // which prefab the camera was last auto-framed to
+let pfTC = null;            // collider transform gizmo (TransformControls)
+let pfSelPiece = -1;        // selected collider piece index (-1 = none)
+let pfSelMesh = null;       // the wireframe currently attached to the gizmo
+let pfGizmoDragging = false;// true while a gizmo handle is dragged (suppresses orbit)
+let pfBounds = null;        // last computed bounds (for gizmo→fraction writeback)
+let pfDownX = 0, pfDownY = 0; // mousedown pos, to tell a click (select) from a drag
+
+const _r3 = v => Math.round(v * 1000) / 1000;
+
+// The collider template frame for the UNROTATED preview prop (mirrors
+// resolveColliders' fallback frame): center + full radius/height in world units.
+function pfFrameVals() {
+    const b = pfBounds || {};
+    return {
+        lcx: b.centerX || 0, lcz: b.centerZ || 0,
+        lbase: b.bottomY || 0,
+        lH: b.height || 1, Rl: b.radius || 1
+    };
+}
+
+// Push the selected wireframe's live world transform back into its collider
+// piece as fractions-of-bounds (piece center=position, half-extents=scale,
+// orientation=rotation). Runs on every gizmo objectChange.
+function writeSelectedPieceFromMesh() {
+    const def = PrefabLibrary[activePrefab];
+    if (!def || !def.colliders || pfSelPiece < 0 || pfSelPiece >= def.colliders.length) return;
+    const m = pfSelMesh; if (!m) return;
+    const c = def.colliders[pfSelPiece];
+    m.updateWorldMatrix(true, false);
+    const pos = new THREE.Vector3(), quat = new THREE.Quaternion(), scl = new THREE.Vector3();
+    m.matrixWorld.decompose(pos, quat, scl);
+    const F = pfFrameVals();
+    const bh = m.userData.baseHalf || { x: F.Rl, y: F.lH * 0.5, z: F.Rl };
+    const hx = bh.x * Math.abs(scl.x), hy = bh.y * Math.abs(scl.y), hz = bh.z * Math.abs(scl.z);
+    c.position = { x: _r3((pos.x - F.lcx) / F.Rl), y: _r3((pos.y - F.lbase) / F.lH), z: _r3((pos.z - F.lcz) / F.Rl) };
+    const e = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+    const deg = r => _r3(THREE.MathUtils.radToDeg(r));
+    if (c.shape === 'box') {
+        c.scale = { x: _r3(hx / F.Rl), y: _r3(2 * hy / F.lH), z: _r3(hz / F.Rl) };
+        c.rotation = { x: deg(e.x), y: deg(e.y), z: deg(e.z) };
+    } else {
+        // Cylinder/sphere: round footprint (radius from x), Y spin only.
+        c.scale = { x: _r3(hx / F.Rl), y: _r3(2 * hy / F.lH), z: _r3(hx / F.Rl) };
+        c.rotation = { y: deg(e.y) };
+    }
+}
+
+function selectPfPiece(i) {
+    const m = pfGizmos.find(g => g.userData.pieceIndex === i);
+    if (!m || !pfTC) { deselectPfPiece(); return; }
+    pfSelPiece = i; pfSelMesh = m;
+    m.material.color.set(0x00e5ff);          // highlight the selected piece
+    pfTC.attach(m); pfTC.visible = true;
+}
+function deselectPfPiece() {
+    pfSelPiece = -1; pfSelMesh = null;
+    if (pfTC) { pfTC.detach(); pfTC.visible = false; }
+}
+
+// Click (not drag) on a collider wireframe → select it for the gizmo. A prop
+// with only its implicit auto collider first materializes that piece so it's editable.
+function pickPfPiece(e) {
+    if (!pfRenderer || activePrefab === 'player') return;
+    const def = PrefabLibrary[activePrefab];
+    if (!def || def.collision === false) return;
+    const rect = pfRenderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, pfCamera);
+    ray.params.Line = { threshold: 0.35 };   // wireframes are LineSegments
+    const hits = ray.intersectObjects(pfGizmos, false);
+    if (!hits.length) { deselectPfPiece(); return; }
+    if (!def.colliders || !def.colliders.length) {
+        const defShape = (def.colliderShape === 'box') ? 'box' : 'cylinder';
+        def.colliders = [defaultColliderPiece(defShape)];
+        persistPrefabs();
+        buildPrefabPreviewContent();
+        renderPrefabColliderRows();
+    }
+    selectPfPiece(hits[0].object.userData.pieceIndex || 0);
+}
+
+// (Re)build pfCamera for the current projection mode. Ortho frustum tracks pfDist
+// (updated per-frame in the loop), so wheel-zoom works in both modes.
+function makePfCamera() {
+    const cv = pfRenderer.domElement;
+    const w = cv.clientWidth || 300, h = cv.clientHeight || 340, aspect = w / h;
+    if (pfOrtho) {
+        const hH = pfDist * 0.55, hW = hH * aspect;
+        pfCamera = new THREE.OrthographicCamera(-hW, hW, hH, -hH, 0.1, 2000);
+    } else {
+        pfCamera = new THREE.PerspectiveCamera(50, aspect, 0.1, 1000);
+    }
+    if (pfTC) pfTC.camera = pfCamera;
+}
+function updatePfProjBtn() {
+    const btn = document.getElementById('pfVgPersp');
+    if (btn) btn.textContent = pfOrtho ? 'Iso' : 'Persp';
+}
+function togglePfProjection() {
+    pfOrtho = !pfOrtho;
+    makePfCamera();
+    updatePfProjBtn();
+}
+// Snap the preview camera to an axis view (same map/behaviour as the scene gizmo).
+function pfSnapView(view) {
+    const P = {
+        'x':  [ Math.PI / 2,  0    ], '-x': [ -Math.PI / 2, 0    ],
+        'y':  [ 0,            1.5   ], '-y': [ 0,           -1.5  ],
+        'z':  [ 0,            0     ], '-z': [ Math.PI,      0    ],
+        'iso':[ Math.PI / 4,  0.6   ]
+    }[view];
+    if (!P) return;
+    pfAutoRotate = false;
+    pfYaw = P[0]; pfPitch = P[1];
+}
 
 function initPrefabPreview() {
     if (pfRenderer) return;
@@ -1512,18 +1677,28 @@ function initPrefabPreview() {
     pfScene.add(ground);
     pfScene.add(new THREE.GridHelper(60, 30, 0x335533, 0x223322));
 
-    pfCamera = new THREE.PerspectiveCamera(50, w / h, 0.1, 1000);
+    makePfCamera();
 
     // Orbit: drag to rotate (stops auto-rotate), wheel to zoom.
     canvas.addEventListener('mousedown', e => {
         pfDragging = true; pfAutoRotate = false; pfLastX = e.clientX; pfLastY = e.clientY;
+        pfDownX = e.clientX; pfDownY = e.clientY;
     });
-    window.addEventListener('mouseup', () => { pfDragging = false; });
+    window.addEventListener('mouseup', e => {
+        pfDragging = false;
+        // A click that barely moved (and wasn't a gizmo drag) selects a collider piece.
+        if (!pfGizmoDragging && Math.abs(e.clientX - pfDownX) + Math.abs(e.clientY - pfDownY) <= 4) {
+            const modal = document.getElementById('prefabModal');
+            if (modal && modal.style.display === 'block') pickPfPiece(e);
+        }
+    });
     window.addEventListener('mousemove', e => {
-        if (!pfDragging) return;
+        if (!pfDragging || pfGizmoDragging) return;    // gizmo drag suppresses orbit
         pfYaw   -= (e.clientX - pfLastX) * 0.01;
         pfPitch += (e.clientY - pfLastY) * 0.01;
-        pfPitch = Math.max(0.05, Math.min(1.45, pfPitch));
+        // Full pitch range (top-down ↔ bottom-up) so the gizmo's ±Y snaps are
+        // reachable by drag too; caps stay shy of the poles to avoid lookAt flip.
+        pfPitch = Math.max(-1.5, Math.min(1.5, pfPitch));
         pfLastX = e.clientX; pfLastY = e.clientY;
     });
     canvas.addEventListener('wheel', e => {
@@ -1531,6 +1706,43 @@ function initPrefabPreview() {
         pfDist *= (1 + Math.sign(e.deltaY) * 0.1);
         pfDist = Math.max(1.5, Math.min(80, pfDist));
     }, { passive: false });
+
+    // Clickable view gizmo — axis snap + Persp/Iso toggle, same as the scene editor.
+    document.querySelectorAll('#pfViewGizmo .vg-axis, #pfViewGizmo .vg-hub').forEach(el =>
+        el.addEventListener('click', () => pfSnapView(el.dataset.view)));
+    const pfPersp = document.getElementById('pfVgPersp');
+    if (pfPersp) pfPersp.addEventListener('click', togglePfProjection);
+
+    // Collider transform gizmo (W/E/R), like the scene editor. Attaches to the
+    // selected collider wireframe; edits write back to the piece's fraction values.
+    pfTC = new THREE.TransformControls(pfCamera, pfRenderer.domElement);
+    pfTC.setSpace('local');
+    pfTC.setSize(0.85);
+    pfTC.visible = false;
+    pfScene.add(pfTC);
+    pfTC.addEventListener('dragging-changed', e => {
+        pfGizmoDragging = e.value;
+        if (!e.value) {                    // drag ended → persist, resync fields + wireframes
+            persistPrefabs();
+            collidersDirty = true;
+            renderPrefabColliderRows();
+            buildPrefabPreviewContent();   // rebuilds wireframes and re-attaches the gizmo
+        }
+    });
+    pfTC.addEventListener('objectChange', () => {
+        writeSelectedPieceFromMesh();      // live writeback while dragging
+    });
+
+    // W / E / R → move / rotate / scale (only while the modal is open + a piece is picked).
+    window.addEventListener('keydown', e => {
+        const modal = document.getElementById('prefabModal');
+        if (!modal || modal.style.display !== 'block' || !pfTC || pfSelPiece < 0) return;
+        if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+        const k = e.key.toLowerCase();
+        if (k === 'w') pfTC.setMode('translate');
+        else if (k === 'e') pfTC.setMode('rotate');
+        else if (k === 'r') pfTC.setMode('scale');
+    });
 }
 
 function buildPrefabPreviewContent() {
@@ -1555,8 +1767,11 @@ function buildPrefabPreviewContent() {
         pfScene.add(helper);
         pfGizmos.push(helper);
         geo.dispose();
-        pfTarget.set(0, H / 2, 0);
-        pfDist = Math.max(H, r * 2) * 2 + 1.5;
+        if (pfFramedFor !== activePrefab) {
+            pfTarget.set(0, H / 2, 0);
+            pfDist = Math.max(H, r * 2) * 2 + 1.5;
+            pfFramedFor = activePrefab;
+        }
         return;
     }
 
@@ -1577,7 +1792,8 @@ function buildPrefabPreviewContent() {
         bounds = { radius: 1, height: 2, bottomY: 0, topY: 2, centerX: 0, centerZ: 0 };
     }
 
-    PropLevel.resolveColliders(propLike, bounds, def).forEach(c => {
+    pfBounds = bounds;   // frame for the gizmo→fraction writeback
+    PropLevel.resolveColliders(propLike, bounds, def).forEach((c, i) => {
         const geo = PropLevel.colliderGeometry(c);
         const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
         mat.depthTest = false;
@@ -1586,14 +1802,30 @@ function buildPrefabPreviewContent() {
         helper.position.set(ctr.x, ctr.y, ctr.z);
         helper.quaternion.copy(PropLevel.colliderQuat(c));
         helper.renderOrder = 999;
+        // Tag for gizmo selection + writeback (base half-extents at scale 1).
+        helper.userData.pieceIndex = i;
+        helper.userData.baseHalf = (c.shape === 'box')
+            ? { x: c.hx, y: c.hy, z: c.hz }
+            : { x: c.radius, y: ((c.yMax || 0) - (c.yMin || 0)) / 2, z: c.radius };
         pfScene.add(helper);
         pfGizmos.push(helper);
         geo.dispose();
     });
 
-    // Frame the camera to the bounds.
-    pfTarget.set(bounds.centerX || 0, (bounds.bottomY + bounds.topY) / 2, bounds.centerZ || 0);
-    pfDist = Math.max(bounds.height, bounds.radius * 2) * 2 + 1.5;
+    // Re-attach the gizmo to the same piece after a rebuild (or drop it if gone).
+    if (pfSelPiece >= 0) {
+        const m = pfGizmos.find(g => g.userData.pieceIndex === pfSelPiece);
+        if (m) { pfSelMesh = m; m.material.color.set(0x00e5ff); if (pfTC) { pfTC.attach(m); pfTC.visible = true; } }
+        else deselectPfPiece();
+    }
+
+    // Frame the camera to the bounds — ONLY when the prefab changed, so editing a
+    // collider value doesn't snap a zoomed/rotated preview back to the default view.
+    if (pfFramedFor !== activePrefab) {
+        pfTarget.set(bounds.centerX || 0, (bounds.bottomY + bounds.topY) / 2, bounds.centerZ || 0);
+        pfDist = Math.max(bounds.height, bounds.radius * 2) * 2 + 1.5;
+        pfFramedFor = activePrefab;
+    }
 }
 
 function refreshPrefabPreview() {
@@ -1611,6 +1843,14 @@ function startPrefabPreviewLoop() {
             pfTarget.y + pfDist * Math.sin(pfPitch),
             pfTarget.z + pfDist * Math.cos(pfPitch) * Math.cos(pfYaw)
         );
+        // Ortho has no perspective foreshortening, so zoom = frustum size (track pfDist).
+        if (pfCamera.isOrthographicCamera) {
+            const cv = pfRenderer.domElement;
+            const asp = (cv.clientWidth || 300) / (cv.clientHeight || 340);
+            const hH = pfDist * 0.55, hW = hH * asp;
+            pfCamera.left = -hW; pfCamera.right = hW; pfCamera.top = hH; pfCamera.bottom = -hH;
+            pfCamera.updateProjectionMatrix();
+        }
         pfCamera.lookAt(pfTarget);
         pfRenderer.render(pfScene, pfCamera);
     };
@@ -1988,9 +2228,16 @@ function applyLibraryMaterialToSelection(name) {
     selectedObjects.forEach(o => {
         if (o.userData && o.userData.data && o.userData.data.model === 'spawn') return;
         o.userData.data.material = name;
+        o.userData._matName = name;   // remembered name (survives later inline slider edits)
         if (PropLevel.applyMaterialPreset(o, name)) applied++;
     });
-    if (applied) { _markMatDirty(); refreshMaterialsSection(); }
+    if (applied) {
+        _markMatDirty();
+        refreshMaterialsSection();
+        // Now "working on" this material → reflect its name in the save field.
+        const nameInput = document.getElementById('matLibName');
+        if (nameInput) nameInput.value = name;
+    }
     return applied;
 }
 
@@ -2006,10 +2253,12 @@ function _currentMaterialPreset() {
         metalness: ('metalness' in m) ? m.metalness : 0,
         roughness: ('roughness' in m) ? m.roughness : 1
     };
-    // Carry a per-instance texture (cube/wall) if the lead object has one.
+    // Carry the per-instance texture (cube/wall) ONLY if the live material still shows
+    // one. If the map was cleared (Materials → Texture ✕), omit it so the saved preset
+    // is genuinely texture-less (and applying it clears the target's texture).
     const lead = _matLead();
     const d = lead && lead.userData && lead.userData.data;
-    if (d && d.texture) { preset.texture = d.texture; preset.tileX = d.tileX || 1; preset.tileY = d.tileY || 1; }
+    if (m.map && d && d.texture) { preset.texture = d.texture; preset.tileX = d.tileX || 1; preset.tileY = d.tileY || 1; }
     return preset;
 }
 
@@ -2021,6 +2270,10 @@ function saveCurrentMaterialToLibrary() {
     if (!preset) { if (status) status.textContent = 'Select an object with an editable material first.'; return; }
     if (typeof MaterialLibrary === 'undefined' || !MaterialLibrary) window.MaterialLibrary = {};
     const existed = Object.prototype.hasOwnProperty.call(MaterialLibrary, name);
+    if (existed && !window.confirm('A material named "' + name + '" already exists.\nOverwrite its properties?')) {
+        if (status) status.textContent = 'Save cancelled — "' + name + '" unchanged.';
+        return;
+    }
     MaterialLibrary[name] = preset;
     refreshMatLibSelect();
     document.getElementById('matLibSelect').value = name;
@@ -2081,7 +2334,19 @@ function openMatLibModal() {
     document.getElementById('matLibExportText').value = buildMaterialLibraryFileString();
     document.getElementById('matLibStatus').textContent = '';
     const nameInput = document.getElementById('matLibName');
-    if (nameInput) nameInput.value = '';
+    if (nameInput) {
+        // Pre-fill the name of the material we're working on so re-saving overwrites
+        // the same one. `_matName` is the remembered library name — it survives inline
+        // slider edits (which replace data.material with an inline object); fall back to
+        // a string data.material (a freshly loaded prop that hasn't been edited yet).
+        const lead = _matLead();
+        let cur = lead && lead.userData && lead.userData._matName;
+        if (typeof cur !== 'string') {
+            const d = lead && lead.userData && lead.userData.data;
+            if (d && typeof d.material === 'string') cur = d.material;
+        }
+        nameInput.value = (typeof cur === 'string') ? cur : '';
+    }
     openModal('matLibModal');
 }
 
@@ -2354,6 +2619,7 @@ function resetMaterials() {
         s.userData.materialDirty = false;
         // Drop any inline/library material so the reset prop exports clean.
         if (s.userData.data) delete s.userData.data.material;
+        delete s.userData._matName;
     });
     _setMatDirtyUI(false);
     _populateMatControls();
@@ -2500,6 +2766,18 @@ scene.add(
 const loader =
 new THREE.GLTFLoader();
 
+// Ground a loaded GLB so its bbox bottom sits at y=0, wrapped in a Group — must
+// match Level.groundModel in js/level.js so the editor previews props (and their
+// disguises) exactly as the game places them (center-origin meshes don't sink).
+function groundModel(scene)
+{
+    const box = new THREE.Box3().setFromObject(scene);
+    if (isFinite(box.min.y)) scene.position.y -= box.min.y;
+    const group = new THREE.Group();
+    group.add(scene);
+    return group;
+}
+
 function loadModel(name,path)
 {
     loader.load(
@@ -2507,7 +2785,7 @@ function loadModel(name,path)
         gltf =>
         {
             modelLibrary[name] =
-                gltf.scene;
+                groundModel(gltf.scene);
 
             // If the prefab modal is open, refresh so the model appears once loaded.
             if (pfRenderer && document.getElementById('prefabModal').style.display === 'block') {
@@ -2517,20 +2795,72 @@ function loadModel(name,path)
     );
 }
 
-loadModel(
-    "tree",
-    "assets/models/tree1.glb"
-);
+// Keep this list in sync with Level.loadModels() in js/level.js.
+const EDITOR_MODELS = {
+    tree: "tree1.glb", rock: "rock1.glb", bush: "bush1.glb",
+    barrel: "barrel1.glb", crate: "crate.glb", pot: "pot1.glb", cart: "cart.glb",
+    rock2: "rock2.glb", bush2: "bush2.glb", bush3: "bush3.glb",
+    fence: "fence2.glb", steps: "steps.glb", entrance: "entrance.glb",
+    amphora: "amphora.glb", fruitcrate: "fruitcrate.glb", hay: "hay.glb",
+    sack: "sack.glb", sackpile: "sackpile.glb", table: "table.glb",
+    tent: "tent.glb", lamppost: "lamppost.glb", hut: "hut.glb", house: "house.glb"
+};
+Object.keys(EDITOR_MODELS).forEach(k => loadModel(k, "assets/models/" + EDITOR_MODELS[k]));
 
-loadModel(
-    "rock",
-    "assets/models/rock1.glb"
-);
+//////////////////////////////////////////////////////
+// Prop palette — buttons + search filter
+//////////////////////////////////////////////////////
+// [model, label] grouped: basics, nature, market goods, structures. Add a row
+// here when a new prefab/model is wired (keep in sync with EDITOR_MODELS/prefabs.js).
+const PROP_PALETTE = [
+    ['tree','Tree'], ['rock','Rock'], ['bush','Bush'],
+    ['wall','Wall'], ['cube','Cube'], ['spawn','Spawn'], ['door','Exit Door'],
+    ['rock2','Rock 2'], ['bush2','Bush 2'], ['bush3','Bush 3'],
+    ['barrel','Barrel'], ['crate','Crate'], ['pot','Pot'], ['amphora','Amphora'],
+    ['sack','Sack'], ['sackpile','Sack Pile'], ['hay','Hay'], ['fruitcrate','Fruit Crate'],
+    ['table','Table'], ['cart','Cart'],
+    ['fence','Fence'], ['steps','Steps'], ['entrance','Entrance'], ['tent','Tent'],
+    ['lamppost','Lamp Post'], ['hut','Hut'], ['house','House']
+];
 
-loadModel(
-    "bush",
-    "assets/models/bush1.glb"
-);
+function buildPropPalette()
+{
+    const grid = document.getElementById('propGrid');
+    if(!grid) return;
+    grid.innerHTML = PROP_PALETTE.map(([m, l]) =>
+        '<button class="propBtn" data-model="' + m + '" data-label="' + l.toLowerCase() + '"' +
+        ' onclick="selectModel(\'' + m + '\',this)">' + l + '</button>'
+    ).join('');
+    // Keep the current placement model highlighted after a rebuild.
+    grid.querySelectorAll('.propBtn').forEach(b => {
+        if(b.dataset.model === selectedModel) b.classList.add('active');
+    });
+}
+
+function filterProps(q)
+{
+    q = (q || '').trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll('#propGrid .propBtn').forEach(b => {
+        const hit = !q || b.dataset.model.includes(q) || b.dataset.label.includes(q);
+        b.style.display = hit ? '' : 'none';
+        if(hit) shown++;
+    });
+    let empty = document.getElementById('propEmpty');
+    if(!shown){
+        if(!empty){
+            empty = document.createElement('div');
+            empty.id = 'propEmpty'; empty.className = 'prop-empty';
+            empty.textContent = 'No props match';
+            document.getElementById('propGrid').appendChild(empty);
+        }
+        empty.style.display = '';
+    } else if(empty){
+        empty.style.display = 'none';
+    }
+}
+
+buildPropPalette();
 
 
 //////////////////////////////////////////////////////
@@ -3549,8 +3879,11 @@ function buildEditorObject(prop)
         PropLevel.applyPropTexture(clone, clone.userData.data.texture, _dataTiling(clone.userData.data));
 
     // Restore a level-authored material preset so the imported prop looks as saved.
-    if(clone.userData.data.material)
+    if(clone.userData.data.material) {
         PropLevel.applyMaterialPreset(clone, clone.userData.data.material);
+        if (typeof clone.userData.data.material === 'string')
+            clone.userData._matName = clone.userData.data.material;   // remember for pre-fill
+    }
 
     PropLevel.syncBoundsToData(clone);
 

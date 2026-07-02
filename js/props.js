@@ -167,6 +167,8 @@ const PropLevel = {
             if (p.texture) {
                 const tex = this.getPropTexture(p.texture, { x: p.tileX || 1, y: p.tileY || 1 });
                 if (tex) nm.map = tex;
+            } else {
+                nm.map = null;   // preset carries no texture → clear any inherited/existing map
             }
             nm.needsUpdate = true;
             return nm;
@@ -443,7 +445,9 @@ const PropLevel = {
         const Rl = L ? Math.max(L.maxX - L.minX, L.maxZ - L.minZ) * 0.5 : R;
 
         // Box-shaped prop (walls): a single oriented box = the prop's whole box.
-        if (def && def.colliderShape === 'box') {
+        // An explicit `colliders` template overrides this (so a box prop can be given
+        // custom pieces in the editor); with no template we use the auto full box.
+        if (def && def.colliderShape === 'box' && !(def.colliders && def.colliders.length)) {
             const lx = (bounds.localX != null ? bounds.localX : R * 2);
             const lz = (bounds.localZ != null ? bounds.localZ : R * 2);
             const lmin = { x: lcx - lx * 0.5, y: lbase,      z: lcz - lz * 0.5 };
@@ -494,9 +498,13 @@ const PropLevel = {
             if (shape === 'box') {
                 const lmin = { x: lcxP - halfX, y: pcy - phy, z: lczP - halfZ };
                 const lmax = { x: lcxP + halfX, y: pcy + phy, z: lczP + halfZ };
-                // Piece's own Y spin composes on top of the prop's full rotation for
-                // its AXES; its CENTER is carried by the prop rotation alone.
-                const axisQ = quat.clone().multiply(this._propQuat({ y: pieceRotY }));
+                // Piece's own X/Y/Z spin composes on top of the prop's full rotation
+                // for its AXES (so a box piece can be TILTED into a ramp/slab); its
+                // CENTER is carried by the prop rotation alone. (Round pieces below
+                // ignore this — the 2.5D solver keeps cylinders/spheres upright.)
+                const pr = c.rotation || {};
+                const axisQ = quat.clone().multiply(
+                    this._propQuat({ x: pr.x || 0, y: pieceRotY, z: pr.z || 0 }));
                 return this._obbPiece(lmin, lmax, pivot, quat, axisQ);
             }
 

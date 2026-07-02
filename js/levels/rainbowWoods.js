@@ -1,4 +1,4 @@
-registerLevel("Forest", [
+registerLevel("Rainbow Woods", [
     {
         "id": "tree_1",
         "model": "tree",
