@@ -5,6 +5,88 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-03
 
+- **Reworked objective-pill text per role.** File: `js/ui.js` (`updateObjective`).
+  (1) **Seekers** no longer see the "Exits unlock in m:ss" countdown at all — they show
+  `🎯 Hunt the hiders` throughout HUNTING, switching to
+  `🚪 Exits are open: Kill the hiders before they escape` once the doors open (was the
+  hider-flavoured "EXITS OPEN — escape!"). (2) **Hiders'** unlock countdown now appears only
+  *after the last key beam has dropped* — computed as `now >= doorsActivateAt −
+  EXIT_ACTIVATE_DELAY_MS` (doors open 60 s after the final purple key beam). Before that they
+  show `🏃 Survive!` (or `🔑 Key secured — hold it!` when carrying a key). (3) HIDING-phase
+  hider text changed `🫥 Hide — disguise as a prop` → `🫥 Camouflage before hunters arrive`.
+
+- **Unified top-row HUD pill styling into one shared system.** Files: `css/style.css`,
+  `index.html`. The upper pills (role/timer `.hud-card`, `#next-drop`, `#objective-hud`,
+  `#keys-hud`, `#fps-meter`) shared the `--hud-*` colour/blur/shadow vars but each hardcoded
+  its own geometry — different `border-radius` (30 / 16 / 14px), padding and font-size — and
+  the `@media (max-height:520px)` block re-shrank each pill with *different* values (only
+  `.hud-card` got a radius override), so they diverged further on short viewports. Added
+  shared geometry vars (`--hud-radius: 999px`, `--hud-pad`, `--hud-font`, `--hud-gap`) and a
+  single grouped base rule so every pill reads identical geometry; only the accent
+  border-colour / text colour / extra glow stay per-pill. The media query now overrides the
+  vars **once** (`:root { --hud-pad; --hud-font; --hud-gap }`), rescaling all pills together
+  so they stay consistent at every viewport. Border **opacity** is also shared via a new
+  `--hud-border-alpha` (default `0.5`) — every pill's border reads it (neutral white + the
+  gold next-drop / teal objective / purple keys accents + the timer's inline orange in
+  `index.html`), so one value moves them all while each keeps its own hue. (Prior per-pill
+  alphas were 0.10 neutral / 0.55–0.7 accents / opaque timer — now unified.)
+
+- **Settings/Controls card fits the viewport + scrolls.** File: `css/style.css`. `.settings-card`
+  is now a flex column capped at `calc(100dvh - 32px)`; the `.settings-list` grows and scrolls
+  internally (`overflow-y:auto`, thin wooden scrollbar) while the title and Save row stay pinned.
+  Fixes the bottom rows (Graphics / toggles) being clipped off-screen on shorter windows. Applies
+  to both the Settings screen and the in-game Controls panel (both use `.settings-card`).
+
+- **Room-code input opens the numeric keypad on mobile.** File: `index.html`. `#input-room-id`
+  gained `inputmode="numeric" pattern="[0-9]*"` (codes are always 4 digits) so phones show the
+  number pad instead of the full QWERTY keyboard.
+
+- **Shareable room link + deep-link auto-join.** Files: `index.html`, `css/style.css`,
+  `js/globals.js`, `js/ui.js`, `js/app.js`. A 🔗 button beside the lobby room code (revealed by
+  `UI.setLobbyCode`, which now stores `currentRoomCode`) builds `…?room=CODE` and opens the OS
+  share sheet (`navigator.share` → WhatsApp etc.), falling back to clipboard-copy + a modal on
+  desktop. Opening a `?room=CODE` link prefills the code and, if a name is already saved, joins
+  straight into the lobby (`handleRoomDeepLink` on menu reveal); first-timers get a
+  **stripped-down menu** — only the name field + JOIN (Host button, OR divider and code
+  field hidden via `body.join-via-link`), since everything else is irrelevant when you
+  arrived through a link. The class is cleared in `UI.transitionToMenu` so leaving the room
+  restores the full menu. The query string is stripped after use so refreshes don't re-fire it.
+
+- **Keys pill hidden for seekers.** File: `js/ui.js`. `updateKeysHUD` now shows the
+  top-left `🔑 x/y` pill only for Hiders (keys are a hider collect/deposit objective);
+  seekers no longer see it. Was previously shown to everyone during HUNTING.
+
+- **Exit doors added to Bazaar / Ruins / Arena.** Files: `js/levels/bazaar.js`,
+  `js/levels/ruins.js`, `js/levels/arena.js`. Only `rainbowWoods` had `door` markers, so on
+  every other level `Level.buildDoors()` built zero portals — the green EXIT ring never
+  rendered when the gate opened, even though the "Exits unlock in…" countdown still showed
+  (the schedule is set from purple-beam timing regardless of whether doors exist). Added 3
+  `exitDoor` markers per level at spread-out **spawn-adjacent** coords (guaranteed-open,
+  reachable): Bazaar (-25,12)/(25,-12)/(0,30), Ruins (38,12)/(-38,-12)/(-4,20), Arena
+  (17,8)/(-17,-8)/(0,18). Positions estimated from each level's spawn layout — worth a quick
+  in-game check that none sit awkwardly against a wall.
+
+- **Fixed top-left HUD pills overlapping across resolutions.** Files: `index.html`,
+  `css/style.css`. `#objective-hud` and `#keys-hud` were each absolutely positioned with
+  hardcoded `top` offsets (52px / 88px); the `@media (max-height:520px)` block moved only
+  `#keys-hud` to `top:40px`, so on short/landscape screens the keys pill jumped above the
+  objective pill and the two collided (and neither tracked the header's real height). Wrapped
+  both in a new `#hud-left-stack` — a flex column anchored to the **bottom of the header**
+  (`top:100%`, the same trick `#fps-meter` uses) — so they always clear the header at any
+  resolution and stack with a gap that can't overlap. The pills lost their individual
+  `position/top/left`; the media query now just shrinks padding/font on the wrapper.
+
+- **HUD polish pass — Division-2-style frosted glass.** File: `css/style.css`. Added five
+  shared `:root` tokens (`--hud-bg` near-black translucent, `--hud-border` thin neutral edge,
+  `--hud-blur` = `blur(12px) saturate(120%)`, `--hud-shadow` soft floating drop shadow,
+  `--hud-text-shadow` for legibility) and applied them across the existing HUD pills — header
+  cards, right-cluster stats/icon buttons, FPS meter, next-drop, bottom-center health/combat
+  row, active-effect, disguise-cd, power-pill, objective + keys pills, and toasts. Each now
+  gets `backdrop-filter` blur, a consistent dark translucent fill, white text with shadow, and
+  the same floating shadow so they read as one system. Semantic accent border colors (gold,
+  green, red, purple, teal) were kept but softened to translucent. No elements added or removed;
+  layout/positions unchanged.
+
 - **FPS counter in the HUD.** Files: `index.html`, `css/style.css`, `js/globals.js`,
   `js/app.js`. New `#fps-meter` pinned top-right, directly below the ☰ menu icon (absolute,
   `top:100%` of `.hud-header`, so it doesn't reflow the header row). Gated by a `const

@@ -2494,7 +2494,13 @@ registerLevel('Ruins', [
         "collision": false,
         "hideSpot": false,
         "spawnPoint": true
-    }
+    },
+    { "id": "door_1", "model": "door", "x": 38, "y": 0, "z": 12, "bottomY": 0,
+      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true },
+    { "id": "door_2", "model": "door", "x": -38, "y": 0, "z": -12, "bottomY": 0,
+      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true },
+    { "id": "door_3", "model": "door", "x": -4, "y": 0, "z": 20, "bottomY": 0,
+      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true }
 ], {
     "ground": {
         "texture": "grass1.jpg",

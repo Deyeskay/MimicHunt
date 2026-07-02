@@ -29,6 +29,65 @@ if (nameField) nameField.addEventListener('input', () => nameField.classList.rem
 
 document.getElementById('btn-host').addEventListener('click', () => { if (!requireName()) return; commitPlayerName(); Network.initHost(); });
 document.getElementById('btn-join').addEventListener('click', () => { if (!requireName()) return; commitPlayerName(); Network.initClient(); });
+
+// --- Share room link (WhatsApp / any app) + deep-link auto-join ---
+// The share button in the lobby builds "<site>?room=CODE". Opening that link
+// prefills the code and (if a name is already saved) joins straight into the lobby.
+function buildRoomShareUrl(code) {
+    return location.origin + location.pathname + '?room=' + encodeURIComponent(code);
+}
+const shareRoomBtn = document.getElementById('btn-share-room');
+if (shareRoomBtn) shareRoomBtn.addEventListener('click', async () => {
+    const code = currentRoomCode;
+    if (!code) return;
+    const url = buildRoomShareUrl(code);
+    // Native share sheet on mobile (lets the user pick WhatsApp directly).
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: 'Hide & Hunt', text: 'Join my Hide & Hunt room ' + code + '!', url });
+            return;
+        } catch (e) {
+            if (e && e.name === 'AbortError') return;   // user dismissed the sheet
+            // otherwise fall through to clipboard copy
+        }
+    }
+    // Desktop / no Web Share: copy the link and show it so it can be pasted anywhere.
+    try {
+        await navigator.clipboard.writeText(url);
+        UI.showModal('Room link copied!', 'Paste it to your friends:\n\n' + url);
+    } catch (e) {
+        UI.showModal('Share this room link', url);
+    }
+});
+
+// Read a ?room=CODE deep link (validated to a real 4-digit code) once, at boot.
+function getRoomDeepLink() {
+    try {
+        const p = new URLSearchParams(location.search).get('room');
+        return (p && /^\d{4}$/.test(p)) ? p : null;
+    } catch (e) { return null; }
+}
+// Called once the menu is revealed: honour a ?room= deep link by joining.
+function handleRoomDeepLink() {
+    const code = getRoomDeepLink();
+    if (!code) return;
+    const roomInput = document.getElementById('input-room-id');
+    if (roomInput) roomInput.value = code;
+    // Strip the query so a refresh (or the successor's own re-share) doesn't re-fire it.
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+    if (myName && myName.trim()) {
+        // Returning player (saved name) — go straight to the lobby.
+        commitPlayerName();
+        Network.initClient();
+    } else {
+        // First-timer: need a name before we can join. Strip the menu down to just
+        // the name field + JOIN (no hosting / code entry — they came via a link).
+        document.body.classList.add('join-via-link');
+        UI.updateStatus('Enter your name to join room ' + code + '.');
+        const nameEl = document.getElementById('input-player-name');
+        if (nameEl) nameEl.focus();
+    }
+}
 // Hamburger (☰) now opens a small dropdown (Edit Layout / Exit Game) instead of
 // leaving the match directly.
 const gameMenu = document.getElementById('game-menu');
@@ -493,6 +552,7 @@ loadLevelScripts().then(() =>
         // the player confirms (Enter / tap), handled inside LoadingScreen.
         LoadingScreen.markReady(() => {
             document.getElementById('menu-screen').style.display = 'flex';
+            handleRoomDeepLink();
         });
     }, (loaded, total) => LoadingScreen.setProgress(loaded, total));
 });

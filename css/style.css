@@ -11,6 +11,23 @@
     --candy-blue-1: #59b8f5; --candy-blue-2: #2a7fd0; --candy-blue-edge: #1a5798;
     --candy-red-1: #ff7363; --candy-red-2: #e23b30; --candy-red-edge: #a8231c;
     --candy-orange: #f5a623;
+
+    /* In-game HUD (Division-style): frosted near-black glass, thin neutral edge,
+       crisp white text, soft floating shadow. Shared so every pill reads as one system. */
+    --hud-bg: rgba(10, 12, 16, 0.55);
+    /* Shared border OPACITY — every pill's border (neutral + gold/teal/purple accents)
+       reads this, so one control moves them all together. Each pill keeps its own hue. */
+    --hud-border-alpha: 0.5;
+    --hud-border: rgba(255, 255, 255, var(--hud-border-alpha));
+    --hud-blur: blur(12px) saturate(120%);
+    --hud-shadow: 0 6px 22px rgba(0, 0, 0, 0.45);
+    --hud-text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
+    /* Shared pill GEOMETRY — every top-row HUD pill reads these so they stay one
+       consistent system at every viewport (a single override rescales them all). */
+    --hud-radius: 999px;
+    --hud-pad: 6px 14px;
+    --hud-font: 0.92rem;
+    --hud-gap: 6px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
@@ -226,10 +243,30 @@ p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; }
 .menu-card p:not(.subtitle) { color: var(--cream-dim); }
 .form-group { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
 
+/* Lobby room-code header: code centred, share button tucked to the right. */
+.lobby-code-row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.lobby-code-row #lobby-title { margin: 0; }
+.share-room-btn {
+    flex: 0 0 auto; width: 40px; height: 40px; padding: 0 !important;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.25rem; line-height: 1; border-radius: 12px !important;
+    /* Reuse the candy-blue button look but compact + square. */
+    background: linear-gradient(180deg, var(--candy-blue-1), var(--candy-blue-2)) !important;
+    box-shadow: 0 4px 0 var(--candy-blue-edge), 0 6px 10px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.4) !important;
+}
+.share-room-btn:active { transform: translateY(3px); }
+
 .or-divider {
     display: flex; align-items: center; gap: 10px; color: var(--cream-dim);
     font-weight: 700; font-size: 0.85rem; letter-spacing: 2px; margin: 4px 0;
 }
+
+/* Deep-link join mode (arrived via a ?room=CODE link): only a name + JOIN are
+   needed — hide hosting, the OR divider and the (already-filled) code field. */
+body.join-via-link #btn-host,
+body.join-via-link .or-divider,
+body.join-via-link #input-room-id { display: none; }
+
 .or-divider::before, .or-divider::after {
     content: ''; flex: 1; height: 3px; border-radius: 3px;
     background: rgba(0,0,0,0.25); box-shadow: 0 1px 0 rgba(255,255,255,0.12);
@@ -248,6 +285,27 @@ input:focus { border-color: var(--candy-blue-2); outline: none; }
 /* Required-field error (e.g. empty name on Host/Join): red ring + shake. */
 input.input-error { border-color: var(--accent-red); box-shadow: inset 0 4px 7px rgba(0,0,0,0.55), 0 0 0 3px rgba(255,71,87,0.30); animation: name-shake 0.32s; }
 @keyframes name-shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+
+/* Settings / Controls card: never taller than the viewport. Title (and Save row)
+   stay pinned; only the rows scroll when they don't all fit. dvh tracks mobile
+   browser chrome; vh is the fallback for older engines. */
+.settings-card {
+    display: flex; flex-direction: column;
+    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 32px);
+}
+.settings-card .form-group {
+    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+}
+.settings-card .settings-list {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    /* room for the scrollbar so it doesn't overlap the value chips */
+    padding-right: 4px; scrollbar-width: thin; scrollbar-color: var(--wood-dark) transparent;
+}
+.settings-card .settings-list::-webkit-scrollbar { width: 8px; }
+.settings-card .settings-list::-webkit-scrollbar-thumb {
+    background: var(--wood-dark); border-radius: 8px;
+}
 
 /* --- Settings rows: recessed wooden slots, icon badge + label + control --- */
 .settings-list { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
@@ -474,16 +532,24 @@ button.leave {
 .hud-header { display: flex; justify-content: flex-start; align-items: center; width: 100%; position: relative; }
 /* Timer pill sits top-LEFT next to the role badge (flows in the header row); the
    icon cluster stays right. The top-CENTRE slot is used by the disguise-lock alert. */
-.hud-card {
-    background: rgba(26, 26, 36, 0.85); padding: 10px 16px; border-radius: 30px;
-    font-weight: bold; border: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px;
-    align-items: center; white-space: nowrap;
+/* One shared look for EVERY top-row HUD pill — role, timer, next-drop, objective,
+   keys, fps. Geometry (radius / padding / font / gap / blur / border / shadow) is
+   unified here so they read as one system at every viewport; only the accent
+   border-colour, text colour and extra glow stay per-pill in the rules below. */
+.hud-card, #next-drop, #objective-hud, #keys-hud, #fps-meter {
+    display: flex; align-items: center; gap: var(--hud-gap);
+    padding: var(--hud-pad); border-radius: var(--hud-radius);
+    font-weight: 700; font-size: var(--hud-font); color: #fff; white-space: nowrap;
+    background: var(--hud-bg); border: 1px solid var(--hud-border);
+    text-shadow: var(--hud-text-shadow);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
+    box-shadow: var(--hud-shadow);
 }
 /* Premium right-side cluster: icon + count, fullscreen, menu — no pills, thin dividers. */
 .hud-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
 .hud-stat {
     display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff;
-    font-size: 1.05rem; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    font-size: 1.05rem; line-height: 1; text-shadow: var(--hud-text-shadow);
 }
 .hud-stat .hud-ic { font-size: 1.15rem; opacity: 0.95; }
 .hud-div { width: 1px; height: 22px; background: rgba(255,255,255,0.25); }
@@ -492,20 +558,17 @@ button.leave {
    header row). Absolute so it doesn't shift the header layout; toggled by SHOW_FPS. */
 #fps-meter {
     position: absolute; top: 100%; right: 0; margin-top: 8px;
-    background: rgba(26, 26, 36, 0.85); padding: 4px 10px; border-radius: 14px;
-    border: 1px solid rgba(255,255,255,0.05);
-    font-weight: 700; font-size: 0.8rem; line-height: 1; color: #7bed9f;
-    font-family: monospace; white-space: nowrap; pointer-events: none;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+    line-height: 1; color: rgba(255,255,255,0.75);
+    font-family: monospace; pointer-events: none;
 }
 #fps-meter #fps-value { color: #fff; }
 
 /* Next-airdrop countdown pill (top-right): a softly-blinking bell + countdown.
    Gold-tinted to match the airdrop beams. Goes "imminent" (faster, brighter) at ≤10s. */
+/* Per-pill accent only (geometry comes from the shared base above). */
 #next-drop {
-    padding: 4px 12px; border-radius: 16px; font-size: 0.92rem; white-space: nowrap;
-    background: rgba(26,26,36,0.78); border: 1px solid rgba(255,215,0,0.65);
-    color: #ffe98a; box-shadow: 0 0 12px rgba(255,215,0,0.22);
+    border-color: rgba(255,215,0,var(--hud-border-alpha)); color: #ffe98a;
+    box-shadow: var(--hud-shadow), 0 0 12px rgba(255,215,0,0.22);
 }
 #next-drop .nd-ic { display: inline-block; animation: nd-blink 1.6s ease-in-out infinite; }
 #next-drop #next-drop-time { font-family: monospace; color: #fff; }
@@ -516,7 +579,7 @@ button.leave {
     width: 40px; height: 40px; padding: 0; border: none; background: transparent;
     color: #fff; font-size: 1.35rem; line-height: 1; cursor: pointer; border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.6); transition: background .15s ease, transform .08s ease;
+    text-shadow: var(--hud-text-shadow); transition: background .15s ease, transform .08s ease;
 }
 .hud-icon-btn:hover { background: rgba(255,255,255,0.12); }
 .hud-icon-btn:active { transform: scale(0.92); }
@@ -528,9 +591,11 @@ button.leave {
 .bottom-center-hud {
     position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
     z-index: 12; pointer-events: none;
-    background: rgba(26, 26, 36, 0.85); padding: 9px 18px; border-radius: 26px;
-    font-weight: bold; display: flex; align-items: center; gap: 10px;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--hud-bg); padding: 9px 18px; border-radius: 26px;
+    font-weight: bold; display: flex; align-items: center; gap: 10px; color: #fff;
+    border: 1px solid var(--hud-border); text-shadow: var(--hud-text-shadow);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
+    box-shadow: var(--hud-shadow);
 }
 #health-hud { border-color: var(--accent-green); }
 #combat-hud { font-family: monospace; border-color: var(--accent-blue); }
@@ -540,8 +605,10 @@ button.leave {
 #active-effect {
     position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%);
     z-index: 13; pointer-events: none;
-    background: rgba(26, 26, 36, 0.9); padding: 6px 14px; border-radius: 20px;
-    border: 1px solid rgba(255,255,255,0.14); color: #fff; font-weight: 700;
+    background: var(--hud-bg); padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--hud-border); color: #fff; font-weight: 700;
+    text-shadow: var(--hud-text-shadow);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
     display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 3px 6px;
     font-size: 0.82rem; letter-spacing: 0.5px; white-space: nowrap;
     box-shadow: 0 4px 14px rgba(0,0,0,0.4);
@@ -587,10 +654,12 @@ button.leave {
 #disguise-cd {
     position: absolute; left: 50%; top: 12px; transform: translateX(-50%);
     z-index: 13; pointer-events: none;
-    background: rgba(26, 26, 36, 0.9); padding: 8px 16px; border-radius: 22px;
+    background: var(--hud-bg); padding: 8px 16px; border-radius: 22px;
     border: 1px solid var(--accent-red); color: #ff6b81; font-weight: bold;
+    text-shadow: var(--hud-text-shadow);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
     display: flex; flex-direction: column; align-items: center; gap: 6px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+    box-shadow: var(--hud-shadow);
 }
 .dcd-row { display: flex; align-items: center; gap: 6px; letter-spacing: 1px; white-space: nowrap; }
 #disguise-cd-text { font-family: monospace; color: #ffa502; }
@@ -602,34 +671,37 @@ button.leave {
 #power-pill {
     position: absolute; bottom: 28px; left: calc(50% + 150px);
     z-index: 12; pointer-events: none;
-    background: rgba(26, 26, 36, 0.85); padding: 6px 13px; border-radius: 22px;
-    border: 1px solid #ffd700; color: #ffe98a; font-weight: 700;
+    background: var(--hud-bg); padding: 6px 13px; border-radius: 22px;
+    border: 1px solid rgba(255,215,0,0.7); color: #ffe98a; font-weight: 700;
+    text-shadow: var(--hud-text-shadow);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
     display: flex; align-items: center; gap: 6px; white-space: nowrap;
     font-size: 0.8rem; letter-spacing: 0.5px;
-    box-shadow: 0 0 14px rgba(255,215,0,0.28);
+    box-shadow: var(--hud-shadow), 0 0 14px rgba(255,215,0,0.28);
 }
 #power-pill .pp-ic { font-size: 1.15rem; line-height: 1; }
 /* The one-shot "power acquired" pop is driven in JS via the Web Animations API
    (UI.pulsePickup) with composite:'add', so its scale composes with the layout
    editor's inline transform (translate(-50%,-50%) scale()) instead of clobbering it. */
 
-/* Persistent objective pill (top-left, directly under the role card). Teal = goal theme.
-   Sits above #keys-hud so the two top-left pills stack without overlapping. */
-#objective-hud {
-    position: absolute; top: 52px; left: 12px; z-index: 13; pointer-events: none;
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(20,30,30,0.85); padding: 5px 13px; border-radius: 16px;
-    border: 1px solid #00e5a0; color: #b6ffe6; font-weight: 700; font-size: 0.92rem;
-    white-space: nowrap; box-shadow: 0 0 12px rgba(0,229,160,0.25);
+/* Top-left objective stack: anchored to the BOTTOM of the header row (top:100%) so it
+   always clears the header regardless of its height/scale, and the two pills stack in a
+   gap'd column that can never overlap each other (or the header) at any resolution. */
+#hud-left-stack {
+    position: absolute; top: 100%; left: 0; margin-top: 8px; z-index: 13;
+    pointer-events: none; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
 }
 
-/* Team key objective pill (top-left, below the objective pill). Purple = key theme. */
+/* Persistent objective pill — teal goal accent (geometry from the shared base). */
+#objective-hud {
+    border-color: rgba(0,229,160,var(--hud-border-alpha)); color: #b6ffe6;
+    box-shadow: var(--hud-shadow), 0 0 12px rgba(0,229,160,0.25);
+}
+
+/* Team key objective pill — purple key accent (geometry from the shared base). */
 #keys-hud {
-    position: absolute; top: 88px; left: 12px; z-index: 13; pointer-events: none;
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(26,26,36,0.85); padding: 5px 13px; border-radius: 16px;
-    border: 1px solid #a64dff; color: #e0c8ff; font-weight: 700; font-size: 0.92rem;
-    white-space: nowrap; box-shadow: 0 0 12px rgba(166,77,255,0.25);
+    border-color: rgba(166,77,255,var(--hud-border-alpha)); color: #e0c8ff;
+    box-shadow: var(--hud-shadow), 0 0 12px rgba(166,77,255,0.25);
 }
 
 /* Hider "use power" action button (mobile) — gold-ringed. Sized + labelled to
@@ -652,9 +724,10 @@ button.leave {
 }
 .toast {
     max-width: 80vw; padding: 8px 16px; border-radius: 20px; white-space: nowrap;
-    font-weight: bold; font-size: 0.92rem; color: #fff;
-    background: rgba(20, 22, 30, 0.9); border: 1px solid rgba(255,255,255,0.12);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+    font-weight: bold; font-size: 0.92rem; color: #fff; text-shadow: var(--hud-text-shadow);
+    background: var(--hud-bg); border: 1px solid var(--hud-border);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
+    box-shadow: var(--hud-shadow);
     animation: toast-in 0.25s ease, toast-out 0.4s ease forwards;
     animation-delay: 0s, 3.6s;   /* visible ~3.6s, then fade out */
 }
@@ -949,9 +1022,9 @@ body.layout-editing .le-selected {
 /* ============================================================= */
 @media (max-height: 520px) {
     #ui-layer { padding: 8px; }
+    /* One override rescales EVERY top-row pill together, so they stay consistent. */
+    :root { --hud-pad: 4px 10px; --hud-font: 0.76rem; --hud-gap: 5px; }
     .hud-header { gap: 6px; }
-    .hud-card { padding: 5px 11px; font-size: 0.78rem; border-radius: 20px; gap: 5px; }
-    #timer-display { font-size: 0.95rem; }
     #health-hud .hp-track { width: 150px; height: 12px; }
     .bottom-center-hud { bottom: 14px; padding: 6px 14px; font-size: 0.85rem; }
     #active-effect { bottom: 54px; padding: 5px 12px; font-size: 0.74rem; }
@@ -965,9 +1038,8 @@ body.layout-editing .le-selected {
     #disguise-cd .dcd-track { width: 130px; height: 5px; }
     #power-pill { bottom: 16px; left: calc(50% + 104px); padding: 4px 10px; font-size: 0.7rem; }
     #power-pill .pp-ic { font-size: 1rem; }
-    #keys-hud { top: 40px; left: 8px; padding: 3px 10px; font-size: 0.76rem; }
+    #hud-left-stack { margin-top: 6px; gap: 5px; }
     .hud-right { gap: 8px; }
-    #next-drop { padding: 3px 9px; font-size: 0.74rem; }
     .action-btn.power-btn { width: 100px; height: 100px; }
     .power-btn .pb-icon { font-size: 1.9rem; }
     .power-btn .pb-label { font-size: 0.68rem; }

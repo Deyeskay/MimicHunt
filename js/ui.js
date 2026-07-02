@@ -43,10 +43,14 @@ const UI = {
     // Lobby title: "ROOM CODE:" in yellow, the code itself white + larger so it
     // stands out as the thing players share. Called from every spot that knows the code.
     setLobbyCode: function(code) {
+        // Stash the current code so the share button can build a join link for it.
+        currentRoomCode = code;
         const t = document.getElementById('lobby-title');
         if (!t) return;
         t.innerHTML = '<span style="color:#ffd54a;">ROOM CODE:</span> ' +
             '<span style="color:#ffffff; font-size:1.35em; font-weight:800;">' + code + '</span>';
+        const share = document.getElementById('btn-share-room');
+        if (share) share.style.display = code ? 'flex' : 'none';
     },
 
     // Transient bottom-center notification (player left / eliminated / disconnected).
@@ -147,23 +151,36 @@ const UI = {
         const exitsOpen = actAt && now >= actAt;
 
         if (phase === 'HUNTING') {
+            if (role === 'Seeker') {
+                // Seekers never see the exit-unlock countdown — just the hunt goal,
+                // then a kill-them-before-they-flee prompt once the doors open.
+                this.objective(exitsOpen
+                    ? '🚪 Exits are open: Kill the hiders before they escape'
+                    : '🎯 Hunt the hiders');
+                return;
+            }
+            // --- Hider ---
             if (exitsOpen) {
                 this.objective(carrying ? '🚪 Deposit your key at an EXIT!' : '🚪 EXITS OPEN — escape!');
-            } else if (actAt) {
+                return;
+            }
+            // The unlock countdown only appears once the LAST key beam has dropped:
+            // doorsActivateAt = lastKeyDrop + EXIT_ACTIVATE_DELAY_MS, so back that out.
+            const keysAllDropped = actAt && now >= (actAt - EXIT_ACTIVATE_DELAY_MS);
+            if (keysAllDropped) {
                 const secs = Math.max(0, Math.ceil((actAt - now) / 1000));
                 const mmss = Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
                 this.objective(carrying ? ('🔑 Key secured — exits unlock in ' + mmss)
                                         : ('⏳ Exits unlock in ' + mmss));
             } else {
-                // No exit schedule (short match) — fall back to the role goal.
-                this.objective(role === 'Seeker' ? '🎯 Hunt the hiders' : '🏃 Survive!');
+                this.objective(carrying ? '🔑 Key secured — hold it!' : '🏃 Survive!');
             }
             return;
         }
 
         // HIDING
         if (role === 'Seeker') this.objective('⏳ Hunt begins in ' + (gameState.timer || 0) + 's');
-        else this.objective('🫥 Hide — disguise as a prop');
+        else this.objective('🫥 Camouflage before hunters arrive');
     },
 
     transitionToGame: function() {
@@ -221,6 +238,9 @@ const UI = {
     },
 
     transitionToMenu: function() {
+        // Leaving a room returns to the FULL menu (host + join) even if we first
+        // arrived via a ?room= link that stripped it to join-only.
+        document.body.classList.remove('join-via-link');
         document.getElementById('gameCanvas').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'none';
@@ -532,7 +552,9 @@ const UI = {
         const el = document.getElementById('keys-hud');
         if (!el) return;
         const goal = (typeof KEYS_TO_WIN !== 'undefined') ? KEYS_TO_WIN : 3;
-        if (gameState.phase !== 'HUNTING') { el.style.display = 'none'; return; }
+        // Keys are a HIDER objective (collect/deposit to win); seekers don't chase
+        // them, so the pill is hidden for them to keep the seeker HUD uncluttered.
+        if (gameState.phase !== 'HUNTING' || !me || me.role !== 'Hider') { el.style.display = 'none'; return; }
         el.style.display = 'flex';
         let txt = '🔑 ' + (gameState.submittedKeys || 0) + '/' + goal;
         if (me.role === 'Hider' && me.carriedKeys > 0) txt += ' · 🎒 ' + me.carriedKeys;

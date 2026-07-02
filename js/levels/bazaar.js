@@ -2715,7 +2715,13 @@ registerLevel("Bazaar", [
             "y": 0,
             "z": -180
         }
-    }
+    },
+    { "id": "door_1", "model": "door", "x": -25, "y": 0, "z": 12, "bottomY": 0,
+      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true },
+    { "id": "door_2", "model": "door", "x": 25, "y": 0, "z": -12, "bottomY": 0,
+      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true },
+    { "id": "door_3", "model": "door", "x": 0, "y": 0, "z": 30, "bottomY": 0,
+      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true }
 ], {
     "ground": {
         "texture": "sandy_ground_texture.jpg",
