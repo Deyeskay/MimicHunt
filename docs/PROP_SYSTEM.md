@@ -85,10 +85,16 @@ are still used by disguise sizing, climbing, spawns, and the hit radius — only
   any `hideSpot`).
 
 ## Meshes
-- `createPropMesh(prop, modelLibrary)`: clones the GLB (`tree/rock/bush`) or builds a
+- `createPropMesh(prop, modelLibrary)`: clones the GLB (`tree/rock/bush` + the Bazaar
+  env props `barrel/crate/pot/cart/rock2/bush2/bush3/fence/steps/entrance`) or builds a
   box for `wall`; `applyPropTransform` grounds it via `bottomY` + applies scale/
   rotation. `spawn` markers have no mesh (placement metadata only).
 - GLB props keep their own materials (why the scene needed brighter lights).
+- **`Level.groundModel`** (in `loadModels`) normalizes every loaded GLB so its bbox
+  bottom sits at y=0, wrapped in a Group so the offset survives per-instance cloning
+  (`applyPropTransform` overwrites the clone's root position). No-op for base-origin
+  models; it's what lets **center-origin** props (barrel/crate/pot) place AND disguise
+  without sinking. New GLB types need a `loadModels` entry + a `PrefabLibrary` def.
 
 ## Per-instance textures (cube + wall)
 `cube` and `wall` are procedural `BoxGeometry` props (not GLBs) that support a per-**instance**

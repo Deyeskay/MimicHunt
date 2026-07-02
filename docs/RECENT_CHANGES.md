@@ -5,6 +5,33 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **New "Bazaar" level + 10 new env prop types.** Files: `js/levels/bazaar.js` (new,
+  116 props), `js/level.js` (`loadModels` + new `groundModel`), `js/prefabs.js` (10 new
+  prefab defs), `js/levels/registry.js` (added `bazaar.js`), generator
+  `testing/tools/gen_bazaar.js` (new). A walled desert marketplace on
+  `sandy_ground_texture.jpg`: two rows of **open see-through stalls** (low counter + slim
+  posts + a non-colliding awning) heaped with an irregular **disguise crowd** of ~55
+  barrels / crates / pots (many identical props = real prop-hunt ambiguity), a central
+  **fountain plaza**, a **caravan corner** (carts + goods), a **steps-up corner rooftop**,
+  corner boulders/bushes, and walk-through **entrance** arches. New disguisable prefab
+  types: `barrel crate pot cart rock2 bush2 bush3` (hideSpot/canDisguise), plus structure
+  `fence steps entrance` — all loaded from `assets/models/` (light GLBs moved out of
+  `env_modals/`).
+  - **Generator now encodes 3 design rules** (portable to the other generators): **R1
+    see-through** (only the perimeter + outer-corner landmarks may be tall solids; a build-
+    time guard throws on any mid-arena opaque partition), **R2 no-empty-areas** (`fillGaps`
+    grids the interior and drops a disguise cluster into every empty non-reserved cell, then
+    asserts none remain — filled 3 gaps → 28/36 cells occupied), **R3 variety** (piles/fills
+    draw from a weighted `PALETTE` — grow it as new market models arrive to lift variety
+    everywhere without touching the layout).
+  - **`Level.groundModel`** normalizes every loaded GLB so its bbox bottom sits at y=0,
+    wrapped in a Group (the offset survives per-instance cloning, where `applyPropTransform`
+    overwrites the root position). No-op for base-origin tree/rock/bush; it's what lets
+    center-origin props (barrel/crate/pot) sit on the floor AND disguise without sinking.
+  - Model display scales in the generator were derived from each GLB's measured bounding
+    box — eyeball-tune in `editor.html` if a prop reads too big/small, and check `steps`
+    ascent orientation (its facing was a best guess, not visually verified).
+
 - **Step-up passthrough fix — no more walking THROUGH small rocks.** File:
   `js/mechanics.js`. With `STEP_HEIGHT=0.7`, a small rock (box collider top ≈0.59 but
   visual **mesh** top ≈0.70) let the feet-lifted `blockedAt` clear the short *collider*,

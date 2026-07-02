@@ -118,6 +118,70 @@ const PrefabLibrary = {
         "hideSpot": false,
         "canDisguise": false
     },
+    "barrel": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "crate": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliderShape": "box"
+    },
+    "pot": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "cart": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliderShape": "box"
+    },
+    "rock2": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "bush2": {
+        "collision": false,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "bush3": {
+        "collision": false,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "fence": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false,
+        "colliderShape": "box"
+    },
+    "steps": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": false,
+        "canDisguise": false,
+        "colliderShape": "box"
+    },
+    "entrance": {
+        "collision": false,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false
+    },
     "door": {
         "collision": false,
         "climbable": false,

@@ -475,12 +475,40 @@ const Level = {
         (this.levelMeshes = this.levelMeshes || []).push(mesh);
     },
 
+    // Normalize a loaded GLB so its bounding-box bottom sits at y=0, and wrap it
+    // in a Group. Props are placed by ABSOLUTE y (applyPropTransform overwrites
+    // the mesh position), so the offset can't live on the returned root — it's
+    // baked onto an inner child and the Group is what gets cloned/placed/scaled.
+    // No-op for already base-origin models (tree/rock/bush: min.y≈0); it fixes
+    // center-origin props (barrel/crate/pot/…) that would otherwise sink — and,
+    // because disguise meshes clone the same library entry, keeps disguises grounded.
+    groundModel: function(scene) {
+        const box = new THREE.Box3().setFromObject(scene);
+        if (isFinite(box.min.y)) scene.position.y -= box.min.y;
+        const group = new THREE.Group();
+        group.add(scene);
+        return group;
+    },
+
     loadModels: function(callback) {
         const loader = new THREE.GLTFLoader();
         const files = [
             { key: "tree", path: "assets/models/tree1.glb" },
             { key: "rock", path: "assets/models/rock1.glb" },
-            { key: "bush", path: "assets/models/bush1.glb" }
+            { key: "bush", path: "assets/models/bush1.glb" },
+            // Extra env props (Bazaar + future levels). Grounded on load (see
+            // groundModel) so center-origin meshes still sit on the floor and
+            // disguise correctly. Each needs a prefab entry in prefabs.js.
+            { key: "barrel",   path: "assets/models/barrel1.glb" },
+            { key: "crate",    path: "assets/models/crate.glb" },
+            { key: "pot",      path: "assets/models/pot1.glb" },
+            { key: "cart",     path: "assets/models/cart.glb" },
+            { key: "rock2",    path: "assets/models/rock2.glb" },
+            { key: "bush2",    path: "assets/models/bush2.glb" },
+            { key: "bush3",    path: "assets/models/bush3.glb" },
+            { key: "fence",    path: "assets/models/fence2.glb" },
+            { key: "steps",    path: "assets/models/steps.glb" },
+            { key: "entrance", path: "assets/models/entrance.glb" }
         ];
 
         const total = files.length + 2;   // + the two animated characters (player + hunter)
@@ -490,7 +518,7 @@ const Level = {
         files.forEach(file => {
             loader.load(
                 file.path,
-                (gltf) => { modelLibrary[file.key] = gltf.scene; done(); },
+                (gltf) => { modelLibrary[file.key] = this.groundModel(gltf.scene); done(); },
                 undefined,
                 (err) => { console.error("Failed:", file.path, err); done(); }
             );

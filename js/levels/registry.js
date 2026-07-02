@@ -27,7 +27,8 @@ function registerLevel(name, props, options) {
 const LEVEL_FILES = [
     'forest.js',
     'arena.js',
-    'ruins.js'
+    'ruins.js',
+    'bazaar.js'
 ];
 
 // Inject each level file in order and resolve once all have registered.
