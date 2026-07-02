@@ -5,6 +5,22 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-02
 
+- **Step-up passthrough fix — no more walking THROUGH small rocks.** File:
+  `js/mechanics.js`. With `STEP_HEIGHT=0.7`, a small rock (box collider top ≈0.59 but
+  visual **mesh** top ≈0.70) let the feet-lifted `blockedAt` clear the short *collider*,
+  so the step-up committed the horizontal move — but `_climbFloor`'s seat gate keys off
+  the taller *mesh* top (`getPropTop`), so it refused to lift the player: you slid THROUGH
+  the rock at ground level. Root issue: step-up cleared on collider height but seating
+  gated on mesh height. Fix: step-up now also requires a real landing — added
+  `_stepLandingAt(x,z,…)` (which reuses `_climbFloor`, now position-queryable via optional
+  `px,pz,py` args) and the per-axis step only commits when there's a climbable surface at
+  the target higher than the player (`> localPos.y`). Props whose seat gate fails (small
+  rocks) now **block** instead of passing through; genuine steps (curbs, the ramp-top
+  platform) still climb. Verified: small rock blocks (`crossed:false`), ramp→platform
+  still reaches the top (y 8.63, 0 drop-outs), descent still smooth (0 airborne ticks).
+  (If small rocks should instead be *stepped onto* rather than block, that's a one-line
+  choice — gate seating on collider top instead of mesh top — say the word.)
+
 - **Movement-smoothness fix — ramp descent no longer bounces; mesh lift no longer pops.**
   Files: `js/globals.js`, `js/mechanics.js`. Two causes of the jerkiness introduced by
   the ramp work: (1) **Descent bounce** (pre-existing, exposed by testing) — walking DOWN

@@ -389,21 +389,25 @@ const Mechanics = {
         // the tangential component still applies and the player slides along the
         // surface rather than sticking. X is committed first, then Z is tested
         // against the updated X to avoid clipping around corners.
-        // Each axis: take the direct move if clear; else, while grounded, retry with
-        // the feet lifted STEP_HEIGHT — if THAT is clear it's a low step (curb/stair),
-        // not a wall, so let the move through. The floorY pass below then seats the
-        // player on the step's surface (its grace matches STEP_HEIGHT), so short ledges
-        // are climbed seamlessly while walking — tall walls still block.
-        if (!this.blockedAt(targetX, localPos.z, myRadius) ||
-            (isGrounded && !this.blockedAt(targetX, localPos.z, myRadius, STEP_HEIGHT))) {
+        let baseHeight = localDisguise.type === 'player' ? PropLevel.PLAYER_BASE_HEIGHT : localDisguise.size / 2;
+
+        // Each axis: take the direct move if clear; else, while grounded, allow a STEP-UP
+        // only when (a) the feet-lifted capsule is clear AND (b) there's actually a higher
+        // climbable surface to land on at the target (_stepLandingAt). Both are required:
+        // the lift check alone would clear a prop whose short COLLIDER sits below its taller
+        // MESH (a rock), committing the move while the seat pass refused to lift you → you
+        // walked THROUGH it. Gating on a real landing makes such props block instead. The
+        // floorY pass below then seats you on the step (grace matches STEP_HEIGHT). Tall
+        // walls (no reachable landing) still block; ramps use the onSlope bypass, not this.
+        const canStep = (tx, tz) => isGrounded
+            && !this.blockedAt(tx, tz, myRadius, STEP_HEIGHT)
+            && this._stepLandingAt(tx, tz, myRadius, baseHeight) > localPos.y + 0.01;
+        if (!this.blockedAt(targetX, localPos.z, myRadius) || canStep(targetX, localPos.z)) {
             localPos.x = targetX;
         }
-        if (!this.blockedAt(localPos.x, targetZ, myRadius) ||
-            (isGrounded && !this.blockedAt(localPos.x, targetZ, myRadius, STEP_HEIGHT))) {
+        if (!this.blockedAt(localPos.x, targetZ, myRadius) || canStep(localPos.x, targetZ)) {
             localPos.z = targetZ;
         }
-
-        let baseHeight = localDisguise.type === 'player' ? PropLevel.PLAYER_BASE_HEIGHT : localDisguise.size / 2;
 
         // Floor under the player = the highest climbable surface it's standing
         // over (and currently on/above), else the world ground. Gravity lands the
@@ -653,7 +657,10 @@ const Mechanics = {
     // If the player is standing on/above `prop`'s top and over its footprint, return
     // that surface height (vs the current best). Shared by level props + disguised
     // hiders. Mirrors the climb test footprint logic.
-    _climbFloor: function(prop, baseHeight, myRadius, best) {
+    // (px,pz,py) default to the player's live position, but may be passed to query the
+    // floor at a PROSPECTIVE spot (used by the step-up landing check) without moving.
+    _climbFloor: function(prop, baseHeight, myRadius, best, px, pz, py) {
+        if (px === undefined) { px = localPos.x; pz = localPos.z; py = localPos.y; }
         if (!PropLevel.isClimbable(prop)) return best;
         const pieces = PropLevel.getColliders(prop);
         const propTop = PropLevel.getPropTop(prop) + baseHeight;
@@ -670,8 +677,8 @@ const Mechanics = {
                     // top left the feet inside the band (pBottom < c.yMax) → blocked every
                     // direction (the rock/tree "sink in and get stuck"). The mesh top clears
                     // c.yMax with margin → flush, free to move.
-                    if (PropLevel.pointBoxDist2(localPos.x, c.yMax, localPos.z, c) < myRadius * myRadius) {
-                        if (localPos.y >= propTop - STEP_HEIGHT && propTop > best) best = propTop;
+                    if (PropLevel.pointBoxDist2(px, c.yMax, pz, c) < myRadius * myRadius) {
+                        if (py >= propTop - STEP_HEIGHT && propTop > best) best = propTop;
                     }
                 } else {
                     // TILTED box (ramp): seat on the ACTUAL slope under the player so you
@@ -688,7 +695,7 @@ const Mechanics = {
                     // blocking (_propBlocks) and seating agree tick-for-tick.
                     const sY = c.yMax + 10;
                     let surf = NaN;
-                    const tc = PropLevel.rayBox(localPos.x, sY, localPos.z, 0, -1, 0, c);
+                    const tc = PropLevel.rayBox(px, sY, pz, 0, -1, 0, c);
                     if (isFinite(tc)) {
                         surf = (sY - tc) + baseHeight;
                     } else {
@@ -698,18 +705,38 @@ const Mechanics = {
                             [h, 0], [-h, 0], [0, h], [0, -h], [e, e], [e, -e], [-e, e], [-e, -e]];
                         let hi = -Infinity;
                         for (let k = 0; k < offs.length; k++) {
-                            const t = PropLevel.rayBox(localPos.x + offs[k][0], sY, localPos.z + offs[k][1], 0, -1, 0, c);
+                            const t = PropLevel.rayBox(px + offs[k][0], sY, pz + offs[k][1], 0, -1, 0, c);
                             if (isFinite(t)) { const s = (sY - t) + baseHeight; if (s > hi) hi = s; }
                         }
                         if (hi > -Infinity) surf = hi;
                     }
-                    if (surf === surf && localPos.y >= surf - STEP_HEIGHT && surf > best) best = surf;
+                    if (surf === surf && py >= surf - STEP_HEIGHT && surf > best) best = surf;
                 }
-            } else if (Math.hypot(localPos.x - c.x, localPos.z - c.z) < c.radius + myRadius) {
-                if (localPos.y >= propTop - STEP_HEIGHT && propTop > best) best = propTop;
+            } else if (Math.hypot(px - c.x, pz - c.z) < c.radius + myRadius) {
+                if (py >= propTop - STEP_HEIGHT && propTop > best) best = propTop;
             }
         }
         return best;
+    },
+
+    // Highest CLIMBABLE surface the player could stand on at a PROSPECTIVE (x,z),
+    // evaluated from the player's current height (same reach gate as _climbFloor).
+    // Used to gate step-up: you may only step onto something you can actually land on.
+    // Without this, a prop whose solid COLLIDER is shorter than its visual MESH (e.g.
+    // a rock — collider ~0.8u, mesh taller) let the lifted blockedAt clear the collider
+    // so the move committed, but _climbFloor's seat gate (keyed to the taller mesh top)
+    // then refused to lift you → you walked THROUGH the rock. Requiring a real landing
+    // makes such props block instead of passing through.
+    _stepLandingAt: function(x, z, myRadius, baseHeight) {
+        let f = baseHeight;                      // world ground
+        for (let i = 0; i < mapProps3D.length; i++) {
+            f = this._climbFloor(mapProps3D[i], baseHeight, myRadius, f, x, z, localPos.y);
+        }
+        const dyn = this._dynamicProps;
+        if (dyn) for (let i = 0; i < dyn.length; i++) {
+            f = this._climbFloor(dyn[i], baseHeight, myRadius, f, x, z, localPos.y);
+        }
+        return f;
     },
 
     // Disguised hiders, as solid "pseudo-props" the local player can collide with and
