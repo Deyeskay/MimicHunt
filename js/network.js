@@ -153,6 +153,12 @@ const Network = {
         const players = {};
         for (const id in gameState.players) {
             const p = gameState.players[id];
+            // Eliminated players are frozen and never move again — omit them.
+            // Both snapshot consumers (level render, mechanics collider sampler)
+            // fall back to the authoritative last-known record when a player is
+            // absent from the sample, so dropping them here saves bytes with no
+            // visible change. They re-enter the roster via discrete events only.
+            if (p.isCaught) continue;
             players[id] = { x: p.x, y: p.y, z: p.z, rotY: p.rotY };
         }
         return {
@@ -936,6 +942,14 @@ const Network = {
                         title: 'Hiders Win!',
                         message: 'The hunter disconnected. Starting a new lobby.'
                     });
+                } else if (wasExpected && this._pendingSeekersWin) {
+                    // Same generic dissolve popup (client 'hidersWin' case just
+                    // renders title/message), with the seekers-win wording.
+                    conn.send({
+                        type: 'hidersWin',
+                        title: 'Seekers Win!',
+                        message: 'The hiders disconnected. Starting a new lobby.'
+                    });
                 }
 
                 if (gameState.phase === 'LOBBY') {
@@ -1541,11 +1555,26 @@ const Network = {
         }, 1000 / 60);
 
         // Network loop — send our movement to the host at NETWORK_SEND_RATE.
+        // Skip the send when we haven't moved since last time (idle players spam
+        // 20 identical packets/sec otherwise). A keepalive is forced at least every
+        // MOVE_KEEPALIVE_MS so the host's ghost sweep (_lastSeen > 3s) never prunes
+        // a stationary player. Guard is cm/milliradian precision so tiny float
+        // jitter doesn't defeat the dedupe.
+        this._lastSentMove = null;
         networkInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+            const now = this.now();
+            const last = this._lastSentMove;
+            const moved = !last ||
+                Math.abs(localPos.x - last.x) > 0.01 ||
+                Math.abs(localPos.y - last.y) > 0.01 ||
+                Math.abs(localPos.z - last.z) > 0.01 ||
+                Math.abs(localRotY - last.rotY) > 0.005;
+            if (!moved && (now - last.t) < MOVE_KEEPALIVE_MS) return;
+            this._lastSentMove = { x: localPos.x, y: localPos.y, z: localPos.z, rotY: localRotY, t: now };
             this.sendToHost({
                 type: 'clientMove',
-                t: this.now(),
+                t: now,
                 x: localPos.x,
                 y: localPos.y,
                 z: localPos.z,
@@ -1575,6 +1604,7 @@ const Network = {
     startGameBroadcast() {
         // A fresh round clears any leftover migration bookkeeping.
         this._pendingHidersWin = false;
+        this._pendingSeekersWin = false;
         this._excluded = null;
 
         // Load the host-selected level into the scene FIRST, so the spawn points
@@ -1707,6 +1737,8 @@ const Network = {
         const wasLobby = gameState.phase === 'LOBBY';
         const seekers = Object.values(gameState.players)
             .filter(p => p.role === 'Seeker').length;
+        const hiders = Object.values(gameState.players)
+            .filter(p => p.role === 'Hider' && !p.isCaught).length;
 
         if (!wasLobby && seekers === 0) {
             // No hunter remains → dissolve the round, everyone to a fresh lobby.
@@ -1717,8 +1749,19 @@ const Network = {
             return;
         }
 
+        if (!wasLobby && hiders === 0) {
+            // No live hider remains (the departed host was the last one) →
+            // seekers win, everyone to a fresh lobby. Symmetric to seekers === 0.
+            this._pendingSeekersWin = true;
+            this.returnToFreshLobby();
+            UI.showModal('Seekers Win!', 'The hiders disconnected. Starting a new lobby.', () => {});
+            migrating = false;
+            return;
+        }
+
         // Lobby migration, or (future) in-game with a surviving seeker.
         this._pendingHidersWin = false;
+        this._pendingSeekersWin = false;
         this.mintCodePeer();
         this.startHostLoops();   // idle while LOBBY; resumes the match otherwise
 
@@ -1885,6 +1928,7 @@ const Network = {
         pendingRoomCode = null;
         this._excluded = null;
         this._pendingHidersWin = false;
+        this._pendingSeekersWin = false;
 
         // Remove meshes
         for (let id in playerMeshes) scene.remove(playerMeshes[id]);

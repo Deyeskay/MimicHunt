@@ -1,6 +1,9 @@
 # Network Protocol
 
-PeerJS WebRTC data channels, JSON messages `{ type, ... }`. **Authoritative-host
+PeerJS WebRTC data channels, `{ type, ... }` messages. Serialization is PeerJS's
+**default BinaryPack** (not JSON) — numbers travel as fixed-width float64, so shrinking
+float precision or pre-serializing a broadcast saves nothing; only cutting packet count
+or field count reduces bandwidth. **Authoritative-host
 star**: clients send inputs to the host; the host owns `gameState` and broadcasts
 state + events. All in `js/network.js`.
 
@@ -18,7 +21,7 @@ state + events. All in `js/network.js`.
 ## Client → Host (inputs)
 | type | when | payload | host handler effect |
 |---|---|---|---|
-| `clientMove` | 20 Hz in-game | `{t,x,y,z,rotY}` | set that player's transform (timestamp-guarded) |
+| `clientMove` | ≤20 Hz in-game | `{t,x,y,z,rotY}` | set that player's transform (timestamp-guarded). **Sent only when the transform changed**; a keepalive is forced every `MOVE_KEEPALIVE_MS` (1 s) so a stationary player isn't ghost-swept |
 | `clientDisguise` | on disguise change | `{disguiseType,disguiseSize,propScale,propHeight,propRadius,propRotation,color}` | apply to roster; **reject if disguising while `disguiseLockUntil` active**; relay as `disguise` to others |
 | `clientJump` | on jump | `{}` | stamp `p.jumpAt=now`; broadcast `jump` |
 | `shoot` | on fire | `{t,ox,oy,oz,dx,dy,dz,mx,my,mz}` (camera ray + muzzle) | `processShot(conn.peer, data)` |
@@ -34,7 +37,7 @@ state + events. All in `js/network.js`.
 ## Host → Client(s) (state + events)
 | type | when | payload | client effect |
 |---|---|---|---|
-| `snapshot` | 20 Hz in-game | `{t,phase,timer,players:{id:{x,y,z,rotY}}}` | `pushSnapshot` (interpolation buffer); update phase/timer/HUD |
+| `snapshot` | 20 Hz in-game | `{t,phase,timer,players:{id:{x,y,z,rotY}}}` | `pushSnapshot` (interpolation buffer); update phase/timer/HUD. **Eliminated (`isCaught`) players are omitted** — consumers hold their last-known record |
 | `lobbySync` | roster/role/ready/level change | `{players, levelName?, roomCode?}` | replace roster; update lobby + level carousel |
 | `gameStart` | match begins | `{gameState}` | adopt full gameState; `Level.loadLevel`; seed local prediction; transition to game |
 | `disguise` | a player (incl. host) disguised | `{id,disguiseType,disguiseSize,propScale,propHeight,propRadius,propRotation,color}` | update that player's disguise fields |
@@ -102,7 +105,13 @@ state + events. All in `js/network.js`.
 - `roomClosing`/`gameOver` set `sessionEnding` so the imminent `close` does NOT
   migrate (distinguishes voluntary shutdown from a crash). Original 4-digit code
   dies on host crash; successor mints a new one.
-- **Seam:** the in-game "resume the match after migration" path is implemented but
-  effectively dead — the host is usually the only Seeker, so a host crash leaves 0
-  seekers → everyone gets `hidersWin` → fresh lobby. Becomes live once non-host
-  seekers are common.
+- **Round dissolve after migration:** `becomeSuccessor` ends the round if either side
+  is emptied by the host's departure — `seekers === 0` → `hidersWin`, or no live hider
+  (`role === 'Hider' && !isCaught`) → `seekersWin`. Both return everyone to a fresh
+  lobby; `_pendingHidersWin` / `_pendingSeekersWin` relay the popup to survivors who
+  reconnect after the dissolve (via the generic client `hidersWin` case = title/message
+  modal).
+- **Seam:** the in-game "resume the match after migration" path only runs when BOTH
+  sides survive the host's exit (≥1 seeker AND ≥1 live hider remain). Usually the host
+  is the only Seeker → 0 seekers → `hidersWin`; or (2-player, host = hider) → 0 hiders →
+  `seekersWin`. Becomes the common path once non-host players fill both roles.

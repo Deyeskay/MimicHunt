@@ -5,6 +5,82 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-03
 
+- **Host-migration: symmetric round-dissolve when no live hider remains.** File:
+  `js/network.js` (`becomeSuccessor`, `acceptConnection`, `startGameBroadcast`,
+  `cleanup`). Bug: 2-player match (host = Hider, client = Seeker), host closes browser →
+  migration elects the lone seeker as successor. `becomeSuccessor` only dissolved the
+  round when `seekers === 0`, so with `seekers === 1 / hiders === 0` the match **resumed
+  and the sole hunter kept playing alone** with nothing to hunt. Added the symmetric
+  guard: after migration, if no live Hider remains (`role === 'Hider' && !isCaught`),
+  seekers win and everyone returns to a fresh lobby. New `_pendingSeekersWin` flag mirrors
+  `_pendingHidersWin` so reconnecting survivors also get the "Seekers Win!" popup (reuses
+  the generic client `hidersWin` case, which just renders `title`/`message`). Flag reset
+  alongside `_pendingHidersWin` in `startGameBroadcast` and `cleanup`.
+
+- **Draw-call batching via InstancedMesh (perf, all tiers).** Files: `js/level.js`
+  (`USE_INSTANCING`, `spawnProp`, new `_canInstance`/`_batchMesh`/`finalizeInstances`,
+  `loadLevel`), `docs/RENDERING.md`. Identical GLB props (scatter bushes/rocks, market
+  crate/barrel stacks, ruined columns) share one geometry+material object across all
+  `.clone(true)` copies, so `spawnProp` now collects each such prop's per-submesh **world
+  matrix** into `this._instanceBatches` (keyed by `geometry.uuid|material.uuid`) and
+  discards the individual mesh; `finalizeInstances` (end of `loadLevel`) draws each batch
+  as **one `THREE.InstancedMesh`** (>=2 members) or a plain baked-matrix `Mesh` (lone
+  member). Collapses hundreds of per-prop draw calls to a handful — the biggest remaining
+  mobile GPU/CPU lever. Safe because collision + dev gizmos read prop DATA (`enrichProp`),
+  never these meshes, and disguises are separate clones in `playerMeshes`. **Excluded**
+  (kept on the individual path): procedural `wall`/`cube` (per-instance materials won't
+  share a batch) and material-preset props (unique cloned material); multi-material leaf
+  meshes fall back individually too. **Foliage tint still works** — instanced tree/bush use
+  the *same shared template material* `applyFoliageTint` mutates via `modelLibrary`.
+  InstancedMesh `frustumCulled=false` (its origin-centred template bounds would wrongly cull
+  the whole level-spanning batch). Toggle `Level.USE_INSTANCING=false` to A/B. Dev console
+  logs `[instancing] N submeshes → M draw objects`. **NEEDS in-browser test** (headless can't
+  verify GPU output): confirm props render/shadow correctly and foliage stays tinted.
+
+- **Mobile framerate cap (60 fps).** File: `js/app.js` (`animate`). Uncapped `rAF` on 90/120
+  Hz phones renders at panel rate → heats the SoC → thermal throttle → *lower*, jittery
+  sustained fps. The `mobile` tier now gates `animate` to 60 fps (`_FRAME_CAP_MOBILE`, −1 ms
+  slack so a 60 Hz panel doesn't collapse to 30). Low/Medium/High stay uncapped (native rate).
+
+- **Mobile render perf pass (big FPS wins).** File: `js/level.js` (`init`, `QUALITY.mobile`,
+  `setGraphicsQuality`), `docs/RENDERING.md`. Three changes on the `mobile` tier:
+  (1) **Shadow pass disabled** — new `shadows:false` QUALITY flag drives
+  `renderer.shadowMap.enabled` + `dirLight.castShadow` in `setGraphicsQuality` (default ON
+  when the flag is absent, so Low/Medium/High unchanged). The shadow map is a full second
+  scene render every frame — the single biggest mobile cost. (2) **MSAA off** — renderer is
+  now created with `antialias: initQ !== 'mobile'` (AA is fixed at renderer creation, so it
+  reads the saved `graphicsQuality` there; switching *to* mobile live needs a reload to drop
+  AA). (3) **`powerPreference:'high-performance'`** added to the WebGLRenderer opts.
+  Also: Low/Mobile now use the cheaper `BasicShadowMap` filter (vs Medium/High
+  `PCFSoftShadowMap`). Breaks the old "shadows always enabled" invariant on phones by design.
+  (4) **Static geometry frozen** — every spawned prop (`spawnProp`) and the ground now bake
+  their world matrix once and set `matrixAutoUpdate=false` on the whole subtree, so the
+  per-frame `updateMatrixWorld` skips them (scales with prop count; all tiers). Safe because
+  level geometry never moves after placement — disguised hiders/characters live in
+  `playerMeshes`, and the skydome (repositioned each frame) is separate.
+
+- **Network: idle-move dedupe + eliminated-player omission.** File: `js/network.js`,
+  `js/globals.js` (`MOVE_KEEPALIVE_MS`). (1) The client movement loop no longer sends 20
+  identical `clientMove` packets/sec while standing still — it skips the send unless the
+  transform changed (cm / ~5-milliradian guard), forcing a keepalive at least every
+  `MOVE_KEEPALIVE_MS` (1000 ms, well under the 3 s ghost-sweep) so a stationary player is
+  never pruned. (2) `buildSnapshot` omits `isCaught` (eliminated) players — both consumers
+  (level avatar render, mechanics collider sampler) already fall back to the authoritative
+  last-known record when a player is absent, so this is byte-only with no visible change.
+  Note: PeerJS here uses the default **BinaryPack** serialization (fixed-width float64), so
+  float rounding and pre-serializing a broadcast give no benefit — only packet/field-count
+  cuts help this transport.
+
+- **New "Mobile" graphics tier (auto-detected).** Files: `js/level.js` (`QUALITY`,
+  `setGraphicsQuality`), `js/app.js` (`isMobileDevice` + fresh-install auto-pick),
+  `index.html` (Settings dropdown option). Most aggressive preset: Low's flat look plus
+  `pixelRatio` hard-capped to 1, directional shadow map halved to **1024²** (was 2048²),
+  and fog pulled in to `fogFar: 70`. Each `QUALITY` tier now carries a `shadowMapSize`
+  knob; `setGraphicsQuality` resizes the shadow map live (disposes the old depth map so
+  Three rebuilds it). On a FRESH install (no saved settings) `isMobileDevice()` —
+  `pointer: coarse` / `hover: none` / mobile UA — defaults the tier to `mobile`.
+  Returning users keep their saved choice; still overridable in Settings.
+
 - **Reworked objective-pill text per role.** File: `js/ui.js` (`updateObjective`).
   (1) **Seekers** no longer see the "Exits unlock in m:ss" countdown at all — they show
   `🎯 Hunt the hiders` throughout HUNTING, switching to
