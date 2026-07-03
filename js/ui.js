@@ -40,6 +40,82 @@ const UI = {
         document.getElementById('status-msg').innerText = msg;
     },
 
+    _esc: function(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g,
+            c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    },
+
+    // End-of-match results scoreboard. `rows` come from Network.buildResults()
+    // (host-authoritative, broadcast to every client so all see identical stats).
+    showResults: function(title, message, rows) {
+        const titleEl = document.getElementById('results-title');
+        const subEl = document.getElementById('results-subtitle');
+        const body = document.getElementById('results-body');
+        if (titleEl) titleEl.innerText = title || 'Match Over';
+        if (subEl) subEl.innerText = message || '';
+        if (body) {
+            const fmt = ms => {
+                const s = Math.max(0, Math.round((ms || 0) / 1000));
+                return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+            };
+            const sorted = (rows || []).slice().sort((a, b) => (b.xp || 0) - (a.xp || 0));
+            body.innerHTML = sorted.map(r => {
+                const isSeeker = r.role === 'Seeker';
+                const result = isSeeker ? '—'
+                    : (r.survived ? '<span class="res-alive">Survived</span>'
+                                  : '<span class="res-dead">Eliminated</span>');
+                const kills = isSeeker ? (r.kills || 0) : '—';
+                const score = isSeeker ? (r.score || 0) : '—';
+                const keys  = isSeeker ? '—' : (r.keys || 0);
+                const surv  = isSeeker ? '—' : fmt(r.survivalMs);
+                return '<tr class="' + (r.isYou ? 'res-you' : '') + '">' +
+                    '<td class="res-name">' + this._esc(r.name) +
+                        (r.isYou ? ' <span class="res-youtag">(You)</span>' : '') + '</td>' +
+                    '<td>' + this.roleLabel(r.role) + '</td>' +
+                    '<td>' + result + '</td>' +
+                    '<td>' + kills + '</td>' +
+                    '<td>' + score + '</td>' +
+                    '<td>' + keys + '</td>' +
+                    '<td>' + surv + '</td>' +
+                    '<td class="res-xp">' + (r.xp || 0) + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+        const hint = document.getElementById('results-hint');
+        if (hint) hint.innerText = isHost
+            ? 'Return everyone to the lobby for a rematch.'
+            : 'Waiting for the host to start the next round…';
+        const screen = document.getElementById('results-screen');
+        if (screen) screen.style.display = 'flex';
+    },
+
+    hideResults: function() {
+        const el = document.getElementById('results-screen');
+        if (el) el.style.display = 'none';
+    },
+
+    // Spectate bar for eliminated players (prev / next cycles alive players).
+    updateSpectate: function() {
+        const bar = document.getElementById('spectate-bar');
+        if (!bar) return;
+        const me = gameState.players[myId];
+        const active = me && me.isCaught &&
+            gameState.phase !== 'LOBBY' && gameState.phase !== 'ENDED';
+        if (!active) { bar.style.display = 'none'; return; }
+        const tid = Network.ensureSpectateTarget();
+        const label = document.getElementById('spectate-name');
+        if (label) {
+            if (tid && gameState.players[tid]) {
+                const t = gameState.players[tid];
+                label.innerText = 'Spectating: ' + (t.name || 'Player') +
+                    ' — ' + this.roleLabel(t.role);
+            } else {
+                label.innerText = 'No one left to spectate';
+            }
+        }
+        bar.style.display = 'flex';
+    },
+
     // Lobby title: "ROOM CODE:" in yellow, the code itself white + larger so it
     // stands out as the thing players share. Called from every spot that knows the code.
     setLobbyCode: function(code) {
@@ -184,6 +260,7 @@ const UI = {
     },
 
     transitionToGame: function() {
+        this.hideResults();
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'flex';
@@ -195,6 +272,7 @@ const UI = {
     transitionToLobby: function() {
         // Used when a client is dropped into a (new) host's lobby — e.g. after a
         // host migration ends the round. Hides the game view, shows the lobby.
+        this.hideResults();
         document.getElementById('gameCanvas').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'none';
         document.getElementById('blind-overlay').style.display = 'none';
@@ -240,6 +318,7 @@ const UI = {
     transitionToMenu: function() {
         // Leaving a room returns to the FULL menu (host + join) even if we first
         // arrived via a ?room= link that stripped it to join-only.
+        this.hideResults();
         document.body.classList.remove('join-via-link');
         document.getElementById('gameCanvas').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'none';
@@ -422,6 +501,9 @@ const UI = {
         const pc = document.getElementById('player-count');
         if (pc) pc.innerText = Object.keys(gameState.players).length;
 
+        // Spectate bar (eliminated players watch a live player).
+        this.updateSpectate();
+
         // --- Combat UI: crosshair + ammo/score, Seeker only, while alive in HUNTING ---
         const combatActive = isSeeker && gameState.phase === 'HUNTING' && !me.isCaught;
         // PUBG-style reload: while reloading, hide the crosshair and show a centre-screen
@@ -556,8 +638,10 @@ const UI = {
         // them, so the pill is hidden for them to keep the seeker HUD uncluttered.
         if (gameState.phase !== 'HUNTING' || !me || me.role !== 'Hider') { el.style.display = 'none'; return; }
         el.style.display = 'flex';
-        let txt = '🔑 ' + (gameState.submittedKeys || 0) + '/' + goal;
-        if (me.role === 'Hider' && me.carriedKeys > 0) txt += ' · 🎒 ' + me.carriedKeys;
+        // 🚪 door icon = keys DELIVERED to the exit doors (counts toward the win);
+        // 🔑 key icon = keys the hider is CARRYING but hasn't delivered yet.
+        let txt = '🚪 ' + (gameState.submittedKeys || 0) + '/' + goal;
+        if (me.role === 'Hider' && me.carriedKeys > 0) txt += ' · 🔑 ' + me.carriedKeys;
         const t = document.getElementById('keys-hud-text');
         if (t) t.innerText = txt;
     },

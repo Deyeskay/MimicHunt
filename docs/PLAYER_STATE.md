@@ -32,6 +32,9 @@ id; the host's own id is `myId`.
 | `scanUntil` | ms (local clock) | seeker see-hiders-through-walls deadline | each peer from `scanMs` | `powerGain` |
 | `killUntil` | ms (local clock) | seeker one-shot-kill deadline | each peer from `killMs` | `powerGain` |
 | `carriedKeys` | int | hider's purple-beam keys held but not yet deposited at a door | host `grantKey`/`depositKeys`/`dropCarriedKeys` | `keyGain`/`keyDeposit` |
+| `kills` | int | **results stat** — hiders this seeker eliminated | host `processShot` (lethal hit) | roster / `gameOver.results` |
+| `caughtAtT` | ms (host clock) | **results stat** — elimination timestamp (0 = survived); survival time = `caughtAtT − huntStartT` | host `processShot` | host-only (feeds `buildResults`) |
+| `keysDelivered` | int | **results stat** — keys this hider deposited at doors this match | host `depositKeys` | roster / `gameOver.results` |
 
 > **Team field (on `gameState`, not per-player):** `submittedKeys` — keys deposited at
 > exit doors toward the hider key-win (`KEYS_TO_WIN`). Host-owned; synced via `gameStart`

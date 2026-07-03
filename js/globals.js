@@ -114,6 +114,7 @@ let localDisguise = {
 // Camera & Movement Params
 let cameraYaw = 0;   // Left/Right look (orbits the camera around the player)
 let cameraPitch = 0.2; // Up/Down look
+let spectateId = null; // when the local player is eliminated: id of the alive player being spectated
 let localRotY = 0;   // character facing = MOVEMENT direction (PUBG-style), not cameraYaw
 let velocityY = 0;
 const GRAVITY = -0.015;

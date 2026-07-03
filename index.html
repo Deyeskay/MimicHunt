@@ -52,18 +52,15 @@
         <div class="ls-content">
             <!-- While loading: progress bar + %. -->
             <div id="ls-loading">
+                <p id="loading-hint" class="loading-hint">Loading assets…</p>
                 <div class="loading-bar-track"><div id="loading-bar" class="loading-bar-fill"></div></div>
                 <p id="loading-pct" class="loading-pct">0%</p>
-                <p id="loading-hint" class="loading-hint">Loading assets…</p>
             </div>
-            <!-- Once ready: press-enter / tap-Continue prompt (revealed by app.js).
-                 Dismissing it (Enter key or tapping this button) fades the screen out
-                 and shows the menu. Tap-anywhere is NOT used — swipes navigate. -->
-            <button id="ls-continue" class="ls-continue" style="display:none;">
-                <span class="ls-continue-main">PRESS ENTER TO CONTINUE</span>
-                <span class="ls-continue-sub">tap here to continue</span>
-            </button>
         </div>
+        <!-- Once ready: Continue prompt (revealed by app.js). Kept OUTSIDE .ls-content
+             so its right/bottom anchor is the full loading screen, not the narrow
+             left-aligned loading block. Enter key or tapping fades the screen out. -->
+        <button id="ls-continue" class="ls-continue" style="display:none;">CONTINUE</button>
     </div>
 
     <!-- Shown only in portrait — the game is landscape-only. -->
@@ -91,6 +88,30 @@
             <div class="player-list" id="players-modal-list"></div>
             <div class="modal-actions">
                 <button id="btn-players-close" class="secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- End-of-match results scoreboard (shown to everyone when the match ends). -->
+    <div id="results-screen">
+        <div class="results-card">
+            <h1 id="results-title">Match Over</h1>
+            <p id="results-subtitle"></p>
+            <div class="results-table-wrap">
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Player</th><th>Role</th><th>Result</th>
+                            <th>Kills</th><th>Score</th><th>Keys</th><th>Survived</th><th>XP</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-body"></tbody>
+                </table>
+            </div>
+            <p id="results-hint" class="results-hint"></p>
+            <div class="results-actions">
+                <button id="results-leave-btn" class="secondary">Leave</button>
+                <button id="results-lobby-btn" class="success">Back to Lobby</button>
             </div>
         </div>
     </div>
@@ -127,7 +148,7 @@
                 <div id="objective-hud" style="display:none;"><span id="objective-text"></span></div>
                 <!-- Team key objective (all players during HUNTING): deposited count
                      toward the hider win, plus the local hider's carried keys. -->
-                <div id="keys-hud" style="display:none;"><span id="keys-hud-text">🔑 0/3</span></div>
+                <div id="keys-hud" style="display:none;"><span id="keys-hud-text">🚪 0/3</span></div>
             </div>
             <!-- Hamburger dropdown: opened by ☰ (btn-leave). -->
             <div id="game-menu" class="game-menu interactive" style="display:none;">
@@ -175,6 +196,13 @@
                     <button id="btn-controls-close" class="success">Done</button>
                 </div>
             </div>
+        </div>
+
+        <!-- Spectate bar: shown to ELIMINATED players; prev/next cycle live players. -->
+        <div id="spectate-bar" class="interactive" style="display:none;">
+            <button id="spectate-prev" class="spectate-arrow" title="Previous player">‹</button>
+            <span id="spectate-name">Spectating…</span>
+            <button id="spectate-next" class="spectate-arrow" title="Next player">›</button>
         </div>
 
         <div id="crosshair"></div>

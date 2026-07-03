@@ -30,7 +30,18 @@
     --hud-gap: 6px;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+* {
+    box-sizing: border-box; margin: 0; padding: 0;
+    user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;
+    -webkit-touch-callout: none;   /* kill long-press "Save image / Copy" menu on mobile */
+}
+
+/* Game UI images/icons must not be draggable or long-press-saveable. */
+img, .hud-icon-btn, button, .interactive {
+    -webkit-user-drag: none; user-drag: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none; user-select: none;
+}
 
 body {
     background: var(--bg-color); color: var(--text-main);
@@ -90,7 +101,7 @@ body {
    out (.hidden) once the player presses Enter / taps Continue. */
 #loading-screen {
     position: absolute; inset: 0; z-index: 200; overflow: hidden;
-    background: #000 url('../assets/images/loading_screen1.jpg') center/cover no-repeat;
+    background: #000 url('../assets/images/loading_screen1.jpg') center/contain no-repeat;
     font-family: "Fredoka", "Baloo 2", system-ui, sans-serif;
     transition: opacity 0.5s ease;
 }
@@ -106,7 +117,7 @@ body {
 .ls-track.dragging { transition: none; cursor: grabbing; }
 .ls-slide {
     flex: 0 0 100%; width: 100%; height: 100%;
-    background-size: cover; background-position: center; background-repeat: no-repeat;
+    background-size: contain; background-position: center; background-repeat: no-repeat;
 }
 
 /* Vignette + bottom scrim so the title/progress/prompt stay legible over art. */
@@ -130,9 +141,9 @@ body {
 .ls-prev { left: 16px; }
 .ls-next { right: 16px; }
 
-/* Dot indicators — just above the loading UI. */
+/* Dot indicators — bottom-centre, in the spot the continue prompt used to sit. */
 .ls-dots {
-    position: absolute; left: 0; right: 0; bottom: 22%; z-index: 3;
+    position: absolute; left: 0; right: 0; bottom: 6%; z-index: 3;
     display: flex; gap: 9px; justify-content: center;
 }
 .ls-dot {
@@ -147,52 +158,57 @@ body {
     text-align: center; font-size: 2.6rem;
 }
 
+/* Loading block sits in the bottom-left region (under the power cards). */
 .ls-content {
-    position: absolute; left: 0; right: 0; bottom: 9%; z-index: 3;
-    display: flex; flex-direction: column; align-items: center; padding: 0 20px;
+    position: absolute; left: 4.5%; right: auto; bottom: 4.5%; z-index: 3;
+    display: flex; flex-direction: column; align-items: flex-start; padding: 0;
     pointer-events: none;   /* only the Continue button inside is interactive */
+}
+/* Order: hint (top-left) → bar → % (bottom-right, under the bar's end). */
+#ls-loading {
+    display: flex; flex-direction: column; align-items: stretch;
+    width: min(320px, 46vw);
 }
 /* Recessed wooden track with a candy-green fill sweeping to the loaded %. */
 .loading-bar-track {
-    width: min(460px, 82vw); height: 20px; margin: 0 0 12px; overflow: hidden;
-    border-radius: 12px; border: 3px solid var(--wood-edge);
+    width: 100%; height: 14px; margin: 0; overflow: hidden;
+    border-radius: 9px; border: 2px solid var(--wood-edge);
     background: linear-gradient(180deg, #2c1b0d, #3e2812);
-    box-shadow: inset 0 3px 6px rgba(0,0,0,0.5);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
 .loading-bar-fill {
-    height: 100%; width: 0%; border-radius: 8px;
+    height: 100%; width: 0%; border-radius: 6px;
     background: linear-gradient(180deg, var(--candy-green-1), var(--candy-green-2));
-    box-shadow: 0 0 10px rgba(155,220,84,0.6);
+    box-shadow: 0 0 8px rgba(155,220,84,0.6);
     transition: width 0.25s ease;
 }
 .loading-pct {
-    font-size: 1.3rem; font-weight: 700; color: var(--cream); text-align: center;
-    -webkit-text-stroke: 1.5px var(--wood-edge); paint-order: stroke fill;
+    align-self: flex-end; margin-top: 4px;
+    font-size: 1rem; font-weight: 700; color: var(--cream); text-align: right;
+    -webkit-text-stroke: 1.2px var(--wood-edge); paint-order: stroke fill;
     text-shadow: 0 2px 0 var(--wood-edge);
 }
 .loading-hint {
-    color: var(--cream-dim); font-size: 0.78rem; font-weight: 600; text-align: center;
-    letter-spacing: 1px; margin-top: 6px; text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+    color: var(--cream-dim); font-size: 0.66rem; font-weight: 600; text-align: left;
+    letter-spacing: 1px; margin: 0 0 5px; text-shadow: 0 2px 4px rgba(0,0,0,0.6);
 }
 
-/* Press-enter / tap-Continue prompt shown once assets are ready (a reset button). */
+/* Continue button shown once assets are ready — arrow/chevron shape, white on
+   dark. Pinned to the right edge (dots take the old bottom-centre spot). */
 .ls-continue {
-    display: flex; flex-direction: column; align-items: center;
-    background: none; border: none; padding: 8px 16px; cursor: pointer;
-    font-family: inherit; pointer-events: auto;
+    position: absolute; right: 24px; bottom: 4.5%;
+    background: #ffffff; color: #23262b; border: none; cursor: pointer;
+    font-family: inherit; font-weight: 800; font-size: 1.25rem;
+    letter-spacing: 2px; text-transform: uppercase; line-height: 1;
+    padding: 15px 46px 15px 30px; pointer-events: auto;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    transition: transform 0.1s ease, filter 0.15s ease;
+    animation: ls-continue-pulse 1.5s ease-in-out infinite;
 }
-.ls-continue-main {
-    font-size: 1.5rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-    color: var(--cream);
-    -webkit-text-stroke: 1.5px var(--wood-edge); paint-order: stroke fill;
-    text-shadow: 0 2px 0 var(--wood-edge), 0 0 18px rgba(255,255,255,0.35);
-    animation: ls-blink 1.4s ease-in-out infinite;
-}
-.ls-continue-sub {
-    margin-top: 8px; font-size: 0.8rem; font-weight: 600; letter-spacing: 1px;
-    color: var(--cream-dim); text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-}
-@keyframes ls-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.ls-continue:hover { filter: brightness(0.94); }
+.ls-continue:active { transform: scale(0.96); }
+@keyframes ls-continue-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
 
 /* Chunky wooden plank panel with corner bolts + bevel. */
 .menu-card {
@@ -1059,6 +1075,13 @@ body.layout-editing .le-selected {
     .disguise-btn .db-label { font-size: 0.68rem; }
     .disguise-btn .db-key { font-size: 0.6rem; }
     .mobile-controls { padding-bottom: 10px; }
+
+    /* Smaller continue button on short/mobile landscape. */
+    .ls-continue {
+        right: 16px; font-size: 0.95rem; letter-spacing: 1.5px;
+        padding: 10px 34px 10px 20px;
+        clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%);
+    }
 }
 
 /* ============================================================= */
@@ -1080,4 +1103,142 @@ body.layout-editing .le-selected {
     .role-toggle .role-btn { padding: 4px 8px; font-size: 0.66rem; }
     .role-tag { padding: 3px 7px; font-size: 0.64rem; }
     .level-card { min-width: 76px; padding: 9px 11px; font-size: 0.8rem; }
+}
+
+/* =========================================================
+   End-of-match RESULTS scoreboard
+   ========================================================= */
+#results-screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 300;                 /* above the HUD / modals */
+    background: rgba(6, 10, 16, 0.86);
+    backdrop-filter: blur(10px) saturate(120%);
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+.results-card {
+    width: min(760px, 94vw);
+    max-height: calc(100dvh - 48px);
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(24, 30, 42, 0.96), rgba(14, 18, 26, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    padding: 22px 24px;
+    color: #eef2f7;
+}
+#results-title {
+    margin: 0 0 4px;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #ffd54a;
+}
+#results-subtitle {
+    margin: 0 0 14px;
+    text-align: center;
+    font-size: 0.98rem;
+    color: #b9c2cf;
+}
+.results-table-wrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+.results-table th,
+.results-table td {
+    padding: 9px 12px;
+    text-align: center;
+}
+.results-table th {
+    position: sticky;
+    top: 0;
+    background: rgba(255, 255, 255, 0.06);
+    color: #9fb0c3;
+    font-weight: 700;
+    font-size: 0.74rem;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+.results-table td.res-name { text-align: left; font-weight: 700; }
+.results-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, 0.03); }
+.results-table tbody tr.res-you {
+    background: rgba(255, 213, 74, 0.12);
+    outline: 1px solid rgba(255, 213, 74, 0.4);
+}
+.res-youtag { color: #ffd54a; font-size: 0.78rem; font-weight: 700; }
+.res-alive { color: #2ed573; font-weight: 700; }
+.res-dead  { color: #ff6b6b; font-weight: 700; }
+.res-xp    { color: #4aa3ff; font-weight: 800; }
+.results-hint {
+    margin: 12px 0 4px;
+    text-align: center;
+    font-size: 0.84rem;
+    color: #9fb0c3;
+}
+.results-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 10px;
+}
+.results-actions button { min-width: 130px; }
+
+/* =========================================================
+   Spectate bar (eliminated players)
+   ========================================================= */
+#spectate-bar {
+    position: absolute;
+    left: 50%;
+    bottom: 96px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: var(--hud-bg, rgba(10, 14, 20, 0.7));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(12px) saturate(120%);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    color: #eef2f7;
+    font-weight: 700;
+    font-size: 0.9rem;
+    pointer-events: auto;
+}
+#spectate-name { min-width: 180px; text-align: center; }
+.spectate-arrow {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.spectate-arrow:hover { background: rgba(255, 255, 255, 0.18); }
+
+@media (max-height: 520px) {
+    #spectate-bar { bottom: 70px; font-size: 0.8rem; padding: 6px 10px; }
+    #spectate-name { min-width: 130px; }
+    .spectate-arrow { width: 28px; height: 28px; font-size: 1.1rem; }
+    .results-card { padding: 14px 16px; }
+    #results-title { font-size: 1.35rem; }
+    .results-table th, .results-table td { padding: 6px 8px; }
 }

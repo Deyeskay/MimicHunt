@@ -116,6 +116,17 @@ document.getElementById('btn-exit-game').addEventListener('click', () => {
         () => Network.leaveMatch(), 'Exit');
 });
 
+// End-of-match results screen: Back to Lobby (rematch, keeps the room) / Leave.
+document.getElementById('results-lobby-btn').addEventListener('click', () => Network.returnToLobby());
+document.getElementById('results-leave-btn').addEventListener('click', () => {
+    UI.hideResults();
+    Network.leaveMatch();
+});
+
+// Spectate controls (eliminated players): cycle the alive player being watched.
+document.getElementById('spectate-prev').addEventListener('click', () => Network.cycleSpectate(-1));
+document.getElementById('spectate-next').addEventListener('click', () => Network.cycleSpectate(1));
+
 // In-game Controls panel (opened from the ☰ menu). Camera look sens, FOV and
 // invert mirror GAME_SETTINGS (same values as the Settings screen, kept in sync
 // both ways); shoot-drag sens is unique to the mobile fire button. Changes apply
@@ -349,6 +360,11 @@ window.addEventListener('resize', () => Level.resize());
 if (window.visualViewport) window.visualViewport.addEventListener('resize', () => Level.resize());
 window.addEventListener('orientationchange', () => setTimeout(() => Level.resize(), 250));
 
+// Suppress long-press "Save image / Copy" context menu on mobile — this is a
+// game, no element should offer a native context menu (CSS -webkit-touch-callout
+// alone is ignored by Android Chrome on <img>).
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
 // --- Fullscreen toggle (explicit button, like CrazyGames) ---
 // Hides the mobile browser address bar and gives the game the whole screen.
 function isFullscreen() {
@@ -566,7 +582,14 @@ loadLevelScripts().then(() =>
         // Assets ready → show "PRESS ENTER TO CONTINUE"; reveal the menu only when
         // the player confirms (Enter / tap), handled inside LoadingScreen.
         LoadingScreen.markReady(() => {
-            document.getElementById('menu-screen').style.display = 'flex';
+            // Returning player (saved name) following a ?room= link joins straight into
+            // the lobby — DON'T flash the menu's Host/Join screen while initClient
+            // connects. First-timers / no-deep-link still get the menu revealed.
+            const deepLinkCode = getRoomDeepLink();
+            const returningViaLink = deepLinkCode && myName && myName.trim();
+            if (!returningViaLink) {
+                document.getElementById('menu-screen').style.display = 'flex';
+            }
             handleRoomDeepLink();
         });
     }, (loaded, total) => LoadingScreen.setProgress(loaded, total));

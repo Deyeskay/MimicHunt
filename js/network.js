@@ -67,7 +67,11 @@ const Network = {
             scanUntil: 0,           // seeker: see-hiders-through-walls deadline (local clock)
             killUntil: 0,           // seeker: one-shot-kill deadline (local clock)
             jamUntil: 0,            // seeker: own jammer-active deadline (hiders' locks reuse disguiseLockUntil)
-            carriedKeys: 0          // hider: purple-beam keys held but not yet deposited
+            carriedKeys: 0,         // hider: purple-beam keys held but not yet deposited
+            // --- END-OF-MATCH RESULTS stats (host-authoritative) ---
+            kills: 0,               // seeker: hiders eliminated this match
+            caughtAtT: 0,           // hider: host-clock timestamp of elimination (0 = survived)
+            keysDelivered: 0        // hider: keys deposited at exit doors this match
         };
     },
 
@@ -377,7 +381,11 @@ const Network = {
                     tgt.color = 0x2ed573;
                 }
                 health = tgt.health;
-                if (tgt.health <= 0) { tgt.isCaught = true; eliminated = true; }
+                if (tgt.health <= 0) {
+                    tgt.isCaught = true; eliminated = true;
+                    tgt.caughtAtT = now;                       // survival-time stamp (results)
+                    shooter.kills = (shooter.kills || 0) + 1;  // seeker kill count (results)
+                }
             }
         }
 
@@ -546,6 +554,7 @@ const Network = {
         if (!p || !(p.carriedKeys > 0)) return;
         const n = p.carriedKeys;
         p.carriedKeys = 0;
+        p.keysDelivered = (p.keysDelivered || 0) + n;   // per-hider results stat
         gameState.submittedKeys = (gameState.submittedKeys || 0) + n;
         this.broadcast({ type: 'keyDeposit', playerId, carried: 0, submitted: gameState.submittedKeys });
         this.applyKeyDeposit(playerId, 0, gameState.submittedKeys, true);
@@ -602,20 +611,23 @@ const Network = {
         this.broadcast(pkt);
         Level.spawnBeam(b.id, kind, b.x, b.z, b.armMs);   // host renders it too
         Sound.beam(kind);
-        this.notify(kind === 'purple' ? '🟣 A key beam has dropped!' : '🟡 An airdrop beam has dropped!');
-        this.keyDropAnnounce(kind);   // hider-only centre banner on purple
+        this.beamDropAnnounce(kind);   // centre banner (no bottom toast)
     },
 
-    // Purple beam = the hider objective. Push a big centre announcement ("Collect
-    // the Key!") to the LOCAL player only if they're a Hider. Called on the host in
-    // spawnBeam and on every client in the 'beamSpawn' handler (both render the beam),
-    // so each peer decides for itself against its own role — no extra packet.
-    keyDropAnnounce(kind) {
-        if (kind !== 'purple') return;
-        const me = gameState.players[myId];
-        if (!me || me.role !== 'Hider') return;
-        if (typeof UI !== 'undefined' && UI.announce)
+    // Beam-drop cue as a big centre announcement (replaces the old bottom toast).
+    // GOLD (powers) → everyone. PURPLE (keys, hider objective) → Hiders only, since a
+    // seeker can't collect it. Called on the host in spawnBeam and on every client in
+    // the 'beamSpawn' handler (both render the beam), so each peer decides for itself
+    // against its own role — no extra packet.
+    beamDropAnnounce(kind) {
+        if (typeof UI === 'undefined' || !UI.announce) return;
+        if (kind === 'purple') {
+            const me = gameState.players[myId];
+            if (!me || me.role !== 'Hider') return;
             UI.announce('🔑 Collect the Key!', 'A purple beam has dropped');
+        } else {
+            UI.announce('🟡 Airdrop!', 'A power beam has dropped');
+        }
     },
 
     // A candidate ground position for a beam: reuse the level's spawn points
@@ -1487,7 +1499,7 @@ const Network = {
                 // Host announced an airdrop beam — render it (arming, then active).
                 Level.spawnBeam(data.beamId, data.kind, data.x, data.z, data.armMs);
                 Sound.beam(data.kind);
-                this.keyDropAnnounce(data.kind);   // hider-only "Collect the Key!" banner
+                this.beamDropAnnounce(data.kind);   // centre banner (gold=all, purple=hiders)
                 break;
 
             case 'beamGone':
@@ -1541,10 +1553,33 @@ const Network = {
                 break;
 
             case 'gameOver':
-                // Terminal: the host will tear down; flag so the imminent
-                // connToHost 'close' does NOT kick off a host migration.
+                // Match ended: show the results scoreboard. The peer stays ALIVE so
+                // "Back to Lobby" can rematch — flag so the (idle) connToHost link
+                // isn't mistaken for a crash / host migration.
                 sessionEnding = true;
-                UI.showModal(data.title, data.message, () => this.cleanup());
+                spectateId = null;
+                gameState.phase = 'ENDED';   // freeze local sim behind the results screen
+                UI.showResults(data.title, data.message, data.results || []);
+                break;
+
+            case 'returnLobby':
+                // Host bounced everyone back to the same lobby for a rematch.
+                sessionEnding = false;
+                migrating = false;
+                spectateId = null;
+                gameState.players = data.players;
+                gameState.phase = 'LOBBY';
+                gameState.timer = 0;
+                if (data.levelName) gameState.levelName = data.levelName;
+                amIReady = false;
+                {
+                    const me = gameState.players[myId];
+                    if (me) { me.isReady = false; localPos = { x: me.x, y: me.y, z: me.z }; cameraYaw = 0; }
+                }
+                UI.hideResults();
+                UI.transitionToLobby();
+                UI.updateLobby();
+                UI.renderLevelSelector();
                 break;
 
             case 'roomClosing':
@@ -1674,6 +1709,10 @@ const Network = {
             p.killUntil = 0;
             p.jamUntil = 0;
             p.carriedKeys = 0;
+            // Results stats — fresh each round.
+            p.kills = 0;
+            p.caughtAtT = 0;
+            p.keysDelivered = 0;
             delete p._lastMoveT;
             delete p._lastShotT;
         });
@@ -2019,10 +2058,128 @@ const Network = {
       Finish match – host side
     =================================================================*/
     finishMatch(title, message) {
-        this.broadcast({ type: 'gameOver', title, message });
-        // Clients will clean up after they press OK; host cleans up now
-        //setTimeout(() => this.cleanup(), 0);
-        UI.showModal(title, message, () => {this.cleanup();});
+        // Build the per-player results and ship them with the gameOver packet so
+        // every client renders the same scoreboard the host computed (survival
+        // time / XP are host-clock derived). The peer is kept ALIVE (no cleanup)
+        // so "Back to Lobby" can bounce everyone into the same room for a rematch.
+        const rows = this.buildResults();
+        this.broadcast({ type: 'gameOver', title, message, results: rows });
+        UI.showResults(title, message, rows);
+    },
+
+    // Compute the end-of-match scoreboard from the authoritative roster.
+    buildResults() {
+        const endT = this.now();
+        const huntStart = gameState.huntStartT || 0;
+        return Object.keys(gameState.players).map(id => {
+            const p = gameState.players[id];
+            let survivalMs = 0, survived = false, xp = 0;
+            if (p.role === 'Hider') {
+                const endStamp = p.isCaught ? (p.caughtAtT || endT) : endT;
+                survivalMs = huntStart ? Math.max(0, endStamp - huntStart) : 0;
+                survived = !p.isCaught;
+                const secs = survivalMs / 1000;
+                // XP scales with survival time, plus a survival bonus and key rewards.
+                xp = Math.round(secs * 10) + (survived ? 300 : 0) + (p.keysDelivered || 0) * 150;
+            } else {
+                // Seeker XP: eliminations + accumulated hit score.
+                xp = (p.kills || 0) * 200 + (p.score || 0);
+            }
+            return {
+                id, name: p.name || 'Player', role: p.role,
+                isYou: id === myId,
+                isCaught: !!p.isCaught, survived,
+                kills: p.kills || 0, score: p.score || 0,
+                keys: p.keysDelivered || 0, survivalMs, xp
+            };
+        });
+    },
+
+    /*=================================================================
+      Back to lobby – rematch WITHOUT re-hosting / re-joining
+    =================================================================*/
+    // HOST: reset the round in place, keep every connection, and bounce all
+    // clients back into the SAME lobby (authoritative broadcast).
+    returnToLobby() {
+        if (!isHost) { this.clientBackToLobby(); return; }
+        sessionEnding = false;
+        migrating = false;
+        spectateId = null;
+        gameState.phase = 'LOBBY';
+        gameState.timer = 0;
+        this._beams = [];
+        this._droppedKeys = [];
+        gameState.submittedKeys = 0;
+        gameState.doorsActivateAt = null;
+
+        Object.keys(gameState.players).forEach(id => {
+            const p = gameState.players[id];
+            // Preserve role + name; reset all round/combat/disguise/results state.
+            p.isCaught = false;
+            p.health = HIDER_MAX_HP;
+            p.score = 0;
+            p.kills = 0;
+            p.caughtAtT = 0;
+            p.keysDelivered = 0;
+            p.revealedUntil = 0; p.disguiseLockUntil = 0; p.shootingUntil = 0; p.jumpAt = 0;
+            p.heldPower = null; p.invisUntil = 0; p.invisTotalMs = 0; p.shieldArmed = false;
+            p.scanUntil = 0; p.killUntil = 0; p.jamUntil = 0; p.carriedKeys = 0;
+            p.disguiseType = 'player'; p.disguiseSize = 2;
+            p.propScale = 1; p.propHeight = 2; p.propRadius = 1; p.propRotation = null; p.disguiseTexture = null;
+            p.color = p.role === 'Seeker' ? 0xff4757 : 0x2ed573;
+            p.isReady = (id === myId);   // host implicitly ready; clients re-ready
+            delete p._lastMoveT;
+            delete p._lastShotT;
+        });
+
+        amIReady = false;
+        const host = gameState.players[myId];
+        if (host) { localPos = { x: host.x, y: host.y, z: host.z }; cameraYaw = 0; }
+        localDisguise = {
+            type: 'player', size: 2, color: host ? host.color : 0xff4757,
+            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null
+        };
+
+        this.broadcast({ type: 'returnLobby', players: gameState.players, levelName: gameState.levelName });
+        UI.hideResults();
+        UI.transitionToLobby();
+        UI.updateLobby();
+        UI.renderLevelSelector();
+    },
+
+    // CLIENT: leave the results view locally; the host's returnLobby broadcast
+    // carries the authoritative fresh roster and re-syncs us.
+    clientBackToLobby() {
+        spectateId = null;
+        gameState.phase = 'LOBBY';
+        UI.hideResults();
+        UI.transitionToLobby();
+        UI.updateLobby();
+    },
+
+    /*=================================================================
+      Spectate – eliminated players watch an alive player's view
+    =================================================================*/
+    // Ids of players that can be spectated (alive, not us, mesh exists).
+    spectatablePlayers() {
+        return Object.keys(gameState.players).filter(id =>
+            id !== myId && !gameState.players[id].isCaught && playerMeshes[id]);
+    },
+    // Pick/validate the spectate target; returns the id or null if none.
+    ensureSpectateTarget() {
+        const list = this.spectatablePlayers();
+        if (!list.length) { spectateId = null; return null; }
+        if (!spectateId || list.indexOf(spectateId) < 0) spectateId = list[0];
+        return spectateId;
+    },
+    // Cycle the spectate target (+1 next / -1 prev).
+    cycleSpectate(dir) {
+        const list = this.spectatablePlayers();
+        if (!list.length) { spectateId = null; UI.updateSpectate(); return; }
+        let i = list.indexOf(spectateId);
+        i = (i < 0) ? 0 : (i + dir + list.length) % list.length;
+        spectateId = list[i];
+        UI.updateSpectate();
     },
 
     /*=================================================================

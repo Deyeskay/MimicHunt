@@ -664,7 +664,13 @@ const Level = {
             { key: "tent",       path: "assets/models/tent.glb" },
             { key: "lamppost",   path: "assets/models/lamppost.glb" },
             { key: "hut",        path: "assets/models/hut.glb" },
-            { key: "house",      path: "assets/models/house.glb" }
+            { key: "house",      path: "assets/models/house.glb" },
+            // Indoor furniture (Apartment level). Grounded on load like the rest.
+            { key: "cupboard",   path: "assets/models/cupboard.glb" },
+            { key: "chair",      path: "assets/models/chair.glb" },
+            { key: "bucket",     path: "assets/models/bucket.glb" },
+            { key: "books",      path: "assets/models/books.glb" },
+            { key: "pillar",     path: "assets/models/pillar.glb" }
         ];
 
         const total = files.length + 2;   // + the two animated characters (player + hunter)
@@ -1924,6 +1930,12 @@ const Level = {
 
             const mesh = playerMeshes[id];
 
+            // Eliminated players are removed from the world for EVERYONE — no body
+            // is shown on the map. (The dead player themselves spectates a live
+            // player; see the camera rig below.)
+            if (p.isCaught) { mesh.visible = false; continue; }
+            if (!mesh.visible) mesh.visible = true;
+
             // The local player is simulated at 60 FPS, so render it exactly.
             // Remote players are drawn from the interpolated snapshot buffer;
             // until a sample exists we fall back to their last known record.
@@ -2031,8 +2043,26 @@ const Level = {
         this.updateDynamicColliderGizmos();
 
         if (gameState.players[myId]) {
-            const p = gameState.players[myId];
-            const groundY = p.y - PropLevel.PLAYER_BASE_HEIGHT;   // player's feet
+            const meRec = gameState.players[myId];
+
+            // View source: normally the local player, but an ELIMINATED player
+            // spectates a live player's over-the-shoulder view — their mesh drives
+            // position + facing (we can't see their pitch, so use a gentle tilt).
+            let viewX, viewZ, groundY, viewYaw, viewPitch;
+            const spectating = meRec.isCaught && gameState.phase !== 'ENDED'
+                && gameState.phase !== 'LOBBY' && Network.ensureSpectateTarget();
+            if (spectating && playerMeshes[spectateId]) {
+                const tm = playerMeshes[spectateId];
+                viewX = tm.position.x; viewZ = tm.position.z; groundY = tm.position.y;
+                // +π so the boom sits BEHIND the target (over-the-shoulder), not
+                // in front staring at their face.
+                viewYaw = tm.rotation.y - (tm.userData.isCharacter ? (this.PLAYER_YAW_OFFSET || 0) : 0) + Math.PI;
+                viewPitch = 0.25;
+            } else {
+                viewX = meRec.x; viewZ = meRec.z;
+                groundY = meRec.y - PropLevel.PLAYER_BASE_HEIGHT;   // player's feet
+                viewYaw = cameraYaw; viewPitch = cameraPitch;
+            }
 
             // --- Over-the-shoulder (PUBG/Free Fire style) rig. Tunables: ---
             //  CAM_BACK   distance behind the player (smaller = bigger character)
@@ -2052,10 +2082,10 @@ const Level = {
             const CAM_EXTEND = 0.12;
 
             // Horizontal forward (into the screen) + screen-right vectors.
-            const fX = -Math.sin(cameraYaw), fZ = -Math.cos(cameraYaw);
+            const fX = -Math.sin(viewYaw), fZ = -Math.cos(viewYaw);
             const rX = -fZ, rZ = fX;
             // Full look direction includes pitch (pitch>0 looks down).
-            const cp = Math.cos(cameraPitch), sp = Math.sin(cameraPitch);
+            const cp = Math.cos(viewPitch), sp = Math.sin(viewPitch);
             const dX = fX * cp, dY = -sp, dZ = fZ * cp;
 
             // Desired camera offset from the pivot (player's head): a full-length boom
@@ -2065,7 +2095,7 @@ const Level = {
             const offX = -dX * CAM_BACK + rX * CAM_RIGHT;
             const offY = -dY * CAM_BACK;
             const offZ = -dZ * CAM_BACK + rZ * CAM_RIGHT;
-            const pivotX = p.x, pivotY = groundY + CAM_EYE, pivotZ = p.z;
+            const pivotX = viewX, pivotY = groundY + CAM_EYE, pivotZ = viewZ;
             const boomLen = Math.hypot(offX, offY, offZ);
             const dirX = offX / boomLen, dirY = offY / boomLen, dirZ = offZ / boomLen;
 

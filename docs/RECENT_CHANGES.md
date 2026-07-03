@@ -3,6 +3,190 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-04
+
+- **Returning-player deep link skips the JOIN screen flash.** File: `js/app.js`. On the
+  loading-screen "continue" dismiss, the menu (Host/Join) was revealed *before*
+  `handleRoomDeepLink()` fired `initClient()`, so a returning player (saved name) opening a
+  `?room=` link saw the JOIN screen for the ~1–3s connect window. Now `markReady` skips
+  showing `#menu-screen` when `getRoomDeepLink()` + a saved `myName` mean the player joins
+  straight through — loading screen → lobby, no menu flash. First-timers / no-deep-link still
+  get the menu revealed as before.
+
+- **Apartment stairs: invisible ramp collider (smooth climb).** Files:
+  `js/levels/apartment.js`, `js/materiallibrary.js`. The stepped cube treads made climbing
+  jittery (12 discrete step-ups per flight). Now the visible step cubes are **decorative only**
+  (`collision:false, climbable:false` on all 192), and each of the 16 flights carries **one
+  invisible tilted ramp** — a thin `cube` rotated to the flight's slope (~25.46°, `atan2(8,16.8)`),
+  spanning the flight exactly (radius 10→26.8, y0→y1, width 5). The ramp does the collision so
+  the player walks up a continuous smooth surface while it still *looks* like stairs. Uses the
+  tilted-box ramp mechanism already validated on the Forest ramp (`_climbFloor` tilted branch).
+  New **"Invisible Collider"** material preset (`opacity:0`) in `materiallibrary.js` hides the
+  ramp; ramps are `canDisguise:false`. Props 593 → 609.
+
+- **Eliminated players: hidden bodies + spectate; End-Game results screen + Back-to-Lobby
+  rematch.** Files: `js/globals.js`, `js/network.js`, `js/level.js`, `js/ui.js`,
+  `js/app.js`, `index.html`, `css/style.css`.
+  - **(1) Dead bodies removed from the world for EVERYONE.** The per-frame render loop
+    (`Level.render`) now sets `mesh.visible=false` and `continue`s for any `isCaught`
+    player (was: greyed/frozen body left in place). The Seeker-scan overlay already
+    skipped caught hiders, so nothing shows a dead player anywhere.
+  - **(2) Spectate (eliminated players follow a live player's view).** New global
+    `spectateId` + `Network.spectatablePlayers()/ensureSpectateTarget()/cycleSpectate(dir)`
+    (alive = not `isCaught`, not self, has a mesh). While the local player is `isCaught`
+    during HIDING/HUNTING, the camera rig in `Level.render` retargets to the spectated
+    player's **mesh** (position + facing — clients hold live remote position only in the
+    mesh/snapshot buffer, not the record) with a fixed downward pitch. HUD **spectate bar**
+    (`#spectate-bar`, prev/‹ ›/next) via `UI.updateSpectate()` (called from `updateHUD`),
+    wired in `app.js` to `Network.cycleSpectate(±1)`.
+  - **(3) End-Game results scoreboard.** New `#results-screen` (fixed, z-300) with a
+    per-player table: Player · Role · Result (Survived/Eliminated) · Kills · Score · Keys ·
+    Survived (mm:ss) · **XP**. `Network.finishMatch` now calls `buildResults()` (host-
+    authoritative: survival time from `gameState.huntStartT`, hider XP = `secs·10 +
+    survived?300 + keys·150`, seeker XP = `kills·200 + score`) and ships the rows in the
+    `gameOver` packet; `UI.showResults(title,message,rows)` renders it for everyone. New
+    per-player stat fields in `createPlayer` (reset each round): `kills`, `caughtAtT`,
+    `keysDelivered` — incremented in `processShot` (lethal hit) and `depositKeys`.
+  - **(4) Back-to-Lobby rematch — NO re-host/re-join.** `gameOver` no longer calls
+    `cleanup()` (which destroyed the peer); the peer/connections stay alive and the host
+    game loops idle in `ENDED`. Results screen **Back to Lobby** → host
+    `Network.returnToLobby()` resets the round in place (preserving roles + names, host
+    implicitly ready, others un-readied) and broadcasts the new `returnLobby` packet
+    ({players, levelName}); clients apply it and `UI.transitionToLobby()`. A client's own
+    button calls `clientBackToLobby()` (local transition; the host's authoritative
+    `returnLobby` re-syncs the roster). **Leave** button → `leaveMatch()` (old teardown).
+    Client `gameOver` handler now also sets `phase='ENDED'` to freeze the local sim behind
+    the results screen. **NEEDS 2-window in-browser test** (P2P; headless can't verify).
+
+- **Apartment: named materials in the library + structural cubes non-disguisable.** Files:
+  `js/materiallibrary.js`, `js/props.js`, `js/levels/apartment.js`, `docs/PROP_SYSTEM.md`.
+  (1) The inline tinted presets are now two **named `MaterialLibrary` entries** — **"Apartment
+  Marble Wall"** (walls, 188) and **"Apartment Concrete Floor"** (floor slabs / stair treads /
+  columns / tanks, 274) — applied to the props **by name** (was inline objects). The editor's
+  Material Library modal/dropdown enumerates `MaterialLibrary` (`getMaterialLibraryNames`), so
+  both auto-appear there — no editor code change. (2) **Hiders could disguise as a floor slab /
+  stair.** Those are `cube` instances (not their own prefab), and `canDisguiseAs` only read the
+  prefab. Added a **per-instance override** (`prop.canDisguise === false/true` wins over the
+  prefab; explicit `false` even beats a `hideSpot`), and set `canDisguise:false` on all 274
+  structural cubes. Verified: 0/274 cubes + 0/188 walls disguisable, 118/118 furniture still
+  disguisable. (Kept them as `cube` rather than inventing `slab`/`step` prefab types — the
+  per-instance flag is general and needs no new mesh/editor wiring.)
+
+- **Apartment: fixed white-out (marble too bright).** File: `js/levels/apartment.js`. The
+  building is a fully-enclosed interior (player is INSIDE it, no sky in view), so the light
+  `marble-wall-texture.jpg` (avg brightness **82%**) blew out to near-white on every lit face
+  under the tone-map-off Lambert materials — the whole scene read white. Fix: re-applied the
+  textures through a material preset that also multiplies a **darker albedo tint** (walls
+  `#909498` × marble, floors/stairs/columns `#c2c2c2` × concrete), so lit surfaces sit ~0.45
+  mid-gray with the texture detail intact instead of washing out. (Was NOT a crash — geometry
+  loaded fine; confirmed via texture-brightness sampling.)
+
+- **Apartment: real textures on the structure.** File: `js/levels/apartment.js`. Dropped the
+  flat "Concrete Gray" material and applied image textures: **walls → `marble-wall-texture.jpg`**
+  (188), **floor slabs / stair treads / cellar columns / terrace tanks → `concrete-texture.jpg`**
+  (274 cubes), and the 2 GLB `pillar` props get concrete via a material preset (`texture` field).
+  Both files already in `assets/textures/`. Furniture GLBs unchanged. (Had to remove `material`
+  from the wall/cube props — a textureless preset clears the map, which would hide the new
+  texture.)
+
+- **Apartment baked to a static prop list.** File: `js/levels/apartment.js`. The generator
+  (IIFE + helpers/loops) was run once and its output serialized to a plain
+  `registerLevel("Apartment", [...596 props...], { ground })` literal — same as
+  `arena.js`/`bazaar.js`, so it loads identically with no runtime build. Byte-for-byte the same
+  scene as the generator (596 props: 274 cube / 188 wall / furniture / 9 spawns / 4 exit doors,
+  462 gray-material). Edit further in `editor.html`; the generator lives in git history if the
+  geometry needs regenerating.
+
+- **Apartment: opened the central lift lobby (playtest 5).** File: `js/levels/apartment.js`.
+  Stairs began at radius 5 — right against the radius-3 lift shaft, so the space around the
+  lift was cramped. Pushed stair inner start `STAIR_R0` **5 → 10**, so the whole central lobby
+  (`|x|,|z| < IN 9`) stays OPEN floor — ~7u ring around the shaft on all four sides, with
+  6u-wide walkways flanking each flight in the arms. Stair holes now start at 9.5 (lobby fully
+  floored); outer reach 26.8 (< flat edge 31). Flights unchanged (12 treads, rise 0.667).
+
+- **Apartment: floor height raised for free jumping (playtest 4).** File:
+  `js/levels/apartment.js`. `FLOOR_H` **6.6 → 8.0** so a full jump clears the ceiling. Jump
+  apex feet-rise = `JUMP_STRENGTH²/(2|GRAVITY|)` = 0.35²/0.03 = **4.08u** → apex head 7.08 vs
+  ceiling bottom `FLOOR_H-SLAB_T` = **7.6** (0.52u clear; was −0.88, head hit roof). Level tops
+  F1 8 / F2 16 / F3 24 / TERRACE 32; `WALL_H` 6.0→7.0. Stairs bumped **11→12 treads** to keep
+  the riser < `STEP_HEIGHT` (8.0/12 = 0.667 < 0.7); flight run 16.8u, outer reach 21.8 (< flat
+  edge 31). Props ~596.
+
+- **Apartment: cellar entrances + concrete-gray reskin (playtest 3).** Files:
+  `js/levels/apartment.js`, `js/materiallibrary.js`. (1) **Cellar was sealed** — the
+  full-height basement perimeter had no way in. Replaced the 4 solid perimeter walls with
+  `wallDoor`s carrying a **16u-wide opening on each of the 4 sides** (cellar floor = world
+  ground, so you walk straight in). (2) **Rainbow walls → whitish gray.** New
+  `MaterialLibrary` preset **"Concrete Gray"** (`albedo #cdd0d2`, roughness 0.95, no texture —
+  `applyMaterialPreset` clears the map when a preset carries no `texture`, so the striped
+  `wall.png`/`rock_wall.png` is replaced by flat gray). Applied via `prop.material` to ALL
+  structure — walls, floor slabs, stair treads, cellar columns, terrace tanks (446 props).
+  Furniture GLBs keep their own look. Note: material-painted props are excluded from
+  InstancedMesh batching (`level.js` `_canInstance`), but these are procedural wall/cube which
+  weren't instanced anyway → no perf change.
+
+- **Loading progress bar + % moved to bottom-left** (was bottom-centre). `.ls-content`
+  now anchors `left:4.5% bottom:4.5%`, `align-items:flex-start`. Stacked hint→bar→%:
+  `#ls-loading` `width:min(320px,46vw)`, bar `100%`×14px, hint top-left, `.loading-pct`
+  bottom-right (`align-self:flex-end`). Shrunk for mobile. Fits the empty left region
+  under the power-intro cards. Baselines lowered so bar / dots / Continue share a bottom
+  band: `.ls-dots` `bottom:6%`, `.ls-continue` `bottom:4.5%`. CSS-only (`css/style.css`);
+  JS unchanged. (Continue only appears at 100% via `markReady` — hidden during load.)
+  **Markup fix:** `#ls-continue` moved OUT of `.ls-content` (now a sibling under
+  `#loading-screen`) — the narrow left-anchored `.ls-content` was its positioning
+  context, so `right:24px` was landing bottom-LEFT; now anchors to full screen (bottom-right).
+
+- **Apartment enlargement pass (playtest 2).** File: `js/levels/apartment.js`. Footprint
+  **48×48 → 68×68** (`HALF` 24→34). Flat interior 15×15 → **22×22** (rooms ~7.5² → ~11²,
+  **2.16× area**) via new layout consts `IN 9 / MID 20 / OUT 31`. Central corridor cross
+  **12 → 18 wide** (6u walkway each side of the 6-wide stairwell). Entrances widened ~1.5×
+  again: front door 4.0→**6.0**, partition/balcony 3.4→**5.1**, lift door 3.0→**4.5**, stair
+  width 4→5 (holes ±2.5→±3). Columns/furniture/spawns/exit-doors respread to the bigger
+  shell; +2 furniture/flat (pot, barrel). Props ~544 → ~576.
+
+- **Apartment tuning pass (playtest fixes).** File: `js/levels/apartment.js`. (1) **Floor
+  height 4 → 6.6** (`FLOOR_H` = 2.2 × full player height 3.0); ceilings were cramped. Level
+  tops are now CELLAR 0 / F1 6.6 / F2 13.2 / F3 19.8 / TERRACE 26.4, walls `WALL_H` 6.0, ~3.2u
+  head clearance under each slab. (2) **Doorways/corridors widened** — front door 2.4 → 4.0
+  (+ a 2nd 4.0 side entry), balcony/partition/lift gaps → 3.2–3.4 (player capsule is 1.4
+  across; the old 2.0–2.4 gaps read as slots). (3) **Stairs unblocked** — steps were SOLID
+  wedges from the floor up, so the flight stacked directly above filled the headroom of the
+  flight below (you couldn't climb). Steps are now **thin overlapping treads** (`TREAD_TH`
+  ≈1.3) occupying only their own band → **2.3u** clear above the head between stacked flights.
+  11 treads/flight (rise 0.6 < `STEP_HEIGHT` 0.7), 20.4u run (< 21 flat edge). Prop count
+  ~452 → ~544 (250 cube + 184 wall = ~434 procedural draw calls — watch mobile FPS).
+
+- **New "Apartment" level — first MULTI-STOREY map (vertical tower).** Files:
+  `js/levels/apartment.js` (new, ~452 props, generator-style), `js/levels/registry.js`
+  (`LEVEL_FILES`), `js/level.js` (`loadModels` +5 indoor models), `js/prefabs.js`
+  (+5 prefabs), `assets/models/` (5 GLBs promoted from `env_modals/`). Five stacked
+  levels share one 48×48 footprint: **CELLAR** (open basement, world ground y=0) → **F1/F2/F3**
+  (top y = 4/8/12, four 2BHK flats each) → **TERRACE** (y=16, open roof). Vertical travel:
+  a central **6×6 lift shaft** is an open void cellar→terrace (no elevator scripting exists —
+  it's a drop-shaft + hide nook), and **four stairwells** in the N/E/S/W corridor arms carry a
+  flight for **every** floor transition, so there are always 4 ways up — including the required
+  **4 ways from Floor 3 to the terrace**.
+  - **How multi-floor works with the existing engine (no new mechanics):** floor slabs are
+    climbable `cube` boxes (walkable tops); walls are `wall` boxes whose collider band
+    (`yMin..yMax`) only blocks a player overlapping that height, so cellar walls and F2 walls
+    coexist without interfering. Stairs are solid cube steps rising 0.667 each (< `STEP_HEIGHT`
+    0.7) so the auto step-up walks you up. `applyPropTransform` places props at the authored
+    **center `y`**, so elevated slabs/walls render at height. Each upper slab carries 4 stair
+    openings + a lift opening (built via a rectangle-minus-holes subtractor) so flights pass
+    through; the same footprint on every floor keeps the stacked flights aligned.
+  - **2BHK flats:** hall + kitchen + 2 bedrooms split by two partition walls, **each partition
+    has a doorway** so rooms INTERCONNECT; every flat has a front door to the corridor + two
+    balcony doors. A continuous outer **balcony ring** (low 1.3 parapet) wraps each floor, so
+    ADJACENT FLATS' BALCONIES INTERCONNECT around the building.
+  - **5 new indoor models** promoted from `assets/models/env_modals/` → `assets/models/`:
+    `cupboard` (tall wardrobe, hide/disguise), `chair`, `bucket`, `books`, `pillar`. Wired in
+    `loadModels` + `prefabs.js`. **Scales are best-guess** (raw GLB dims unverified) — the
+    `pillar` decor and the furniture sizes **need an editor.html size check**; tune if any read
+    off. Cellar structural columns use `cube` (guaranteed to reach the F1 ceiling).
+  - **NEEDS in-browser test** (headless can't verify climb/render): confirm you can stair up
+    cellar→terrace in all 4 arms, stand on every slab, walk between interconnected rooms and
+    balconies, and that no furniture is grotesquely over/undersized.
+
 ## 2026-07-03
 
 - **Bullets now leave the hand, not the head.** File: `js/level.js` (`getAimRay`
@@ -16,13 +200,14 @@ each round of asset changes is in parentheses where relevant.
   reach in that pose. Bolt origin is broadcast in the shot packet, so every viewer sees it
   leave the hand.
 
-- **Hiders get a centre "Collect the Key!" banner on purple drops.** File:
-  `js/network.js` (new `keyDropAnnounce`, called from `spawnBeam` + `beamSpawn`
-  handler). Purple beams previously only fired the shared toast ("🟣 A key beam has
-  dropped!"). Added a hider-only `UI.announce('🔑 Collect the Key!', 'A purple beam has
-  dropped')` big centre banner so hiders get a clear objective cue. No new packet —
-  each peer (host in `spawnBeam`, every client in `beamSpawn`) already renders the beam,
-  so it decides locally against its own role. Seekers see nothing extra.
+- **Beam drops now use a centre announcement, not a bottom toast.** File:
+  `js/network.js` (new `beamDropAnnounce`, called from `spawnBeam` + `beamSpawn`
+  handler; old `notify` toast removed). Both beam kinds now fire a big centre
+  `UI.announce` instead of the bottom-of-screen toast. GOLD (powers) →
+  `🟡 Airdrop! / A power beam has dropped` for everyone. PURPLE (keys) →
+  `🔑 Collect the Key! / A purple beam has dropped` for **Hiders only** (a seeker
+  can't collect it). No new packet — each peer (host in `spawnBeam`, every client in
+  `beamSpawn`) already renders the beam, so it decides locally against its own role.
 
 - **Seeker power tuning + deterministic 2nd gold beam.** Files: `js/globals.js`
   (power consts), `js/network.js` (`spawnBeam`, `collectBeam`, `grantPower`, hunt-start

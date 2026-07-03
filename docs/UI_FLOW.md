@@ -24,15 +24,30 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
 - `#custom-modal` — generic modal: `UI.showModal(title,msg,cb)` (single OK) for
   win/room events, or `UI.showConfirm(title,msg,onConfirm,label)` (Yes/Cancel via
   `#modal-cancel-btn` + `.modal-actions`) — used by the Exit Match confirm.
+- `#results-screen` — **End-Game results scoreboard** (fixed, z-300, above everything).
+  `UI.showResults(title,message,rows)` fills `#results-body` (per-player table: Player ·
+  Role · Result · Kills · Score · Keys · Survived · XP, sorted by XP; the local row is
+  highlighted). **Back to Lobby** (`#results-lobby-btn` → `Network.returnToLobby()`)
+  rematches into the SAME room; **Leave** (`#results-leave-btn` → `Network.leaveMatch()`)
+  tears down. `UI.hideResults()` clears it (also called from every `transitionTo*`).
+- `#spectate-bar` (inside `#ui-layer`, `.interactive`) — shown to ELIMINATED players
+  during HIDING/HUNTING by `UI.updateSpectate()` (from `updateHUD`); ‹ / › cycle the
+  live player being watched (`Network.cycleSpectate(±1)`), name in `#spectate-name`.
 - `#gameCanvas` — the Three.js canvas (z-index 1, behind the UI layer).
 
 ## Flow
 ```
 menu ──host/join──► lobby ──(all ready, ≥1 hider & ≥1 seeker)──► game(HIDING→HUNTING)
-  ▲                                                                     │
-  └──────────────── gameOver/roomClosing/host-alone ◄──────────────────┘
+  ▲                     ▲                                              │
+  │                     │        gameOver ──► results screen ──────────┤
+  │                     └──── Back to Lobby (returnLobby, peer kept) ◄──┤
+  └──────────────── roomClosing / host-alone / Leave ◄─────────────────┘
                     (migration may drop clients into a new host's lobby)
 ```
+- **`gameOver` no longer tears down.** The match-end path shows `#results-screen`; the
+  peer stays alive so **Back to Lobby** (`returnToLobby`) resets the round in place and
+  bounces everyone to the SAME lobby for a rematch — no re-host/re-join. Only **Leave**
+  (or `roomClosing`/host-alone) runs `cleanup()` back to the menu.
 - `transitionToGame`: hide menu/lobby, show `#ui-layer` + canvas, `Level.resize()`.
 - `transitionToLobby` / `transitionToMenu`: hide game view (so the crosshair/HUD
   hide with `#ui-layer`).
