@@ -7,14 +7,22 @@ enumerate a folder, so a manifest + loader injects them.
 ```js
 const LEVELS = [];                         // [{ name, props, options }]
 function registerLevel(name, props, options) { LEVELS.push({ name, props, options: options||{} }); }
-const LEVEL_FILES = ['rainbowWoods.js', 'arena.js', 'ruins.js', 'bazaar.js'];   // <-- the ONE place to add a level
+const LEVEL_FILES = ['rainbowWoods.js', 'arena.js', 'ruins.js', 'bazaar.js', 'apartment.js'];   // <-- the ONE place to add a level
 function loadLevelScripts() { /* inject each js/levels/<file>?v=N sequentially */ }
 ```
 - Loaded **sequentially** so `LEVELS[0]` is the deterministic default map (Rainbow Woods).
 - `app.js` awaits `loadLevelScripts()` before `Level.init()` so `LEVELS` is populated.
 - Cache `?v=` for level files lives in this loader (keep in sync with `index.html`).
 
-## Level files — `js/levels/rainbowWoods.js`, `arena.js`, `ruins.js`, `bazaar.js`
+## Level files — `js/levels/rainbowWoods.js`, `arena.js`, `ruins.js`, `bazaar.js`, `apartment.js`
+All are static prop lists. **`apartment.js`** is the first **multi-storey** map (cellar →
+F1/F2/F3 → terrace stacked on one 68×68 footprint) — see the Apartment entries in
+RECENT_CHANGES for how stacked climbable-`cube` slabs + banded `wall` colliders + cube stairs
+make vertical floors work with no new mechanics. It was authored as a JS generator (IIFE with
+`wall`/`slab`/`stairFlight`/rectangle-minus-holes helpers) then **baked to a hardcoded
+`registerLevel(...)` list** so it loads like every other level; re-author via `editor.html` or
+restore the generator from git history if you need to regenerate the geometry.
+
 Each calls `registerLevel('Name', [ ...prop objects... ], options?)`. A prop object:
 ```
 { id, model:'tree'|'rock'|'bush'|'wall'|'spawn', x, y, z, bottomY,

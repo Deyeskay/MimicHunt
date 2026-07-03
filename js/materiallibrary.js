@@ -61,6 +61,44 @@ const MaterialLibrary = {
         "texture": "wood-texture.jpg",
         "tileX": 1,
         "tileY": 1
+    },
+    "Concrete Gray": {
+        "albedo": "#cdd0d2",
+        "opacity": 1,
+        "emission": "#000000",
+        "emissionIntensity": 0,
+        "metalness": 0,
+        "roughness": 0.95
+    },
+    "Apartment Marble Wall": {
+        "albedo": "#909498",
+        "opacity": 1,
+        "emission": "#000000",
+        "emissionIntensity": 0,
+        "metalness": 0,
+        "roughness": 0.85,
+        "texture": "marble-wall-texture.jpg",
+        "tileX": 2,
+        "tileY": 2
+    },
+    "Apartment Concrete Floor": {
+        "albedo": "#c2c2c2",
+        "opacity": 1,
+        "emission": "#000000",
+        "emissionIntensity": 0,
+        "metalness": 0,
+        "roughness": 0.95,
+        "texture": "concrete-texture.jpg",
+        "tileX": 3,
+        "tileY": 3
+    },
+    "Invisible Collider": {
+        "albedo": "#808080",
+        "opacity": 0,
+        "emission": "#000000",
+        "emissionIntensity": 0,
+        "metalness": 0,
+        "roughness": 1
     }
 };
 

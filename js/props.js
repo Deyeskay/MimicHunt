@@ -662,6 +662,12 @@ const PropLevel = {
     },
 
     canDisguiseAs: function(prop) {
+        // Per-instance override wins (a level can opt a specific prop in/out of
+        // disguise regardless of its prefab). Used e.g. by Apartment's structural
+        // cubes — floor slabs / stair treads — which are `cube` but must NOT be
+        // disguisable (a hider mimicking a whole floor slab makes no sense).
+        if (prop.canDisguise === false) return false;
+        if (prop.canDisguise === true) return true;
         if (prop.hideSpot) return true;   // explicit hide spot is always disguisable
         return this.getPrefab(prop.model).canDisguise === true;
     },

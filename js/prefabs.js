@@ -345,6 +345,38 @@ const PrefabLibrary = {
         "climbable": false,
         "hideSpot": false,
         "canDisguise": false
+    },
+    "cupboard": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true,
+        "colliderShape": "box"
+    },
+    "chair": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "bucket": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "books": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "pillar": {
+        "collision": true,
+        "climbable": false,
+        "hideSpot": false,
+        "canDisguise": false,
+        "colliderShape": "box"
     }
 };
 

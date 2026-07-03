@@ -130,9 +130,22 @@ body{
     color:var(--muted);
     user-select:none;            /* shift-click selects rows, not text */
     -webkit-user-select:none;
+    display:flex;
+    align-items:center;
+    gap:6px;
 }
+.hierarchy-item .hi-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .hierarchy-item:hover{ background:#2c2c37; color:var(--text); }
 .hierarchy-item.active{ background:var(--accent); color:#fff; font-weight:600; }
+/* Props carrying per-instance overrides (material / canDisguise / gameplay flag
+   differing from the prefab / custom texture) get a left accent + a ✎ badge, so
+   they're easy to tell apart from props that use pure prefab defaults. */
+.hierarchy-item.overridden{ box-shadow:inset 3px 0 0 #e0a63a; }
+.hierarchy-item .ov-badge{
+    flex:none; font-size:10px; line-height:1; padding:2px 5px; border-radius:999px;
+    background:#4a3a12; color:#f0c04a; border:1px solid #7a5f1e; font-weight:700;
+}
+.hierarchy-item.active .ov-badge{ background:rgba(0,0,0,.28); color:#ffe08a; border-color:transparent; }
 
 #inspector{
     flex:1;
@@ -2803,7 +2816,9 @@ const EDITOR_MODELS = {
     fence: "fence2.glb", steps: "steps.glb", entrance: "entrance.glb",
     amphora: "amphora.glb", fruitcrate: "fruitcrate.glb", hay: "hay.glb",
     sack: "sack.glb", sackpile: "sackpile.glb", table: "table.glb",
-    tent: "tent.glb", lamppost: "lamppost.glb", hut: "hut.glb", house: "house.glb"
+    tent: "tent.glb", lamppost: "lamppost.glb", hut: "hut.glb", house: "house.glb",
+    cupboard: "cupboard.glb", chair: "chair.glb", bucket: "bucket.glb",
+    books: "books.glb", pillar: "pillar.glb"
 };
 Object.keys(EDITOR_MODELS).forEach(k => loadModel(k, "assets/models/" + EDITOR_MODELS[k]));
 
@@ -3206,6 +3221,35 @@ function selectModel(model, button)
 /////////////////////////////////////////////////////
 //  Refresh Hierarchy List
 /////////////////////////////////////////////////////
+// Per-instance overrides a prop carries on top of its prefab defaults. Returns a
+// list of short labels (empty => a "default" prop that's pure prefab). Drives the
+// hierarchy ✎ badge + tooltip so instance-customised props stand out.
+function propOverrides(d)
+{
+    const ov = [];
+    const pf = (typeof PrefabLibrary !== 'undefined' && PrefabLibrary[d.model]) || null;
+
+    if (d.material)
+        ov.push('material: ' + (typeof d.material === 'string' ? d.material : 'custom'));
+    if (d.canDisguise === false) ov.push('canDisguise: false');
+    else if (d.canDisguise === true) ov.push('canDisguise: true');
+
+    if (pf) {
+        ['collision', 'climbable', 'hideSpot'].forEach(f => {
+            if (d[f] !== undefined && d[f] !== pf[f]) ov.push(f + ': ' + d[f]);
+        });
+    }
+
+    // Custom texture (differs from the model's default).
+    if (d.texture) {
+        let def = null;
+        try { def = PropLevel.defaultTextureFor(d.model); } catch (e) {}
+        if (!def || d.texture !== def) ov.push('texture: ' + d.texture);
+    }
+
+    return ov;
+}
+
 function refreshHierarchy()
 {
     // Roster changed (place/delete/clone/load) → collider outlines are stale.
@@ -3240,8 +3284,21 @@ function refreshHierarchy()
 
         item.className = "hierarchy-item";
 
-        item.innerText =
-            obj.userData.data.name;
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "hi-name";
+        nameSpan.textContent = obj.userData.data.name;
+        item.appendChild(nameSpan);
+
+        // Mark instance-overridden props (vs pure prefab defaults).
+        const ov = propOverrides(obj.userData.data);
+        if (ov.length) {
+            item.classList.add("overridden");
+            item.title = "Instance overrides:\n• " + ov.join("\n• ");
+            const badge = document.createElement("span");
+            badge.className = "ov-badge";
+            badge.textContent = "✎";
+            item.appendChild(badge);
+        }
 
         if(selectedObjects.includes(obj))
             item.classList.add("active");

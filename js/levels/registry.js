@@ -28,7 +28,8 @@ const LEVEL_FILES = [
     'rainbowWoods.js',
     'arena.js',
     'ruins.js',
-    'bazaar.js'
+    'bazaar.js',
+    'apartment.js'
 ];
 
 // Inject each level file in order and resolve once all have registered.

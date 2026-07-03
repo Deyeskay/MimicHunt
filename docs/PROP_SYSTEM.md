@@ -84,8 +84,11 @@ are still used by disguise sizing, climbing, spawns, and the hit radius — only
 - `climbable`: same rule (instance-wins-else-prefab). NOTE: older level files baked
   `"climbable": false` on every prop; `forest.js` and the rebuilt `arena.js` omit those
   (so rocks/bushes inherit `climbable:true` from the prefab).
-- `canDisguise` is prefab-only (read via `canDisguiseAs`, which also returns true for
-  any `hideSpot`).
+- `canDisguise`: read via `canDisguiseAs(prop)`, which honors a **per-instance override**
+  first — `prop.canDisguise === false` opts a prop OUT (beating even a `hideSpot`),
+  `=== true` opts it IN — then falls back to `hideSpot` (always disguisable) and finally the
+  prefab default. (E.g. Apartment's floor slabs / stair treads are `cube`s carrying
+  `canDisguise:false` so a hider can't become a whole floor.)
 
 ## Meshes
 - `createPropMesh(prop, modelLibrary)`: clones the GLB (`tree/rock/bush` + the Bazaar
