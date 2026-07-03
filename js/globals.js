@@ -90,6 +90,10 @@ let codePeer = null;           // successor's second Peer (code alias) accepting
 
 // Network transmission rate (Hz). Physics/render stay at 60 FPS.
 const NETWORK_SEND_RATE = 20;
+// A stationary client skips clientMove sends, but forces one at least this often
+// so the host's ghost sweep (CLIENT_TIMEOUT_MS silence) never prunes it. Must stay
+// comfortably below CLIENT_TIMEOUT_MS (3000).
+const MOVE_KEEPALIVE_MS = 1000;
 
 // --- PHYSICS & LOCAL PLAYER DATA ---
 let localPos = { x: 0, y: 2, z: 0 }; // Added Y for verticality

@@ -26,6 +26,32 @@ Tone mapping compresses highlights, so a **stronger** sun no longer blows out th
 that's what lets Medium/High look richer *and* darker-balanced at once. Low restores
 `NoToneMapping` + `LinearEncoding` (the original flat look).
 
+## Draw-call batching (InstancedMesh) — `Level.USE_INSTANCING`
+Identical GLB props share ONE geometry + material object across every `.clone(true)` copy
+(Three's `Mesh.clone` shares refs), so drawing them one-mesh-each wastes a draw call per
+prop. At level load `spawnProp` routes eligible props into `this._instanceBatches` (keyed by
+`geometry.uuid|material.uuid`): it still builds the placed clone (so `enrichProp` can compute
+colliders) but records each **leaf submesh's world matrix** and discards the mesh instead of
+adding it to the scene. `finalizeInstances` (end of `loadLevel`) turns each batch into one
+`THREE.InstancedMesh` (≥2 members) or a plain baked-matrix `Mesh` (lone member), collapsing
+hundreds of draw calls to a handful — the biggest remaining mobile GPU/CPU win.
+- **Eligible** (`_canInstance`): shared GLB-library models (tree/rock/bush/barrel/crate.glb/
+  columns/…) with **no** `prop.material` preset. **Excluded** → individual path: procedural
+  `wall`/`cube` (materials are built per-instance so they'd never share a batch anyway) and
+  preset props (unique cloned material). Multi-material leaf meshes also fall back individually
+  (`_batchMesh` returns false; validated in a first pass so a prop can't half-batch).
+- **Decoupled from gameplay:** collision + dev collider gizmos read prop DATA (`mapProps3D` /
+  `enrichProp`), never the rendered meshes, and disguised hiders are separate clones in
+  `playerMeshes` — so consolidating the *static* render set changes nothing gameplay-side.
+- **Foliage tint intact:** instanced tree/bush use the *same* shared template material that
+  `applyFoliageTint` mutates via `modelLibrary['tree'|'bush']`, so the tint reaches the
+  InstancedMesh even though it's no longer an individual `levelMeshes` entry.
+- **Culling:** InstancedMesh `frustumCulled=false` — its bounding sphere comes from the
+  origin-centred template geometry, so per-instance culling would wrongly drop the whole
+  level-spanning batch when the origin leaves view. It's one draw call regardless.
+- Set `Level.USE_INSTANCING=false` to fall back to one mesh per prop (A/B the frame time).
+  Dev mode logs `[instancing] N submeshes → M draw objects` from `finalizeInstances`.
+
 ## Grass / ground
 Ground plane (200×200) with `MeshLambertMaterial`. A procedural CanvasTexture shows
 instantly (`makeGroundTexture`), swapped to `assets/textures/grass.png` when it loads
@@ -40,15 +66,30 @@ active quality via `refreshTextures`.
   missing. `scene.fog` (near 20 / far 100) still applies to world geometry.
 
 ## Graphics quality tiers (`Level.QUALITY` + `setGraphicsQuality`)
-Setting: `GAME_SETTINGS.graphicsQuality` (`'low' | 'medium' | 'high'`, default **medium**),
-edited via the **Graphics** dropdown on the Settings screen (`#setting-graphics`), applied
-**live** (`js/app.js` `change` handler) and at the end of `Level.init`.
+Setting: `GAME_SETTINGS.graphicsQuality` (`'mobile' | 'low' | 'medium' | 'high'`, default
+**medium** on desktop; auto-set to **mobile** on a fresh install on touch/mobile devices —
+see `isMobileDevice()` in `js/app.js`), edited via the **Graphics** dropdown on the Settings
+screen (`#setting-graphics`), applied **live** (`js/app.js` `change` handler) and at the end
+of `Level.init`.
 
-| Tier | pixelRatio | colour mgmt | grass aniso | sky | IBL (env) | fog far | shadow soft | bloom | lights |
-|------|-----------|-------------|-------------|-----|-----------|---------|-------------|-------|--------|
-| Low | 1 | off | off | flat | off | 100 | hard | off | ambient .9 / hemi .6 / sun 1.2 |
-| Medium | ≤2 | sRGB + ACES | on | cloud dome | off | 100 | hard | off | ambient .30 / hemi .85 / sun 1.7 warm |
-| High | ≤2 | sRGB + ACES | on | cloud dome | **on** | **180** | **radius 4** | **on** | ambient .30 / hemi .90 / sun 1.8 warm |
+Each tier carries a `shadowMapSize` knob (`setGraphicsQuality` resizes the directional
+shadow map live and disposes the old depth map so Three rebuilds it). Default is 2048²;
+**Mobile halves it to 1024²**.
+
+| Tier | pixelRatio | AA | colour mgmt | grass aniso | sky | IBL (env) | fog far | shadows | shadow map | shadow soft | bloom | lights |
+|------|-----------|-----|-------------|-------------|-----|-----------|---------|---------|------------|-------------|-------|--------|
+| Mobile | **1** | **off** | off | off | flat | off | **70** | **OFF** | — | — | off | ambient .9 / hemi .6 / sun 1.2 |
+| Low | 1 | on | off | off | flat | off | 100 | on | 2048² | hard (Basic) | off | ambient .9 / hemi .6 / sun 1.2 |
+| Medium | ≤2 | on | sRGB + ACES | on | cloud dome | off | 100 | on | 2048² | hard (PCFSoft) | off | ambient .30 / hemi .85 / sun 1.7 warm |
+| High | ≤2 | on | sRGB + ACES | on | cloud dome | **on** | **180** | on | 2048² | **radius 4** | **on** | ambient .30 / hemi .90 / sun 1.8 warm |
+
+**Mobile perf preset (2026-07-03):** the `mobile` tier now also disables the whole
+shadow pass (`shadows:false` → `renderer.shadowMap.enabled=false` + `dirLight.castShadow=false`;
+the shadow map is a full second scene render/frame — the single biggest mobile cost),
+turns off **MSAA** (`antialias:false`, fixed at renderer creation so it reads the saved
+quality then; switching *to* mobile in Settings needs a reload to drop AA), and requests
+`powerPreference:'high-performance'`. Low/Mobile also use the cheaper `BasicShadowMap`
+filter vs Medium/High's `PCFSoftShadowMap`.
 
 ### High-only: image-based lighting + contact shadows
 - **IBL** (`buildEnvironment`): `assets/textures/sky.png` is PMREM-processed into

@@ -1,9 +1,28 @@
 const Level = {
+    // Draw-call batching. Identical GLB props (scatter bushes/rocks, market crate
+    // stacks, columns) share one geometry + material, so their per-submesh world
+    // matrices are collected at level load and drawn as a single InstancedMesh each
+    // (see spawnProp → _batchMesh → finalizeInstances). Collapses hundreds of draw
+    // calls to a handful — the main remaining mobile GPU/CPU win. Set false to fall
+    // back to one mesh per prop (e.g. to A/B the frame time). Walls/cubes (per-
+    // instance material) and material-preset props always use the individual path.
+    USE_INSTANCING: true,
+
     init: function() {
         const canvas = document.getElementById('gameCanvas');
-        renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        // Mobile tier disables MSAA (expensive on mobile GPUs/bandwidth); AA is fixed
+        // at renderer-creation so we read the saved quality here. high-performance hints
+        // phones onto their perf GPU path.
+        const initQ = (typeof GAME_SETTINGS !== 'undefined' && GAME_SETTINGS.graphicsQuality) || 'medium';
+        renderer = new THREE.WebGLRenderer({
+            canvas: canvas,
+            antialias: initQ !== 'mobile',
+            powerPreference: 'high-performance',
+        });
         renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Cheaper hard-edged shadow filter on the low tiers; PCFSoft only where it shows.
+        renderer.shadowMap.type = (initQ === 'mobile' || initQ === 'low')
+            ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb);
         scene.fog = new THREE.Fog(0x87ceeb, 20, 100);
@@ -41,6 +60,8 @@ const Level = {
         ground.position.y = 0;
         ground.receiveShadow = true;
         scene.add(ground);
+        ground.updateMatrix();
+        ground.matrixAutoUpdate = false;   // static — skip per-frame matrix recompute
         this._groundMat = groundMat;
         this._groundTex = groundTex;
 
@@ -74,13 +95,24 @@ const Level = {
         // grassTint multiplies ONLY the ground material; foliageTint multiplies ONLY the
         // tree/bush materials (templates + instances, so disguises stay colour-matched).
         // Both are tunable [r,g,b] knobs and touch nothing else.
+        // Mobile: Low's flat look, but even more aggressive for phones/tablets —
+        // pixelRatio hard-capped to 1, shadow map halved to 1024² and fog pulled in
+        // so fewer props draw. Auto-selected on touch/mobile devices (see auto-detect
+        // in app.js); still user-overridable from Settings.
+        mobile: { pixelRatio: 1, srgb: false, toneMap: false, aniso: false, bloom: false, sky: 'flat',
+                  ambient: 0.9,  hemi: 0.6,  hemiGround: 0x4a6a3a, dir: 1.2, dirColor: 0xffffff,
+                  env: false, envIntensity: 0, exposure: 1.0, fogFar: 70, shadowRadius: 1,
+                  shadowMapSize: 1024, shadows: false,
+                  grassTint: [0.35, 0.4, 0.3], foliageTint: [1, 1, 1] },
         low:    { pixelRatio: 1, srgb: false, toneMap: false, aniso: false, bloom: false, sky: 'flat',
                   ambient: 0.9,  hemi: 0.6,  hemiGround: 0x4a6a3a, dir: 1.2, dirColor: 0xffffff,
                   env: false, envIntensity: 0, exposure: 1.0, fogFar: 100, shadowRadius: 1,
+                  shadowMapSize: 2048,
                   grassTint: [0.35, 0.4, 0.3], foliageTint: [1, 1, 1] },
         medium: { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: false, sky: 'dome',
                   ambient: 0.30, hemi: 0.85, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xfff3e0,
                   env: false, envIntensity: 0, exposure: 1.0, fogFar: 100, shadowRadius: 1,
+                  shadowMapSize: 2048,
                   grassTint: [0.35, 0.4, 0.3], foliageTint: [0.3, 0.35, 0.25] },
         // High adds image-based lighting (env map → soft sky-lit props/characters), softer
         // contact shadows, crisper fog and a more visible bloom. Exposure + fill are pulled
@@ -88,6 +120,7 @@ const Level = {
         high:   { pixelRatio: 2, srgb: true,  toneMap: true,  aniso: true,  bloom: true,  sky: 'dome',
                   ambient: 0.22, hemi: 0.70, hemiGround: 0x6a8a4a, dir: 1.7, dirColor: 0xffefd0,
                   env: true,  envIntensity: 0.65, exposure: 0.85, fogFar: 180, shadowRadius: 4,
+                  shadowMapSize: 2048,
                   grassTint: [0.45, 0.5, 0.4], foliageTint: [0.3, 0.35, 0.25],
                   bloomStrength: 0.55, bloomRadius: 0.4, bloomThreshold: 0.75 },
     },
@@ -106,6 +139,23 @@ const Level = {
         if (this._hemi) { this._hemi.intensity = p.hemi; this._hemi.groundColor.setHex(p.hemiGround); }
         if (this._dir) { this._dir.intensity = p.dir; this._dir.shadow.radius = p.shadowRadius; }
         if (this._dir) this._dir.color.setHex(p.dirColor);
+
+        // Shadow pass on/off. Mobile disables it entirely (`shadows:false`) — the shadow
+        // map is a full second scene render every frame, the single biggest mobile cost.
+        // Other tiers default ON (flag absent → true). castShadow on the sun gates the pass.
+        const wantShadows = p.shadows !== false;
+        renderer.shadowMap.enabled = wantShadows;
+        if (this._dir) this._dir.castShadow = wantShadows;
+
+        // Shadow map resolution (mobile halves it to 1024² to save GPU/bandwidth).
+        // Changing mapSize needs the old depth map disposed so Three rebuilds it.
+        if (this._dir && p.shadowMapSize) {
+            const sh = this._dir.shadow;
+            if (sh.mapSize.x !== p.shadowMapSize) {
+                sh.mapSize.set(p.shadowMapSize, p.shadowMapSize);
+                if (sh.map) { sh.map.dispose(); sh.map = null; }
+            }
+        }
 
         // Crisper distance on High (push the fog back); keep depth haze on Low/Medium.
         if (scene.fog) { scene.fog.near = 20; scene.fog.far = p.fogFar; }
@@ -362,7 +412,11 @@ const Level = {
         this.applyGroundTexture(options && options.ground);
 
         mapProps3D = JSON.parse(JSON.stringify(props || []));
+        // Fresh instancing accumulator for this level (spawnProp fills it, then
+        // finalizeInstances turns each batch into one InstancedMesh).
+        this._instanceBatches = {};
         mapProps3D.forEach(prop => this.spawnProp(prop));
+        this.finalizeInstances();
 
         // Clear any airdrop beams / scan markers / dropped keys from a previous round
         // and (re)build the level's exit-door goal portals.
@@ -471,8 +525,97 @@ const Level = {
         // Props both cast and RECEIVE shadows so they're grounded with contact
         // shadows on the grass (and on each other) instead of looking like they float.
         mesh.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+        // Static level geometry never moves after placement (transform is baked in
+        // createPropMesh), so bake its world matrix once up front. Collision + dev
+        // gizmos read the prop DATA populated by enrichProp above, never these meshes,
+        // so rendering can be consolidated freely.
+        mesh.updateMatrixWorld(true);
+
+        // Instancing path: collect this prop's submesh world matrices into batches
+        // (drawn as one InstancedMesh per geometry+material in finalizeInstances) and
+        // discard the individual mesh. Only for identical GLB props — walls/cubes and
+        // material-preset props keep the individual path (their per-instance materials
+        // wouldn't share a batch anyway).
+        if (this._canInstance(prop) && this._batchMesh(mesh)) return;
+
         scene.add(mesh);
+        // Freeze matrixAutoUpdate on the whole subtree so the per-frame
+        // updateMatrixWorld skips it. (Disguised hiders/characters live in
+        // playerMeshes, not here.)
+        mesh.traverse(o => { o.matrixAutoUpdate = false; });
         (this.levelMeshes = this.levelMeshes || []).push(mesh);
+    },
+
+    // A prop can be instanced when batching is on, it's a shared GLB-library model
+    // (not a procedural wall/cube whose material is built per-instance), and it has no
+    // per-instance material preset (which clones a unique material).
+    _canInstance: function(prop) {
+        return this.USE_INSTANCING
+            && prop.model !== 'wall' && prop.model !== 'cube'
+            && !prop.material
+            && !!(typeof modelLibrary !== 'undefined' && modelLibrary && modelLibrary[prop.model]);
+    },
+
+    // Record each leaf submesh's (geometry, material, worldMatrix) into
+    // this._instanceBatches keyed by geometry+material uuid. Because GLB clones share
+    // their geometry/material objects, all clones of the same model land in the same
+    // batch. Returns false (→ caller renders it individually) if any leaf is
+    // multi-material (geometry-group meshes don't map cleanly to one InstancedMesh);
+    // validated in a first pass so a partially-batched prop can't double-draw.
+    _batchMesh: function(mesh) {
+        const leaves = [];
+        let ok = true;
+        mesh.traverse(o => {
+            if (!o.isMesh || !o.geometry) return;
+            if (Array.isArray(o.material) || !o.material) { ok = false; return; }
+            leaves.push(o);
+        });
+        if (!ok || !leaves.length) return false;
+        const batches = this._instanceBatches || (this._instanceBatches = {});
+        for (const o of leaves) {
+            const key = o.geometry.uuid + '|' + o.material.uuid;
+            let b = batches[key];
+            if (!b) b = batches[key] = { geometry: o.geometry, material: o.material, matrices: [] };
+            b.matrices.push(o.matrixWorld.clone());
+        }
+        return true;
+    },
+
+    // Turn the collected batches into scene objects: one InstancedMesh per batch with
+    // >=2 members (the win), a plain baked-matrix Mesh for a lone member. Reuses the
+    // shared geometry/material (never disposed). Runs once at the end of loadLevel.
+    finalizeInstances: function() {
+        const batches = this._instanceBatches;
+        this._instanceBatches = null;
+        if (!batches) return;
+        let instanced = 0, drawn = 0;
+        for (const key in batches) {
+            const b = batches[key];
+            const n = b.matrices.length;
+            let obj;
+            if (n >= 2) {
+                obj = new THREE.InstancedMesh(b.geometry, b.material, n);
+                for (let i = 0; i < n; i++) obj.setMatrixAt(i, b.matrices[i]);
+                obj.instanceMatrix.needsUpdate = true;
+                // The template geometry's bounding sphere sits at the origin, so
+                // per-instance frustum culling would wrongly cull the whole batch when
+                // the origin leaves the view. Props blanket the level and it's a single
+                // draw call regardless — disable culling.
+                obj.frustumCulled = false;
+            } else {
+                obj = new THREE.Mesh(b.geometry, b.material);
+                obj.matrixAutoUpdate = false;
+                obj.matrix.copy(b.matrices[0]);
+                obj.matrixWorldNeedsUpdate = true;
+            }
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+            scene.add(obj);
+            (this.levelMeshes = this.levelMeshes || []).push(obj);
+            instanced += n; drawn++;
+        }
+        if (typeof developer !== 'undefined' && developer)
+            console.log(`[instancing] ${instanced} prop submeshes → ${drawn} draw objects`);
     },
 
     // Normalize a loaded GLB so its bounding-box bottom sits at y=0, and wrap it

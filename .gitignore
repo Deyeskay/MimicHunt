@@ -3,3 +3,10 @@ testing/
 
 # Local model working folder — not shipped.
 assets/models/env_modals/
+
+# API keys for the LiteLLM proxy — never commit. Use modal_Switch/.env.example as a template.
+modal_Switch/.env
+
+# Python bytecode cache from modal_Switch/ scripts — generated, machine-specific.
+__pycache__/
+*.pyc

@@ -320,8 +320,23 @@ function updateFps() {
     }
 }
 
-function animate() {
+// Mobile framerate cap. On 90/120 Hz phones an uncapped rAF renders as fast as the
+// panel refreshes, which just heats the SoC → thermal throttle → LOWER, jittery
+// sustained FPS. Capping the mobile tier to 60 keeps frametimes steady and cooler.
+// 0 = uncapped (Low/Medium/High run at the display's native rate).
+const _FRAME_CAP_MOBILE = 60;
+let _lastFrameTs = 0;
+function animate(now) {
     requestAnimationFrame(animate);
+    const cap = (typeof GAME_SETTINGS !== 'undefined' && GAME_SETTINGS.graphicsQuality === 'mobile')
+        ? _FRAME_CAP_MOBILE : 0;
+    if (cap) {
+        if (now === undefined) now = performance.now();
+        // −1 ms slack so a 60 Hz panel (16.67 ms frames) doesn't miss the 16.67 ms
+        // gate and collapse to 30; on 120 Hz it renders every other frame → ~60.
+        if (now - _lastFrameTs < (1000 / cap) - 1) return;
+        _lastFrameTs = now;
+    }
     updateFps();
     if (gameState.phase !== 'LOBBY' && document.getElementById('gameCanvas').style.display === 'block') {
         Level.render();
@@ -558,6 +573,22 @@ loadLevelScripts().then(() =>
 });
 
 const savedSettings = localStorage.getItem('hidehunt_settings');
+
+// Auto-detect mobile/tablet on a FRESH install (no saved settings) and default the
+// graphics tier to 'mobile' — the most aggressive preset (pixelRatio 1, 1024² shadows,
+// pulled-in fog). Coarse pointer (no hover) or a mobile UA both count. Returning users
+// keep whatever they saved.
+function isMobileDevice() {
+    const coarse = window.matchMedia &&
+        (window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches);
+    const ua = /Android|iPhone|iPad|iPod|Mobile|Silk|Kindle|Opera Mini/i.test(navigator.userAgent || '');
+    return !!(coarse || ua);
+}
+if(!savedSettings && isMobileDevice()) {
+    GAME_SETTINGS.graphicsQuality = 'mobile';
+    const g = document.getElementById('setting-graphics');
+    if (g) g.value = 'mobile';
+}
 
 if(savedSettings)
 {
