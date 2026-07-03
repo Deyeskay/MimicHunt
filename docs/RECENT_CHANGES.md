@@ -5,6 +5,61 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-03
 
+- **Bullets now leave the hand, not the head.** File: `js/level.js` (`getAimRay`
+  muzzle offsets). The visual bolt spawned from `my = localPos.y + HAND_UP` with
+  `HAND_UP = +0.35`. `localPos.y` is the capsule CENTRE (feet + `PLAYER_BASE_HEIGHT`
+  1.5), so the muzzle sat at feet+1.85 — above the neck/head — and shots read as fired
+  from the face. Measured the rig live (chrome-devtools): during the upper-body **shoot**
+  clip the right-hand bone holds steady at **~1.15 above the feet**. Set `HAND_UP = -0.35`
+  (1.15 − 1.5) so the muzzle Y now equals the shoot-pose hand exactly (verified `dy=0`),
+  and widened `HAND_FWD 0.45→0.6`, `HAND_RIGHT 0.35→0.4` to match the hand's forward/side
+  reach in that pose. Bolt origin is broadcast in the shot packet, so every viewer sees it
+  leave the hand.
+
+- **Hiders get a centre "Collect the Key!" banner on purple drops.** File:
+  `js/network.js` (new `keyDropAnnounce`, called from `spawnBeam` + `beamSpawn`
+  handler). Purple beams previously only fired the shared toast ("🟣 A key beam has
+  dropped!"). Added a hider-only `UI.announce('🔑 Collect the Key!', 'A purple beam has
+  dropped')` big centre banner so hiders get a clear objective cue. No new packet —
+  each peer (host in `spawnBeam`, every client in `beamSpawn`) already renders the beam,
+  so it decides locally against its own role. Seekers see nothing extra.
+
+- **Seeker power tuning + deterministic 2nd gold beam.** Files: `js/globals.js`
+  (power consts), `js/network.js` (`spawnBeam`, `collectBeam`, `grantPower`, hunt-start
+  reset). (1) All seeker power durations `10s→15s` (`POWER_SCAN_MS`, `POWER_JAM_MS`,
+  `POWER_KILL_MS`). (2) Scan range `POWER_SCAN_RANGE 20→40` units. (3) The **2nd gold
+  beam** of each hunt now always grants **Scan** to a seeker who takes it (a hider still
+  rolls a random hider power). `spawnBeam` counts golds and tags the 2nd with
+  `forceSeekerPower:'scan'`; `collectBeam` threads it into `grantPower`, which uses the
+  forced power instead of the random roll. Counter (`_goldSpawnCount`) resets at each
+  HUNTING transition so it's per-match. Scan range is a shared const (every client derives
+  markers identically — no packet).
+
+- **Louder footsteps (remote hiders were near-inaudible).** Files: `js/globals.js`
+  (`Sound.step` base gains, `FOOTSTEP_MIN_DIST`), `js/level.js` (`tickRemoteFootstep`
+  falloff). Complaint: hider footsteps very low. Two quiet-makers stacked: base step
+  gains were low (sine `0.22`, noise `0.13`) and the remote volume used a **squared**
+  falloff (`vol *= vol`) that crushed the mid-range (~22u away → 0.25×). Fix: bumped base
+  gains (sine `0.22→0.32`, noise `0.13→0.20`), widened the full-volume radius
+  (`FOOTSTEP_MIN_DIST 4→8`), and softened the curve to `sqrt(vol)` so mid-range stays
+  audible. Local player steps (vol=1) are a touch louder too — expected.
+
+- **Forced-out hider no longer spawns underground (feet-over-wire `y`).** Files:
+  `js/network.js` (clientMove send + handler, `buildSnapshot`), `js/level.js`
+  (`updatePlayerMeshTransform` snapshot merge), `docs/NETWORK_PROTOCOL.md`. Bug: a hider
+  shot out of a **short prop** (bush/rock) sometimes rendered sunk below the floor for a
+  moment. Cause: the wire carried the **disguise-dependent capsule centre `y`** (base =
+  `propRadius` while disguised, `PLAYER_BASE_HEIGHT` as a player). The reveal flip
+  (`disguiseType→'player'`) and the position stream travel on separate paths, so for one
+  round-trip a low disguised `y` was paired with the tall player base → feet `= y − 1.5 <
+  0`. Fix: `clientMove` + `snapshot` now ship **feet** (`y − getDisguiseBaseHeight(self)`),
+  a disguise-invariant ground value; the receiver rebuilds centre with *its own* known
+  disguise for that player (`feet + getDisguiseBaseHeight(p)`), so a disguise change can
+  never desync `y`. The one-shot reveal lift in the `shot` handler stays (bridges the flip
+  instant on the host's own snapshot build; non-additive, so no drift). Full snapshots
+  (`lobbySync`/`gameStart`/`rejoinAck`) still carry centre `y` — they're self-consistent
+  bundles. `PropLevel.getDisguiseBaseHeight` is the single offset source.
+
 - **Host-migration: symmetric round-dissolve when no live hider remains.** File:
   `js/network.js` (`becomeSuccessor`, `acceptConnection`, `startGameBroadcast`,
   `cleanup`). Bug: 2-player match (host = Hider, client = Seeker), host closes browser →

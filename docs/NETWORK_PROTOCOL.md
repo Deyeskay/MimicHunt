@@ -21,7 +21,7 @@ state + events. All in `js/network.js`.
 ## Client → Host (inputs)
 | type | when | payload | host handler effect |
 |---|---|---|---|
-| `clientMove` | ≤20 Hz in-game | `{t,x,y,z,rotY}` | set that player's transform (timestamp-guarded). **Sent only when the transform changed**; a keepalive is forced every `MOVE_KEEPALIVE_MS` (1 s) so a stationary player isn't ghost-swept |
+| `clientMove` | ≤20 Hz in-game | `{t,x,y,z,rotY}` | set that player's transform (timestamp-guarded). **`y` is FEET (ground-relative), not centre** — see *Vertical (y) wire convention* below; host rebuilds centre via `p.y = data.y + getDisguiseBaseHeight(p)`. **Sent only when the transform changed**; a keepalive is forced every `MOVE_KEEPALIVE_MS` (1 s) so a stationary player isn't ghost-swept |
 | `clientDisguise` | on disguise change | `{disguiseType,disguiseSize,propScale,propHeight,propRadius,propRotation,color}` | apply to roster; **reject if disguising while `disguiseLockUntil` active**; relay as `disguise` to others |
 | `clientJump` | on jump | `{}` | stamp `p.jumpAt=now`; broadcast `jump` |
 | `shoot` | on fire | `{t,ox,oy,oz,dx,dy,dz,mx,my,mz}` (camera ray + muzzle) | `processShot(conn.peer, data)` |
@@ -37,7 +37,7 @@ state + events. All in `js/network.js`.
 ## Host → Client(s) (state + events)
 | type | when | payload | client effect |
 |---|---|---|---|
-| `snapshot` | 20 Hz in-game | `{t,phase,timer,players:{id:{x,y,z,rotY}}}` | `pushSnapshot` (interpolation buffer); update phase/timer/HUD. **Eliminated (`isCaught`) players are omitted** — consumers hold their last-known record |
+| `snapshot` | 20 Hz in-game | `{t,phase,timer,players:{id:{x,y,z,rotY}}}` | `pushSnapshot` (interpolation buffer); update phase/timer/HUD. **`y` is FEET (ground-relative)** — render rebuilds centre via `s.y + getDisguiseBaseHeight(p)` (see below). **Eliminated (`isCaught`) players are omitted** — consumers hold their last-known record |
 | `lobbySync` | roster/role/ready/level change | `{players, levelName?, roomCode?}` | replace roster; update lobby + level carousel |
 | `gameStart` | match begins | `{gameState}` | adopt full gameState; `Level.loadLevel`; seed local prediction; transition to game |
 | `disguise` | a player (incl. host) disguised | `{id,disguiseType,disguiseSize,propScale,propHeight,propRadius,propRotation,color}` | update that player's disguise fields |
@@ -78,10 +78,29 @@ state + events. All in `js/network.js`.
 - Reveal/lock/shoot windows are sent as **ms durations**; each peer does
   `Network.now() + ms` → no cross-peer clock sync.
 
+### Vertical (`y`) wire convention — FEET, not centre
+A player's stored `y` is the **capsule centre**, which sits at a *disguise-dependent*
+base height: `PLAYER_BASE_HEIGHT` (1.5) as a player, but `propRadius` while disguised
+(a bush/rock centre sits ~0.5 off the ground). Shipping centre `y` over the wire
+couples it to disguise state, and the two travel on separate paths (`clientMove`/
+`snapshot` vs `disguise`/`shot`). When a hider was **forced out of a short prop**, the
+disguise flip (`disguiseType→'player'`, base 1.5) landed before the next position
+packet, which still carried the low disguised centre — render then drew feet at
+`y − 1.5 < 0`, i.e. **sunk underground** for one round-trip.
+
+Fix: `clientMove` and `snapshot` carry **feet** `= y − getDisguiseBaseHeight(self)`.
+Feet is the same ground value in every disguise, so the receiver rebuilds centre with
+*its own* known disguise for that player (`feet + getDisguiseBaseHeight(p)`) — always
+consistent, even mid-flip. Send/apply sites: `network.js` clientMove send, `clientMove`
+handler, `buildSnapshot`; render rebuild in `level.js` `updatePlayerMeshTransform` merge.
+Full snapshots (`lobbySync`, `gameStart`, `rejoinAck`) still carry centre `y` (they are
+self-consistent disguise+transform bundles). `PropLevel.getDisguiseBaseHeight(p)` is the
+single source of truth for the offset.
+
 ## Authority model
 - **Movement**: client-predicted locally; host stores client transforms verbatim
-  (light timestamp guard). The owner never overwrites its own prediction with the
-  host snapshot of itself.
+  (light timestamp guard, y reconstructed from feet — see above). The owner never
+  overwrites its own prediction with the host snapshot of itself.
 - **Shooting**: client supplies the aim ray; **host validates geometry**
   (`processShot`): ray-vs-hider body-column sampling, **prop occlusion** via
   `PropLevel.raycastProps` (a rock/tree between you and the hider blocks the shot),

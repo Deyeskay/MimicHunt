@@ -189,10 +189,10 @@ const BEAM_LIFETIME_MS = 30000;   // an active beam despawns if nobody collects 
 const BEAM_RADIUS      = 3;       // walk-through pickup radius (matches the visual cylinder)
 const PICKUP_INVIS_MS  = 5000;    // hider becomes invisible this long the instant they pick up
 const POWER_INVIS_MS   = 10000;   // hider "Invisible" power duration
-const POWER_SCAN_MS    = 10000;   // seeker "Scan" (see hiders through walls) duration
-const POWER_SCAN_RANGE = 20;      // seeker "Scan" range (world units / "metres")
-const POWER_JAM_MS     = 10000;   // seeker "Jammer" locks undisguised hiders out of disguising
-const POWER_KILL_MS    = 10000;   // seeker "Kill" (one-shot direct kill) window
+const POWER_SCAN_MS    = 15000;   // seeker "Scan" (see hiders through walls) duration
+const POWER_SCAN_RANGE = 40;      // seeker "Scan" range (world units / "metres")
+const POWER_JAM_MS     = 15000;   // seeker "Jammer" locks undisguised hiders out of disguising
+const POWER_KILL_MS    = 15000;   // seeker "Kill" (one-shot direct kill) window
 // Random power pools, by role. Hiders activate manually (E / power button); seekers
 // get theirs applied instantly on pickup.
 const HIDER_POWERS  = ['heal', 'invis', 'shield'];
@@ -259,7 +259,7 @@ function spreadBeamTimes(a, b, n, midpoint) {
 
 // --- REMOTE FOOTSTEPS (heard from OTHER players; computed client-side, no packets) ---
 const FOOTSTEP_MAX_DIST   = 40;   // beyond this (world units), remote footsteps are silent
-const FOOTSTEP_MIN_DIST   = 4;    // within this, full volume
+const FOOTSTEP_MIN_DIST   = 8;    // within this, full volume
 const FOOTSTEP_SPEED_ON   = 1.5;  // u/s to start stepping (matches anim walk threshold)
 const FOOTSTEP_SPEED_OFF  = 0.5;  // u/s hysteresis to stop stepping
 const FOOTSTEP_INTERVAL_MS = 330; // step cadence (same as the local player)
@@ -383,12 +383,12 @@ const Sound = {
         const f = right ? 130 : 110;
         osc.frequency.setValueAtTime(f, t);
         osc.frequency.exponentialRampToValueAtTime(f * 0.65, t + 0.07);
-        gain.gain.setValueAtTime(0.22 * vol, t);
+        gain.gain.setValueAtTime(0.32 * vol, t);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
         osc.connect(gain).connect(out);
         osc.start(t);
         osc.stop(t + 0.1);
-        this._noiseBurst(0.07, { freq: right ? 900 : 760, q: 0.9, gain: 0.13 * vol, out });
+        this._noiseBurst(0.07, { freq: right ? 900 : 760, q: 0.9, gain: 0.20 * vol, out });
     },
     // Quick upward "whoomp" as the player leaves the ground.
     jump() {

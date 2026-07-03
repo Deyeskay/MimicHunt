@@ -159,7 +159,10 @@ const Network = {
             // absent from the sample, so dropping them here saves bytes with no
             // visible change. They re-enter the roster via discrete events only.
             if (p.isCaught) continue;
-            players[id] = { x: p.x, y: p.y, z: p.z, rotY: p.rotY };
+            // Ship FEET (ground-relative) y so clients rebuild centre with each
+            // player's own disguise — see clientMove. Keeps a forced-out hider from
+            // rendering sunk during the reveal→position-sync window.
+            players[id] = { x: p.x, y: p.y - PropLevel.getDisguiseBaseHeight(p), z: p.z, rotY: p.rotY };
         }
         return {
             type: 'snapshot',
@@ -589,12 +592,30 @@ const Network = {
         const pos = this.pickBeamPos();
         const b = { id: ++this._beamSeq, kind, x: pos.x, z: pos.z,
                     spawnAt: this.now(), armMs: BEAM_ARM_MS };
+        // The 2nd gold beam of a hunt always yields Scan when a seeker takes it
+        // (hiders still roll a random hider power). Deterministic reward, not random.
+        if (kind === 'gold' && (this._goldSpawnCount = (this._goldSpawnCount || 0) + 1) === 2) {
+            b.forceSeekerPower = 'scan';
+        }
         this._beams.push(b);
         const pkt = { type: 'beamSpawn', beamId: b.id, kind, x: b.x, z: b.z, armMs: b.armMs };
         this.broadcast(pkt);
         Level.spawnBeam(b.id, kind, b.x, b.z, b.armMs);   // host renders it too
         Sound.beam(kind);
         this.notify(kind === 'purple' ? '🟣 A key beam has dropped!' : '🟡 An airdrop beam has dropped!');
+        this.keyDropAnnounce(kind);   // hider-only centre banner on purple
+    },
+
+    // Purple beam = the hider objective. Push a big centre announcement ("Collect
+    // the Key!") to the LOCAL player only if they're a Hider. Called on the host in
+    // spawnBeam and on every client in the 'beamSpawn' handler (both render the beam),
+    // so each peer decides for itself against its own role — no extra packet.
+    keyDropAnnounce(kind) {
+        if (kind !== 'purple') return;
+        const me = gameState.players[myId];
+        if (!me || me.role !== 'Hider') return;
+        if (typeof UI !== 'undefined' && UI.announce)
+            UI.announce('🔑 Collect the Key!', 'A purple beam has dropped');
     },
 
     // A candidate ground position for a beam: reuse the level's spawn points
@@ -619,13 +640,13 @@ const Network = {
         this.broadcast({ type: 'beamGone', beamId: beam.id, collectorId: playerId });
         Level.removeBeam(beam.id, playerId);
         if (beam.kind === 'purple') this.grantKey(playerId);
-        else this.grantPower(playerId, beam.kind);
+        else this.grantPower(playerId, beam.kind, beam.forceSeekerPower);
     },
 
     // Roll + apply the random power for the collector's role. Hiders also get an
     // automatic 5s invisibility and HOLD one power to activate later (E / button);
     // seekers get their power applied instantly.
-    grantPower(playerId, kind) {
+    grantPower(playerId, kind, forceSeekerPower) {
         const p = gameState.players[playerId];
         if (!p) return;
         const now = this.now();
@@ -638,7 +659,7 @@ const Network = {
                              heldPower: power, invisMs: PICKUP_INVIS_MS });
             this.applyPowerGain(playerId, 'Hider', { heldPower: power, invisMs: PICKUP_INVIS_MS }, true);
         } else {
-            const power = SEEKER_POWERS[Math.floor(Math.random() * SEEKER_POWERS.length)];
+            const power = forceSeekerPower || SEEKER_POWERS[Math.floor(Math.random() * SEEKER_POWERS.length)];
             const pkt = { type: 'powerGain', playerId, role: 'Seeker', power };
             if (power === 'scan') {
                 p.scanUntil = now + POWER_SCAN_MS;
@@ -1030,7 +1051,10 @@ const Network = {
                         data.t <= p._lastMoveT) break;
                     p._lastMoveT = data.t;
                     p.x = data.x;
-                    p.y = data.y;
+                    // data.y is FEET (ground-relative); rebuild centre with the
+                    // disguise WE currently believe this peer wears. Invariant even
+                    // mid-disguise-change: feet is the same ground value regardless.
+                    p.y = data.y + PropLevel.getDisguiseBaseHeight(p);
                     p.z = data.z;
                     p.rotY = data.rotY;
                 }
@@ -1186,6 +1210,7 @@ const Network = {
                     const sched = computeBeamSchedule(huntLen);
                     this._beamSched = sched.gold.map(t => ({ at: t, kind: 'gold' }))
                         .concat(sched.purple.map(t => ({ at: t, kind: 'purple' })));
+                    this._goldSpawnCount = 0;   // reset so "2nd gold = Scan" is per-match
                     // Exit doors open EXIT_ACTIVATE_DELAY_MS after the LAST purple key
                     // beam that actually fits inside this hunt. computeBeamSchedule keeps
                     // every purple beam inside the window, so all of them fire.
@@ -1462,6 +1487,7 @@ const Network = {
                 // Host announced an airdrop beam — render it (arming, then active).
                 Level.spawnBeam(data.beamId, data.kind, data.x, data.z, data.armMs);
                 Sound.beam(data.kind);
+                this.keyDropAnnounce(data.kind);   // hider-only "Collect the Key!" banner
                 break;
 
             case 'beamGone':
@@ -1572,11 +1598,19 @@ const Network = {
                 Math.abs(localRotY - last.rotY) > 0.005;
             if (!moved && (now - last.t) < MOVE_KEEPALIVE_MS) return;
             this._lastSentMove = { x: localPos.x, y: localPos.y, z: localPos.z, rotY: localRotY, t: now };
+            // Wire carries FEET (ground-relative) y, not the disguise-dependent
+            // centre y. localPos.y sits at the current base height (propRadius while
+            // disguised, PLAYER_BASE_HEIGHT as a player), so feet = y - base is the
+            // same ground value in every disguise. The receiver rebuilds centre with
+            // ITS known disguise for us, so a disguise change never desyncs y (no
+            // sunk-underground frame when a hider is forced out of a short prop).
+            const selfBase = PropLevel.getDisguiseBaseHeight(
+                { disguiseType: localDisguise.type, propRadius: localDisguise.propRadius });
             this.sendToHost({
                 type: 'clientMove',
                 t: now,
                 x: localPos.x,
-                y: localPos.y,
+                y: localPos.y - selfBase,
                 z: localPos.z,
                 rotY: localRotY
             });

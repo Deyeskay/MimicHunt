@@ -956,7 +956,7 @@ const Level = {
         if (dist > FOOTSTEP_MAX_DIST) return;
         let vol = 1 - Math.max(0, dist - FOOTSTEP_MIN_DIST) / (FOOTSTEP_MAX_DIST - FOOTSTEP_MIN_DIST);
         vol = Math.max(0, Math.min(1, vol));
-        vol *= vol;   // gentle perceptual falloff
+        vol = Math.sqrt(vol);   // gentle perceptual falloff — keeps mid-range audible
 
         // Stereo pan = how far to the listener's right the source sits. Right vector
         // matches the movement convention (D key = cos(yaw), -sin(yaw)). ×0.9 so a
@@ -1073,12 +1073,15 @@ const Level = {
         const d = new THREE.Vector3();
         if (camera) { camera.getWorldPosition(o); camera.getWorldDirection(d); }
         else { o.set(localPos.x, localPos.y + 1, localPos.z); d.set(0, 0, -1); }
-        // Muzzle = the player's right hand: lower than the head and offset
-        // forward + right of the body so the bolt reads as fired from the held
-        // weapon (not the head). HAND_UP is below the old +1.0 chest origin.
+        // Muzzle = the player's right hand DURING THE SHOOT POSE, offset forward +
+        // right of the body so the bolt reads as fired from the held weapon (not the
+        // head). Heights measured off the rig: the shoot-clip right hand sits ~1.15
+        // above the feet (feet = group origin). localPos.y is the capsule CENTRE
+        // (feet + PLAYER_BASE_HEIGHT = feet + 1.5), so HAND_UP = 1.15 - 1.5 = -0.35
+        // drops the muzzle from the old head-height origin down onto the hand.
         const fX = -Math.sin(cameraYaw), fZ = -Math.cos(cameraYaw);   // forward
         const rX = -fZ, rZ = fX;                                       // screen-right
-        const HAND_FWD = 0.45, HAND_RIGHT = 0.35, HAND_UP = 0.35;
+        const HAND_FWD = 0.6, HAND_RIGHT = 0.4, HAND_UP = -0.35;
         return {
             ox: o.x, oy: o.y, oz: o.z,
             dx: d.x, dy: d.y, dz: d.z,
@@ -1928,9 +1931,11 @@ const Level = {
                 this.updatePlayerMeshTransform(mesh, p);
             } else {
                 const s = sampled && sampled[id];
+                // Snapshot y is FEET (ground-relative) — rebuild centre with this
+                // player's current disguise so a forced-out hider never renders sunk.
                 this.updatePlayerMeshTransform(
                     mesh,
-                    s ? { ...p, x: s.x, y: s.y, z: s.z, rotY: s.rotY } : p
+                    s ? { ...p, x: s.x, y: s.y + PropLevel.getDisguiseBaseHeight(p), z: s.z, rotY: s.rotY } : p
                 );
                 // Footsteps for OTHER players, derived from their rendered motion
                 // (no network event). Runs for prop-disguised hiders too, so a
