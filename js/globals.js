@@ -162,7 +162,7 @@ const GYRO_WRAP = 45;
 // touching the remap logic: GYRO_YAW_SIGN if left/right is reversed, GYRO_PITCH_SIGN
 // if up/down is reversed (independent of the invertY look setting).
 let GYRO_YAW_SIGN = 1;
-let GYRO_PITCH_SIGN = 1;
+let GYRO_PITCH_SIGN = -1;   // up/down was reversed on-device (Android landscape)
 
 // --- INPUTS ---
 let keys = {};
