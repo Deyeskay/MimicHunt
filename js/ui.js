@@ -86,7 +86,13 @@ const UI = {
             ? 'Return everyone to the lobby for a rematch.'
             : 'Waiting for the host to start the next round…';
         const screen = document.getElementById('results-screen');
-        if (screen) screen.style.display = 'flex';
+        if (screen) {
+            // Bell chime once, only when the results screen first appears (not on any
+            // re-render while it's already up).
+            const wasHidden = screen.style.display !== 'flex';
+            screen.style.display = 'flex';
+            if (wasHidden && typeof Sound !== 'undefined' && Sound.playAlarm) Sound.playAlarm('chime');
+        }
     },
 
     hideResults: function() {
@@ -495,6 +501,27 @@ const UI = {
             const cd = document.getElementById('blind-countdown');
             if (cd) cd.innerText = `${gameState.timer}s`;
         }
+
+        // Hider "HUNTERS ARRIVING IN" countdown overlay (live hiders, HIDING phase).
+        const hiderCd = document.getElementById('hider-countdown');
+        const showHiderCd = (gameState.phase === 'HIDING' && !isSeeker && !me.isCaught);
+        if (hiderCd) {
+            hiderCd.style.display = showHiderCd ? 'flex' : 'none';
+            if (showHiderCd) {
+                const num = document.getElementById('hider-countdown-num');
+                if (num) {
+                    num.innerText = gameState.timer;
+                    num.classList.toggle('urgent', gameState.timer <= 5);
+                }
+            }
+        }
+
+        // Klaxon on the HIDING->HUNTING flip — fires once for EVERYONE (seeker + hider)
+        // regardless of the overlay, so the host/seeker also hears the hunt start.
+        if (this._lastPhase === 'HIDING' && gameState.phase === 'HUNTING') {
+            if (typeof Sound !== 'undefined' && Sound.alarm) Sound.alarm();
+        }
+        this._lastPhase = gameState.phase;
 
         // Live player count (top-right pill). Keeps updating on host (60fps loop)
         // and clients (snapshot handler), including after a host migration.

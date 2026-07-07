@@ -410,15 +410,19 @@ const Network = {
             Level.spawnPulse(packet, packet.impactDist);
         }
         // If the host itself is the hider that got hit, play the damage sound
-        // (or a shield-deflect toast when the hit was absorbed).
+        // (or a shield-deflect toast when the hit was absorbed). The fatal hit plays
+        // the death cue instead (in the `eliminated` block below), not the ow zap.
         if (hit && targetId === myId) {
             if (shielded) UI.toast('🛡️ Shield absorbed the hit!');
-            else Sound.hurt();
+            else if (!eliminated) Sound.hurt();
         }
         // Hit-marker on our own crosshair when we (the host seeker) land a shot.
         if (hit && shooterId === myId) UI.hitMarker();
 
         if (eliminated) {
+            // Deep war horn to the hider that just died; kill-confirm to the seeker.
+            if (targetId === myId) Sound.playAlarm('horn');
+            if (shooterId === myId) Sound.kill();
             const tn = (gameState.players[targetId] && gameState.players[targetId].name) || 'A hider';
             const sn = (shooter && shooter.name) || 'Seeker';
             this.notify('💀 ' + tn + ' was eliminated by ' + sn);
@@ -1480,7 +1484,11 @@ const Network = {
                     if (data.targetId === myId) UI.toast('🛡️ Shield absorbed the hit!');
                 }
                 // Damage sound when WE are the hider that got hit (not when shielded).
-                if (data.hit && !data.shielded && data.targetId === myId) Sound.hurt();
+                // The fatal hit plays the death cue instead of the ow zap.
+                if (data.hit && !data.shielded && !data.eliminated && data.targetId === myId) Sound.hurt();
+                // Deep war horn to the hider that just died; kill-confirm to the seeker.
+                if (data.eliminated && data.targetId === myId) Sound.playAlarm('horn');
+                if (data.eliminated && data.shooterId === myId) Sound.kill();
                 // Hit-marker on our own crosshair when our shot landed.
                 if (data.hit && data.shooterId === myId) UI.hitMarker();
                 break;

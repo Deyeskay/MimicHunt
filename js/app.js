@@ -30,6 +30,21 @@ if (nameField) nameField.addEventListener('input', () => nameField.classList.rem
 document.getElementById('btn-host').addEventListener('click', () => { if (!requireName()) return; commitPlayerName(); Network.initHost(); });
 document.getElementById('btn-join').addEventListener('click', () => { if (!requireName()) return; commitPlayerName(); Network.initClient(); });
 
+// Unlock the WebAudio context on the first real user gesture. Browsers create an
+// AudioContext suspended and only honour resume() from inside a gesture handler.
+// Without this, the HIDING->HUNTING alarm (fired from a timer, not a click) is the
+// first sound attempted and plays silently; later click/keypress-driven sounds
+// (pew/reload) unlock it too late. One-shot, then removed.
+(function unlockAudio() {
+    const go = () => {
+        if (typeof Sound !== 'undefined' && Sound.ensure) Sound.ensure();
+        window.removeEventListener('pointerdown', go);
+        window.removeEventListener('keydown', go);
+    };
+    window.addEventListener('pointerdown', go);
+    window.addEventListener('keydown', go);
+})();
+
 // --- Share room link (WhatsApp / any app) + deep-link auto-join ---
 // The share button in the lobby builds "<site>?room=CODE". Opening that link
 // prefills the code and (if a name is already saved) joins straight into the lobby.

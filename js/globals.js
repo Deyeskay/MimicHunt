@@ -312,6 +312,35 @@ const Sound = {
         osc.start(t);
         osc.stop(t + 0.25);
     },
+    // Seeker kill-confirm — a punchy low impact thud + a bright rising two-tone ding.
+    // Played to the seeker when their shot eliminates a hider (satisfying feedback).
+    kill() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        // Low impact thud.
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(200, t);
+        o.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+        g.gain.setValueAtTime(0.22, t);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+        o.connect(g).connect(ctx.destination);
+        o.start(t); o.stop(t + 0.22);
+        // Bright rising confirm ding (C6 → G6).
+        [[0.04, 1046], [0.13, 1568]].forEach(([dt, f]) => {
+            const o2 = ctx.createOscillator();
+            const g2 = ctx.createGain();
+            o2.type = 'square';
+            o2.frequency.setValueAtTime(f, t + dt);
+            g2.gain.setValueAtTime(0.0001, t + dt);
+            g2.gain.exponentialRampToValueAtTime(0.1, t + dt + 0.01);
+            g2.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.1);
+            o2.connect(g2).connect(ctx.destination);
+            o2.start(t + dt); o2.stop(t + dt + 0.12);
+        });
+    },
     // Mechanical "cha-chunk" played when a reload starts.
     reload() {
         const ctx = this.ensure();
@@ -329,6 +358,222 @@ const Sound = {
             osc.start(t + dt);
             osc.stop(t + dt + 0.1);
         });
+    },
+    // "Hunt begins" cue, played once to everyone at the HIDING->HUNTING flip. The live
+    // game always uses the 'stinger' profile (chosen 2026-07-07). The other profiles in
+    // _alarmProfiles are kept for auditioning via the dev harness (testing/), which calls
+    // playAlarm(name) directly — swap ALARM_PROFILE here to change the in-game cue.
+    alarm() { this.playAlarm(this.ALARM_PROFILE); },
+    ALARM_PROFILE: 'stinger',
+    playAlarm(name) {
+        const fn = this._alarmProfiles[name] || this._alarmProfiles.klaxon;
+        fn.call(this);
+    },
+    _alarmProfiles: {
+        // Classic klaxon — alternating two-tone square beeps over ~1s (original cue).
+        klaxon() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            [[0, 740], [0.25, 560], [0.5, 740], [0.75, 560]].forEach(([dt, f]) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(f, t + dt);
+                gain.gain.setValueAtTime(0.0001, t + dt);
+                gain.gain.exponentialRampToValueAtTime(0.16, t + dt + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.22);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start(t + dt);
+                osc.stop(t + dt + 0.24);
+            });
+        },
+        // Air-raid siren — sawtooth swept up then down (~1.2s) with a fast warble LFO.
+        siren() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(300, t);
+            osc.frequency.linearRampToValueAtTime(880, t + 0.6);
+            osc.frequency.linearRampToValueAtTime(300, t + 1.2);
+            // Warble: LFO modulating the pitch for that wavering siren texture.
+            const lfo = ctx.createOscillator();
+            const lfoGain = ctx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.value = 6;
+            lfoGain.gain.value = 45;
+            lfo.connect(lfoGain).connect(osc.frequency);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(0.15, t + 0.12);
+            gain.gain.setValueAtTime(0.15, t + 1.0);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.25);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(t); lfo.start(t);
+            osc.stop(t + 1.3); lfo.stop(t + 1.3);
+        },
+        // Horror stinger — dissonant minor-2nd stab over a descending sub drone (~1.1s).
+        stinger() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            [440, 466].forEach((f) => {   // 440 & 466 Hz ≈ minor 2nd = tense dissonance
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sawtooth';
+                o.frequency.setValueAtTime(f, t);
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.11, t + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.02, t + 0.4);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+                o.connect(g).connect(ctx.destination);
+                o.start(t); o.stop(t + 0.95);
+            });
+            const sub = ctx.createOscillator();
+            const sg = ctx.createGain();
+            sub.type = 'sine';
+            sub.frequency.setValueAtTime(140, t);
+            sub.frequency.exponentialRampToValueAtTime(45, t + 1.1);
+            sg.gain.setValueAtTime(0.0001, t);
+            sg.gain.exponentialRampToValueAtTime(0.22, t + 0.05);
+            sg.gain.exponentialRampToValueAtTime(0.0001, t + 1.15);
+            sub.connect(sg).connect(ctx.destination);
+            sub.start(t); sub.stop(t + 1.2);
+        },
+        // Deep war horn — two clearly separated low notes (110→165 Hz), each a single
+        // sawtooth through a lowpass so it reads as a smooth brass swell, not a buzz.
+        // Clear 0.25s gap between the notes so they sound as two distinct calls.
+        horn() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            const lp = ctx.createBiquadFilter();
+            lp.type = 'lowpass';
+            lp.frequency.value = 650;   // tame the sawtooth's harsh upper harmonics
+            lp.Q.value = 0.7;
+            lp.connect(ctx.destination);
+            [[0, 110, 0.5], [0.75, 165, 0.8]].forEach(([dt, f, dur]) => {
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sawtooth';
+                o.frequency.setValueAtTime(f, t + dt);
+                g.gain.setValueAtTime(0.0001, t + dt);
+                g.gain.linearRampToValueAtTime(0.17, t + dt + 0.12);        // slow swell in
+                g.gain.setValueAtTime(0.17, t + dt + dur - 0.18);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + dt + dur);  // fade out
+                o.connect(g).connect(lp);
+                o.start(t + dt); o.stop(t + dt + dur + 0.05);
+            });
+        },
+        // Digital alert — three clean rising bleeps (660/880/1100 Hz), snappy (~0.5s).
+        digital() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            [[0, 660], [0.16, 880], [0.32, 1100]].forEach(([dt, f]) => {
+                ['sine', 'square'].forEach((type, i) => {
+                    const o = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    o.type = type;
+                    o.frequency.setValueAtTime(f, t + dt);
+                    const amp = i === 0 ? 0.14 : 0.05;
+                    g.gain.setValueAtTime(0.0001, t + dt);
+                    g.gain.exponentialRampToValueAtTime(amp, t + dt + 0.01);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.14);
+                    o.connect(g).connect(ctx.destination);
+                    o.start(t + dt); o.stop(t + dt + 0.16);
+                });
+            });
+        },
+        // Sonar pulse — three clean sine pings, each dropping 880→660 Hz with a long
+        // decay tail. Submarine "contact" feel.
+        pulse() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            [0, 0.5, 1.0].forEach((dt) => {
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.setValueAtTime(880, t + dt);
+                o.frequency.exponentialRampToValueAtTime(660, t + dt + 0.3);
+                g.gain.setValueAtTime(0.0001, t + dt);
+                g.gain.exponentialRampToValueAtTime(0.18, t + dt + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.42);
+                o.connect(g).connect(ctx.destination);
+                o.start(t + dt); o.stop(t + dt + 0.45);
+            });
+        },
+        // Bell chime — ascending four-note arpeggio (C-E-G-C), each note a sine
+        // fundamental + a soft inharmonic partial with a long ring. Bright, alerting.
+        chime() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            [[0, 523], [0.14, 659], [0.28, 784], [0.42, 1047]].forEach(([dt, f]) => {
+                [[f, 0.14], [f * 2.76, 0.045]].forEach(([freq, amp]) => {   // fundamental + bell partial
+                    const o = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(freq, t + dt);
+                    g.gain.setValueAtTime(0.0001, t + dt);
+                    g.gain.exponentialRampToValueAtTime(amp, t + dt + 0.005);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.6);
+                    o.connect(g).connect(ctx.destination);
+                    o.start(t + dt); o.stop(t + dt + 0.65);
+                });
+            });
+        },
+        // Monster growl — sub sawtooth rising 50→150 Hz while a lowpass opens up, so it
+        // snarls from a muffled rumble into a menacing roar (~1.2s).
+        growl() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            const lp = ctx.createBiquadFilter();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(50, t);
+            o.frequency.exponentialRampToValueAtTime(150, t + 1.05);
+            lp.type = 'lowpass';
+            lp.frequency.setValueAtTime(180, t);
+            lp.frequency.exponentialRampToValueAtTime(1300, t + 1.05);   // filter opens = roar
+            lp.Q.value = 4;
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.2, t + 0.12);
+            g.gain.setValueAtTime(0.2, t + 0.85);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 1.2);
+            o.connect(lp).connect(g).connect(ctx.destination);
+            o.start(t); o.stop(t + 1.25);
+        },
+        // Referee whistle — piercing sine sweep 1200→2000 Hz with a fast trill LFO
+        // (fluttering pea). Sharp "everyone move NOW" cue (~0.6s).
+        whistle() {
+            const ctx = this.ensure();
+            if (!ctx) return;
+            const t = ctx.currentTime;
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(1200, t);
+            o.frequency.linearRampToValueAtTime(2000, t + 0.5);
+            const lfo = ctx.createOscillator();      // trill = the whistle's pea rattling
+            const lg = ctx.createGain();
+            lfo.type = 'sine';
+            lfo.frequency.value = 18;
+            lg.gain.value = 130;
+            lfo.connect(lg).connect(o.frequency);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.12, t + 0.03);
+            g.gain.setValueAtTime(0.12, t + 0.45);
+            g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+            o.connect(g).connect(ctx.destination);
+            o.start(t); lfo.start(t);
+            o.stop(t + 0.65); lfo.stop(t + 0.65);
+        }
     },
     // Output node for a sound: a StereoPannerNode (so remote sounds come from the
     // correct side) when a non-zero pan is given and the browser supports it, else

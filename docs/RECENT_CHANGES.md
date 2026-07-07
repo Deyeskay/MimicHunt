@@ -3,7 +3,87 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-07
+
+- **Removed the in-game "G" collider-gizmo toggle.** File: `js/mechanics.js`. The
+  `keydown` handler no longer maps `g` → `Level.setDeveloper(!developer)`, so pressing G
+  during a match no longer flips the debug collider outlines. `developer` still defaults
+  `false` and `Level.setDeveloper(true)` is still callable from the console; the editor's
+  own "Show Colliders" button (`editor.html`) is unaffected.
+
+- **New event sounds: game-over chime, hider death cue, seeker kill-confirm.** Files:
+  `js/globals.js`, `js/network.js`, `js/ui.js`. Three hooks added:
+  1. **Game over** — `UI.showResults()` plays `Sound.playAlarm('chime')` once, guarded so
+     it only fires on the hidden→shown transition (not on re-renders while the results
+     screen is already up).
+  2. **Local hider death** — when the eliminating shot targets the local player, the deep
+     war-horn cue (`Sound.playAlarm('horn')`) plays instead of the normal `Sound.hurt()`
+     ow-zap (the zap is now suppressed on the fatal hit via a `!eliminated` guard).
+  3. **Seeker kill-confirm** — new `Sound.kill()` (low impact thud + bright rising C6→G6
+     ding) plays to the seeker whose shot eliminates a hider.
+  Wired in both shot paths so it works host- and client-side: host `processShotAuthoritative`
+  (its own perspective) and the client `shot` packet handler both check
+  `eliminated` + `targetId`/`shooterId` against `myId`.
+
+- **Multiple hunt-alarm sound profiles (dev-harness preview only).** Files:
+  `js/globals.js`, `testing/index.html`, `testing/dev-harness.js`. The single hard-coded
+  klaxon is now one of **nine** WebAudio profiles in `Sound._alarmProfiles`: `klaxon`
+  (original two-tone), `siren` (air-raid sweep + warble LFO), `stinger` (dissonant
+  minor-2nd stab over a descending sub drone), `horn` (deep two-note brass swell),
+  `digital` (three rising bleeps), `pulse` (three sonar sine pings), `chime` (ascending
+  C-E-G-C bell arpeggio), `growl` (sub sawtooth rising through an opening lowpass), and
+  `whistle` (piercing sine sweep + trill LFO). The `horn` profile was reworked — it
+  previously stacked a raw sawtooth+square at low frequency and buzzed; it now uses one
+  sawtooth per note through a 650 Hz lowpass with a 0.25s gap between the two notes, so
+  they read as two clean, distinct brass calls. **The live in-game hunt-start cue is now
+  `stinger`** — `Sound.alarm()` (fired at the HIDING→HUNTING flip) plays
+  `Sound.ALARM_PROFILE` (= `'stinger'`); swap that one constant to change it. The old
+  `GAME_SETTINGS.alarmProfile` indirection was dropped (no in-game UI set it, and a stale
+  localStorage blob could have pinned the wrong cue). The full nine-profile set stays
+  auditionable via the dev harness. `Sound.alarm()` dispatches to
+  `GAME_SETTINGS.alarmProfile` (default `klaxon`); `Sound.playAlarm(name)` plays any by
+  name (unknown → klaxon). Auditioned via the **Dev Harness** (`testing/`) — a new
+  **Alarm** dropdown + ▶ replay button, bridged to the game realm through
+  `__dev.playAlarm(name)` (needed because `Sound` is a top-level const, so
+  `iframe.contentWindow.Sound` is undefined). No in-game UI: the profile picker is a dev
+  tool only. Verified in-browser: all five schedule oscillators with no errors, unknown
+  name falls back to klaxon.
+
+- **Fix: hunt-start alarm never played.** Files: `js/ui.js`, `js/app.js`. The klaxon
+  on the HIDING→HUNTING flip was guarded by `if (window.Sound && Sound.alarm)`, but
+  `Sound` is a top-level `const` and **top-level `const`/`let` do not become properties
+  of `window`** — so `window.Sound` was always `undefined` and the guard was never true;
+  `Sound.alarm()` was simply never called (every other sound is invoked as a bare
+  `Sound.xxx()`, which is why only the alarm was silent). Guard changed to
+  `typeof Sound !== 'undefined' && Sound.alarm`. Verified in-browser: `window.Sound`
+  is `undefined`, and driving `UI.updateHUD()` across a `_lastPhase` HIDING→HUNTING
+  edge now fires the alarm exactly once (and not on subsequent frames). Also added a
+  one-shot `pointerdown`/`keydown` audio-context unlock in `js/app.js` (belt-and-braces
+  for browser autoplay policy) using the same `typeof` guard.
+
+- **Hider "HUNTERS ARRIVING IN" countdown overlay.** Files: `index.html`,
+  `css/style.css`, `js/globals.js`, `js/ui.js`. During the HIDING grace phase live
+  hiders now see a big center-screen countdown (`#hider-countdown` → `#hider-countdown-num`
+  = `gameState.timer`) with the label "HUNTERS ARRIVING IN". The overlay is deliberately
+  **backdrop-less** (only a faint 0.18-alpha radial vignette) and `pointer-events:none`,
+  so hiders keep a clear view of the environment and clicks aren't blocked. Final 5s
+  (`timer <= 5`) the number pulses heavily via the new `.urgent` class / `@keyframes
+  hider-urgent` (scale 1→1.35 + red color/glow). On the HIDING→HUNTING flip the overlay
+  hides and a new `Sound.alarm()` klaxon (alternating 740/560 Hz square beeps, ~1s) plays
+  **once for everyone** — seeker + hider — via a role-independent `UI._lastPhase`
+  transition guard (so the host/seeker hears the hunt start too). Seekers keep their
+  existing all-black
+  `#blind-overlay`; caught hiders don't see the new overlay. Driven from `UI.updateHUD`
+  alongside the seeker blind block — no new network work (`timer` already synced via
+  `snapshot`/`gameStart`).
+
 ## 2026-07-04
+
+- **Loading-screen bottom tint + pagination dots removed.** File: `css/style.css`. The
+  `.ls-dots` container spanned the full width at the bottom with `pointer-events:auto`,
+  overlapping the CONTINUE button and swallowing its clicks; the `.ls-scrim` bottom black
+  gradient was also unwanted. Both now `display:none`. Carousel navigation still works via the
+  side arrows, swipe, and ←→ keys.
 
 - **Returning-player deep link skips the JOIN screen flash.** File: `js/app.js`. On the
   loading-screen "continue" dismiss, the menu (Host/Join) was revealed *before*
