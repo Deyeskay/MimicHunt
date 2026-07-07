@@ -137,11 +137,17 @@ sens/FOV), persisted to `hidehunt_settings`.
   `enableGyro` is called from the Settings/Controls `<select>` change handler (a tap) and
   at boot (Android attaches directly; denial reverts the select to Off). Attach is
   guarded once by `gyroAttached`. Requires **HTTPS** (satisfied on GitHub Pages).
-- **Mapping (needs on-device confirm):** landscape-locked, so `gamma`→yaw, `beta`→pitch;
-  scaled by `GYRO_BASE` (0.02 rad/deg) × `gyroSensitivity`, pitch clamped like every other
-  path and sign-flipped by `invertY`. A `GYRO_WRAP` (45°) guard skips sensor
-  wrap/discontinuity frames. All in the single `onGyro` block — flip a sign there to
-  re-tune. Consts in `js/globals.js`.
+- **Landscape axis remap:** `deviceorientation` reports `beta`/`gamma` in the **portrait**
+  frame, but the game is played in **landscape** (device rotated 90°), so beta↔gamma swap
+  roles and the rotation direction flips the sign. `onGyro` reads
+  `screen.orientation.angle` (fallback `window.orientation`): at `90` → `dYaw=-beta`,
+  `dPitch=-gamma`; at `270`/`-90` → `dYaw=beta`, `dPitch=gamma`; portrait fallback →
+  `dYaw=gamma`, `dPitch=beta`. Then scaled by `GYRO_BASE` (0.02 rad/deg) × `gyroSensitivity`,
+  pitch clamped like every other path and sign-flipped by `invertY`. A `GYRO_WRAP` (45°)
+  guard skips sensor wrap/discontinuity frames.
+- **Re-tuning:** if left/right is reversed set `GYRO_YAW_SIGN = -1`; if up/down is reversed
+  set `GYRO_PITCH_SIGN = -1` (both in `js/globals.js`, independent of the `invertY` look
+  setting).
 
 ## Movement, collision, climbing (`handleLocalMovement`)
 - Speed `moveSpeed = 0.15`/tick (~9 u/s; was 0.3). World clamp ±100.

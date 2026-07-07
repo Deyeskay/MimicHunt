@@ -227,10 +227,24 @@ const Mechanics = {
         }
 
         const k = GYRO_BASE * (GAME_SETTINGS.gyroSensitivity || 1);
-        // Landscape-locked game: gamma->yaw, beta->pitch. Signs confirmed on-device
-        // (physically pan left => view pans left); flip a sign here to re-tune.
-        cameraYaw -= dGamma * k;
-        cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * dBeta * k;
+        // Landscape axis remap. deviceorientation reports beta/gamma in the PORTRAIT
+        // frame; the game is played in landscape, where the device is rotated 90°, so
+        // beta<->gamma swap roles and the rotation direction (angle 90 vs 270) flips
+        // the sign. Read the current orientation to pick the mapping. dYaw/dPitch are
+        // the raw look deltas (deg) before the master sign flips + sensitivity.
+        const oa = (typeof screen !== 'undefined' && screen.orientation && typeof screen.orientation.angle === 'number')
+            ? screen.orientation.angle
+            : (typeof window.orientation === 'number' ? window.orientation : 0);
+        let dYaw, dPitch;
+        if (oa === 90) {                          // landscape (top edge points one way)
+            dYaw = -dBeta;  dPitch = -dGamma;
+        } else if (oa === 270 || oa === -90) {    // landscape (rotated the other way)
+            dYaw = dBeta;   dPitch = dGamma;
+        } else {                                  // portrait fallback (game is landscape-locked)
+            dYaw = dGamma;  dPitch = dBeta;
+        }
+        cameraYaw -= dYaw * k * GYRO_YAW_SIGN;
+        cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * GYRO_PITCH_SIGN * dPitch * k;
         cameraPitch = Math.max(CAMERA_MAX_LOOK_DOWN, Math.min(CAMERA_MAX_LOOK_UP, cameraPitch));
 
         gyroPrev = { alpha: e.alpha, beta: e.beta, gamma: e.gamma };

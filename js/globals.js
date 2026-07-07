@@ -157,6 +157,12 @@ const GYRO_BASE = 0.02;
 // wrap/discontinuity (e.g. beta flipping near vertical) — reset the baseline & skip
 // so the view doesn't jump violently.
 const GYRO_WRAP = 45;
+// Master direction flips for gyro aim, applied AFTER the landscape axis remap in
+// Mechanics.onGyro. Set to -1 to invert. Use these to re-tune on-device without
+// touching the remap logic: GYRO_YAW_SIGN if left/right is reversed, GYRO_PITCH_SIGN
+// if up/down is reversed (independent of the invertY look setting).
+let GYRO_YAW_SIGN = 1;
+let GYRO_PITCH_SIGN = 1;
 
 // --- INPUTS ---
 let keys = {};
