@@ -164,6 +164,76 @@ const Mechanics = {
         };
         document.addEventListener('touchend', endLook);
         document.addEventListener('touchcancel', endLook);
+
+        // Gyro aim: attach at boot if a mode was saved. On iOS the permission
+        // request only succeeds from a user gesture, so a boot attach truly wires
+        // only on Android; iOS re-attaches on the first Settings interaction.
+        if (GAME_SETTINGS.gyroMode !== 'off') this.enableGyro();
+    },
+
+    // --- GYRO AIM (PUBG-style) -----------------------------------------------
+    // Attach the deviceorientation listener (once). iOS 13+ gates the sensor
+    // behind DeviceOrientationEvent.requestPermission(), which MUST be called
+    // from a user gesture — so this is invoked from the Settings select's change
+    // handler (a tap) as well as at boot. Guarded by gyroAttached.
+    enableGyro: function() {
+        if (gyroAttached) return;
+        if (typeof DeviceOrientationEvent === 'undefined') return;   // no sensor API (needs HTTPS)
+        const attach = () => {
+            gyroAttached = true;
+            gyroPrev = null;
+            window.addEventListener('deviceorientation', (e) => this.onGyro(e));
+        };
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // iOS 13+ — returns a promise; only attach on 'granted'.
+            DeviceOrientationEvent.requestPermission().then((state) => {
+                if (state === 'granted') attach();
+                else {
+                    // Denied: fall back to Off so the UI reflects reality.
+                    GAME_SETTINGS.gyroMode = 'off';
+                    const sel = document.getElementById('setting-gyro-mode');
+                    if (sel) sel.value = 'off';
+                    if (typeof UI !== 'undefined' && UI.showModal)
+                        UI.showModal('Gyro unavailable', 'Motion access was denied. Enable it in your browser settings to use gyro aim.');
+                }
+            }).catch(() => {});
+        } else {
+            attach();   // Android / desktop — no permission gate
+        }
+    },
+
+    // deviceorientation handler: diff against the previous reading and add the
+    // delta to cameraYaw/cameraPitch (same globals the touch/mouse look feed).
+    onGyro: function(e) {
+        if (e.alpha === null && e.beta === null && e.gamma === null) return;   // no sensor data
+        const mode = GAME_SETTINGS.gyroMode;
+        // Gate: when inactive, drop the baseline so re-engaging doesn't apply a
+        // giant accumulated delta (no camera jump).
+        const active =
+            mode !== 'off' &&
+            gameState.phase !== 'LOBBY' &&
+            !isEditingLayout &&
+            (mode === 'always' || (mode === 'scope' && shootTouchId !== null));
+        if (!active) { gyroPrev = null; return; }
+
+        if (gyroPrev === null) { gyroPrev = { alpha: e.alpha, beta: e.beta, gamma: e.gamma }; return; }
+
+        const dBeta = e.beta - gyroPrev.beta;
+        const dGamma = e.gamma - gyroPrev.gamma;
+        // Wrap/discontinuity guard (e.g. beta flips near vertical) — reset baseline.
+        if (Math.abs(dBeta) > GYRO_WRAP || Math.abs(dGamma) > GYRO_WRAP) {
+            gyroPrev = { alpha: e.alpha, beta: e.beta, gamma: e.gamma };
+            return;
+        }
+
+        const k = GYRO_BASE * (GAME_SETTINGS.gyroSensitivity || 1);
+        // Landscape-locked game: gamma->yaw, beta->pitch. Signs confirmed on-device
+        // (physically pan left => view pans left); flip a sign here to re-tune.
+        cameraYaw -= dGamma * k;
+        cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * dBeta * k;
+        cameraPitch = Math.max(CAMERA_MAX_LOOK_DOWN, Math.min(CAMERA_MAX_LOOK_UP, cameraPitch));
+
+        gyroPrev = { alpha: e.alpha, beta: e.beta, gamma: e.gamma };
     },
 
     handleJoystickTouch: function(touch, zone, nub) {

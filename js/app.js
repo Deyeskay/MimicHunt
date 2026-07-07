@@ -151,12 +151,15 @@ function syncControlsDisplays() {
     setChip('ctl-val-sensitivity', Number(GAME_SETTINGS.mouseSensitivity).toFixed(4));
     setChip('ctl-val-shoot-sens', Number(GAME_SETTINGS.shootDragSensitivity).toFixed(4));
     setChip('ctl-val-fov', String(Math.round(GAME_SETTINGS.cameraFov)));
+    setChip('ctl-val-gyro-sens', Number(GAME_SETTINGS.gyroSensitivity).toFixed(1));
 }
 function openControlsPanel() {
     document.getElementById('ctl-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
     document.getElementById('ctl-shoot-sens').value = GAME_SETTINGS.shootDragSensitivity;
     document.getElementById('ctl-fov').value = GAME_SETTINGS.cameraFov;
     document.getElementById('ctl-invert-y').checked = GAME_SETTINGS.invertY;
+    document.getElementById('ctl-gyro-mode').value = GAME_SETTINGS.gyroMode;
+    document.getElementById('ctl-gyro-sens').value = GAME_SETTINGS.gyroSensitivity;
     syncControlsDisplays();
     controlsPanel.style.display = 'flex';
 }
@@ -175,12 +178,16 @@ document.getElementById('btn-controls-reset').addEventListener('click', () => {
     GAME_SETTINGS.shootDragSensitivity = 0.003;
     GAME_SETTINGS.cameraFov = 60;
     GAME_SETTINGS.invertY = false;
+    GAME_SETTINGS.gyroMode = 'off';
+    GAME_SETTINGS.gyroSensitivity = 1.0;
     Level.setFov(GAME_SETTINGS.cameraFov);
     openControlsPanel();   // repopulate this panel's inputs + chips
     // Keep the Settings screen inputs in sync (they share these values).
     const s = document.getElementById('setting-sensitivity'); if (s) s.value = GAME_SETTINGS.mouseSensitivity;
     const f = document.getElementById('setting-fov'); if (f) f.value = GAME_SETTINGS.cameraFov;
     const i = document.getElementById('setting-invert-y'); if (i) i.checked = GAME_SETTINGS.invertY;
+    const gm = document.getElementById('setting-gyro-mode'); if (gm) gm.value = GAME_SETTINGS.gyroMode;
+    const gs = document.getElementById('setting-gyro-sens'); if (gs) gs.value = GAME_SETTINGS.gyroSensitivity;
     syncSettingDisplays();
 });
 controlsPanel.addEventListener('click', (e) => { if (e.target === controlsPanel) closeControlsPanel(); });
@@ -207,6 +214,18 @@ controlsPanel.addEventListener('click', (e) => { if (e.target === controlsPanel)
     inv.addEventListener('change', () => {
         GAME_SETTINGS.invertY = inv.checked;
         const i = document.getElementById('setting-invert-y'); if (i) i.checked = inv.checked;
+    });
+    const gyMode = document.getElementById('ctl-gyro-mode');
+    const gySens = document.getElementById('ctl-gyro-sens');
+    gyMode.addEventListener('change', () => {
+        GAME_SETTINGS.gyroMode = gyMode.value;
+        const m = document.getElementById('setting-gyro-mode'); if (m) m.value = gyMode.value;
+        if (gyMode.value !== 'off') Mechanics.enableGyro();   // change = gesture (iOS permission)
+    });
+    gySens.addEventListener('input', () => {
+        GAME_SETTINGS.gyroSensitivity = parseFloat(gySens.value);
+        const s = document.getElementById('setting-gyro-sens'); if (s) s.value = gySens.value;
+        syncControlsDisplays(); syncSettingDisplays();
     });
 })();
 
@@ -244,6 +263,8 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
     GAME_SETTINGS.graphicsQuality = document.getElementById('setting-graphics').value;
     GAME_SETTINGS.invertY = document.getElementById('setting-invert-y').checked;
     GAME_SETTINGS.showMobileControls = document.getElementById('setting-mobile-ui').checked;
+    GAME_SETTINGS.gyroMode = document.getElementById('setting-gyro-mode').value;
+    GAME_SETTINGS.gyroSensitivity = parseFloat(document.getElementById('setting-gyro-sens').value);
 
     Level.setFov(GAME_SETTINGS.cameraFov);
     refreshMobileControls();
@@ -264,6 +285,8 @@ function syncSettingDisplays() {
     const hu = document.getElementById('setting-hunt-time');
     if (ht) setChip('val-hide-time', String(parseInt(ht.value)));
     if (hu) setChip('val-hunt-time', String(parseInt(hu.value)));
+    const gy = document.getElementById('setting-gyro-sens');
+    if (gy) setChip('val-gyro-sens', Number(gy.value).toFixed(1));
 }
 (function wireLiveSettings() {
     const sens = document.getElementById('setting-sensitivity');
@@ -283,6 +306,20 @@ function syncSettingDisplays() {
     if (gfx) gfx.addEventListener('change', () => {
         GAME_SETTINGS.graphicsQuality = gfx.value;
         Level.setGraphicsQuality(gfx.value);
+    });
+    // Gyro: the select's change is a user gesture, so it can satisfy the iOS
+    // motion-permission prompt (Mechanics.enableGyro). Mirrors to the Controls panel.
+    const gyMode = document.getElementById('setting-gyro-mode');
+    if (gyMode) gyMode.addEventListener('change', () => {
+        GAME_SETTINGS.gyroMode = gyMode.value;
+        const c = document.getElementById('ctl-gyro-mode'); if (c) c.value = gyMode.value;
+        if (gyMode.value !== 'off') Mechanics.enableGyro();
+    });
+    const gySens = document.getElementById('setting-gyro-sens');
+    if (gySens) gySens.addEventListener('input', () => {
+        GAME_SETTINGS.gyroSensitivity = parseFloat(gySens.value);
+        const c = document.getElementById('ctl-gyro-sens'); if (c) c.value = gySens.value;
+        syncSettingDisplays();
     });
     // Time sliders apply on Save; just keep their value chips live.
     if (hide) hide.addEventListener('input', syncSettingDisplays);
@@ -644,6 +681,8 @@ if(savedSettings)
     document.getElementById('setting-graphics').value = GAME_SETTINGS.graphicsQuality;
     document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY;
     document.getElementById('setting-mobile-ui').checked = GAME_SETTINGS.showMobileControls;
+    document.getElementById('setting-gyro-mode').value = GAME_SETTINGS.gyroMode;
+    document.getElementById('setting-gyro-sens').value = GAME_SETTINGS.gyroSensitivity;
 }
 syncSettingDisplays();
 

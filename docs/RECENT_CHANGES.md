@@ -3,6 +3,29 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-08
+
+- **PUBG-style gyroscope aiming (mobile).** Files: `js/globals.js`, `js/mechanics.js`,
+  `index.html`, `js/app.js`, `css/style.css`. A new **GYRO AIM** option in the Settings
+  screen and the in-game Controls panel lets players tilt the phone to orbit the camera.
+  Three modes via a `<select>`: **Off** / **While Firing** (gyro active only while the
+  SHOOT button is held — PUBG "Scope On") / **Always**. A separate **GYRO SENS.** slider
+  (0.2–3.0 multiplier) tunes the feel independently of look sensitivity. Both persist in
+  `GAME_SETTINGS` (`gyroMode`, `gyroSensitivity`) via the usual `hidehunt_settings`
+  localStorage blob. Implementation: `Mechanics.onGyro` (a `deviceorientation` listener)
+  is **delta-based** — it diffs each reading against the previous one and adds the delta
+  to `cameraYaw`/`cameraPitch` (the same globals mouse/touch look feed), so it mixes with
+  touch drag and never drifts. When gated off (wrong mode / LOBBY / editing layout /
+  not-firing in scope mode) it drops the baseline (`gyroPrev = null`) so re-engaging
+  causes no camera jump. `Mechanics.enableGyro` handles the **iOS 13+
+  `DeviceOrientationEvent.requestPermission()`** gate — called from the Settings select's
+  `change` handler (a user gesture, required by iOS) and at boot (Android attaches
+  directly). A `GYRO_WRAP` (45°) guard skips sensor-wrap discontinuities; tuning consts
+  `GYRO_BASE`/`GYRO_WRAP` live in `globals.js`. **Landscape mapping** (`gamma`→yaw,
+  `beta`→pitch) and its signs are isolated in the single `onGyro` block and need a quick
+  on-device confirmation pass. No camera-rig or network changes (aim is local). See
+  [CAMERA_AND_CONTROLS.md](CAMERA_AND_CONTROLS.md) → "Gyroscope aim".
+
 ## 2026-07-07
 
 - **Removed the in-game "G" collider-gizmo toggle.** File: `js/mechanics.js`. The

@@ -120,6 +120,29 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
   ratio so a resized joystick still tracks the finger 1:1. The `isEditingLayout` global
   gates all the touch handlers above so dragging a control doesn't also move/jump/shoot.
 
+## Gyroscope aim (PUBG-style, mobile) (`Mechanics.enableGyro`/`onGyro`)
+Tilt the phone to orbit the camera. Wired in `Mechanics.initInputs`; settings in
+`GAME_SETTINGS.gyroMode` (`'off' | 'scope' | 'always'`) + `gyroSensitivity` (0.2–3.0),
+exposed on the **Settings screen** and the in-game **Controls panel** (mirrored, like
+sens/FOV), persisted to `hidehunt_settings`.
+- **Delta-based, not absolute.** `onGyro` (a `deviceorientation` listener) diffs each
+  reading against `gyroPrev` and adds the delta to `cameraYaw`/`cameraPitch` — the same
+  globals mouse/touch look feed — so it **mixes with touch drag** and doesn't drift.
+- **Modes:** `off` = ignored; `scope` = active only while the SHOOT button is held
+  (`shootTouchId !== null`); `always` = active whenever not in LOBBY / editing layout.
+  When gated off it sets `gyroPrev = null`, so re-engaging never applies a big
+  accumulated jump.
+- **iOS permission:** iOS 13+ hides the sensor behind
+  `DeviceOrientationEvent.requestPermission()`, which must run **from a user gesture** —
+  `enableGyro` is called from the Settings/Controls `<select>` change handler (a tap) and
+  at boot (Android attaches directly; denial reverts the select to Off). Attach is
+  guarded once by `gyroAttached`. Requires **HTTPS** (satisfied on GitHub Pages).
+- **Mapping (needs on-device confirm):** landscape-locked, so `gamma`→yaw, `beta`→pitch;
+  scaled by `GYRO_BASE` (0.02 rad/deg) × `gyroSensitivity`, pitch clamped like every other
+  path and sign-flipped by `invertY`. A `GYRO_WRAP` (45°) guard skips sensor
+  wrap/discontinuity frames. All in the single `onGyro` block — flip a sign there to
+  re-tune. Consts in `js/globals.js`.
+
 ## Movement, collision, climbing (`handleLocalMovement`)
 - Speed `moveSpeed = 0.15`/tick (~9 u/s; was 0.3). World clamp ±100.
 - **Per-axis wall sliding**: X then Z tested independently via `blockedAt` (compound
@@ -164,8 +187,9 @@ const CAM_EXTEND = 0.12; // ease-out speed per frame when space reopens
 `0.003`; drives the shoot-button slide-to-look only), `cameraFov` (default 60; read in
 `Level.init`, changeable live via `Level.setFov` + the Settings FOV slider — clamped
 40–100), `invertY`, `showMobileControls` (toggles `.mobile-controls` via
-`body.hide-mobile-controls`). The Settings screen sliders for sensitivity and FOV
-apply live while dragging.
+`body.hide-mobile-controls`), `gyroMode` + `gyroSensitivity` (gyro aim — see "Gyroscope
+aim" above). The Settings screen sliders for sensitivity and FOV apply live while
+dragging.
 
 **In-game Controls panel** (☰ → 🎚 Controls → `#controls-panel`, wired in `js/app.js`):
 Camera look sens / Shoot drag sens / Camera FOV / Invert camera. Look-sens, FOV and

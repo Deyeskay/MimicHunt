@@ -23,6 +23,11 @@ let GAME_SETTINGS = {
     graphicsQuality: 'medium',   // 'low' | 'medium' | 'high' (see Level.setGraphicsQuality)
     invertY: false,
     showMobileControls: true,
+    // PUBG-style gyroscope aim (mobile): tilt the phone to orbit the camera.
+    // 'off' | 'scope' (only while holding SHOOT) | 'always'. gyroSensitivity is a
+    // multiplier on GYRO_BASE (see below). Delta-based, so it mixes with touch look.
+    gyroMode: 'off',
+    gyroSensitivity: 1.0,
     playerName: '',
     // PUBG-style custom control layout: per-control { x, y, scale, opacity } —
     // x/y are % of the viewport (centre of the element); scale/opacity default
@@ -145,6 +150,13 @@ const MOUSE_SENSITIVITY = 0.002;
 const INVERT_Y = false;
 const CAMERA_MAX_LOOK_UP = 70 * Math.PI / 180;
 const CAMERA_MAX_LOOK_DOWN = -10 * Math.PI / 180;
+// --- GYRO AIM (PUBG-style) ---
+// Radians of look per degree of device tilt (base feel; scaled by gyroSensitivity).
+const GYRO_BASE = 0.02;
+// If a single deviceorientation frame's delta exceeds this (deg), it's a sensor
+// wrap/discontinuity (e.g. beta flipping near vertical) — reset the baseline & skip
+// so the view doesn't jump violently.
+const GYRO_WRAP = 45;
 
 // --- INPUTS ---
 let keys = {};
@@ -163,6 +175,11 @@ let shootTouchId = null;
 let shootLastX = 0;
 let shootLastY = 0;
 let shootFireTimer = null;
+// Gyro aim state: gyroPrev is the last {alpha,beta,gamma} reading (baseline for the
+// per-frame delta; null = re-establish baseline, no jump). gyroAttached guards the
+// one-time deviceorientation listener wiring (after iOS permission is granted).
+let gyroPrev = null;
+let gyroAttached = false;
 
 // --- COMBAT (seeker energy-pulse shooting) ---
 const MAG_SIZE = 8;            // shots before a reload (bullets until reload)
