@@ -852,6 +852,11 @@ const Network = {
         peer = new Peer('hnh3d-' + code);
         peer.on('open', id => {
             myId = id;
+            // The original room code is the joinable code until (if ever) a
+            // migration mints a new one — keep pendingRoomCode in sync so
+            // lobbySync/rejoinAck broadcasts carry the real code, not null.
+            pendingRoomCode = code;
+            currentRoomCode = code;
             // Show lobby UI (replicating previous manual DOM handling)
             document.getElementById('menu-screen').style.display = 'none';
             document.getElementById('lobby-screen').style.display = 'flex';
@@ -1892,6 +1897,7 @@ const Network = {
         if (!currentHostId) { this.onHostConnectionClose(); return; }
 
         reconnecting = true;
+        this._regraceProbes = 0;
         reconnectDeadline = this.now() + GRACE_MS;
         departedHostId = (connToHost && connToHost.peer) || currentHostId;
         if (connToHost) { try { connToHost.close(); } catch (e) {} }
@@ -1927,7 +1933,9 @@ const Network = {
             } catch (e) {}
             return;   // wait for the fresh peer to open before connecting
         }
-        if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} return; }
+        // Our own peer lost the signaling server ⇒ OUR net is down: reset the
+        // host-death probe count (this isn't the host's fault) and reconnect.
+        if (peer.disconnected) { this._regraceProbes = 0; try { peer.reconnect(); } catch (e) {} return; }
 
         let conn;
         try { conn = peer.connect(currentHostId, { metadata: { name: myName } }); }
@@ -1935,12 +1943,21 @@ const Network = {
         if (!conn) return;
 
         this._regraceDialing = true;
-        // If this dial doesn't open in time, release the in-flight lock so the
-        // next tick can retry with a fresh connection.
+        // If this dial doesn't open in time, release the in-flight lock. Then
+        // decide blip vs. host-death: if our own peer is still attached to the
+        // signaling server yet we couldn't reach the host, the HOST is gone →
+        // escalate to migration (don't wait for a possibly-never 'peer-unavailable').
+        // If our peer is detached, OUR network is still down → keep retrying.
         const dialTimeout = setTimeout(() => {
-            if (this._regraceDialing) {
-                this._regraceDialing = false;
-                try { conn.close(); } catch (e) {}
+            if (!this._regraceDialing) return;
+            this._regraceDialing = false;
+            try { conn.close(); } catch (e) {}
+            // Peer attached to the server but host unreachable ⇒ likely host-death.
+            // Require TWO consecutive such misses before migrating so a single
+            // transient dial failure to a HEALTHY host can't split the room.
+            if (reconnecting && peer && !peer.disconnected && !peer.destroyed) {
+                this._regraceProbes = (this._regraceProbes || 0) + 1;
+                if (this._regraceProbes >= 2) this._escalateToMigration();
             }
         }, 4000);
 

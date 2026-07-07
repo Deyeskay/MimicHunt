@@ -20,6 +20,17 @@ each round of asset changes is in parentheses where relevant.
     survives in memory, so the client reconnects with the **same peer id** → the host's
     `acceptConnection` existing-record branch matches, clears grace, toasts `✅ reconnected`,
     and resyncs via the existing `rejoinAck` (role/disguise/position intact).
+  - **Migration-escalation hardening (end-to-end audit).** `handleHostLoss` no longer waits
+    solely for a `peer-unavailable` to tell blip from host-death (which can be slow/never on a
+    host *network* drop vs. a tab close). Now: while our peer is detached from the signaling
+    server → OUR net is down → keep retrying the original host; while our peer is still attached
+    but the host is unreachable after **two** consecutive 4s dials → the host is gone → escalate
+    to migration. Two probes (not one) prevent a single transient dial failure to a healthy host
+    from splitting the room. Terminal states verified: `gameOver`/`roomClosing` set
+    `sessionEnding` (regrace + migration both suppressed during results / host shutdown),
+    `returnLobby` clears it, `cleanup` resets all reconnect state incl. `joinedRoom`. Also set
+    `pendingRoomCode` at original-host init so `lobbySync`/`rejoinAck` carry the real code (was
+    null until a migration minted one; clients ignored null, so cosmetic-only, but now correct).
   - **Duplicate-connection race fix.** A reconnect could briefly open two host connections
     sharing the client's peer id; the client closes the extra, and the host's
     `connections.filter(c => c.peer !== …)` removed BOTH — emptying `connections` and firing a
