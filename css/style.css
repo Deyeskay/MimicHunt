@@ -489,6 +489,7 @@ button.leave {
 }
 .player-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 8px; border-bottom: 1px solid rgba(0,0,0,0.25); }
 .player-item:last-child { border-bottom: none; }
+.player-item.player-reconnecting { opacity: 0.55; font-style: italic; }
 .player-item > span:first-child { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .status-ready { color: var(--accent-green); font-weight: bold;}
 .status-not { color: #ffa502; font-weight: bold;}
@@ -752,6 +753,31 @@ button.leave {
 }
 @keyframes toast-in  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(-8px); } }
+
+/* Reconnect overlay — non-blocking scrim + card shown while our own connection
+   blipped and we're retrying the host (see Network.attemptRegrace). */
+#reconnect-overlay {
+    position: absolute; inset: 0; z-index: 40;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.45); pointer-events: none;
+    -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+}
+#reconnect-card {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 24px 34px; border-radius: 16px; text-align: center;
+    background: var(--hud-bg); border: 1px solid var(--hud-border);
+    box-shadow: var(--hud-shadow);
+    -webkit-backdrop-filter: var(--hud-blur); backdrop-filter: var(--hud-blur);
+}
+#reconnect-spinner {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.2); border-top-color: var(--accent-blue);
+    animation: reconnect-spin 0.8s linear infinite;
+}
+#reconnect-title { font-weight: 800; font-size: 1.05rem; color: #fff; text-shadow: var(--hud-text-shadow); }
+#reconnect-sub { font-size: 0.9rem; color: var(--text-muted); }
+#reconnect-sub #reconnect-secs { color: var(--accent-blue); font-weight: 700; font-variant-numeric: tabular-nums; }
+@keyframes reconnect-spin { to { transform: rotate(360deg); } }
 
 /* AAA-style centre-screen pickup announcements (power/key). A beveled hexagon panel
    with a translucent dark fill (scene stays visible through it), a glowing cyan edge,

@@ -135,3 +135,28 @@ single source of truth for the offset.
   sides survive the host's exit (≥1 seeker AND ≥1 live hider remain). Usually the host
   is the only Seeker → 0 seekers → `hidersWin`; or (2-player, host = hider) → 0 hiders →
   `seekersWin`. Becomes the common path once non-host players fill both roles.
+
+## Reconnect grace (PUBG-style 60s hold)
+Distinct from host migration (which fires when the **host** drops), this covers a
+**non-host player's** connection blip and gives them `GRACE_MS` (60s) to return.
+- **Host side.** `handleConnClose` → `enterGrace(conn)` instead of an instant delete:
+  sets `player._grace = true`, removes the dead conn from `connections`, but **keeps the
+  record** so `level.js` leaves the mesh in place (frozen). Toasts `🔌 <name> reconnecting…`
+  and arms `graceTimers[peer] = setTimeout(finalizeDrop, GRACE_MS)`. `finalizeDrop` is the
+  old removal (`delete` + `⚠️ <name> left` + `checkHostAlone`), fired only on expiry.
+  A voluntary `leave` skips grace (it pre-deletes + sets `conn._dropped`). `checkHostAlone`
+  treats grace players as present; `_clearRejoinTimers` also clears `graceTimers`.
+- **Reconnect = the existing rejoin branch.** The blip is in-page, so `myId` persists and
+  the client reconnects with the **same peer id**. `acceptConnection`'s existing-record
+  branch matches, clears `_grace`/`graceTimers[peer]`, toasts `✅ reconnected`, and resyncs
+  via `rejoinAck` — no new packets.
+- **Client side.** Both host-loss entry points (watchdog silence, conn `close`) route
+  through `handleHostLoss`, which starts an `attemptRegrace` loop (2s cadence, deadline
+  `now + GRACE_MS`) and shows the `#reconnect-overlay` ("Reconnecting… (Ns)"). Each attempt
+  ensures the peer can signal (`peer.reconnect()` / recreate `new Peer(myId)` if destroyed),
+  then redials `currentHostId` (captured on connect + migration). On `open` → resume via
+  the host's `rejoinAck`. A `peer-unavailable` error means the host id is truly gone →
+  `_escalateToMigration` hands off to the **unchanged** `onHostConnectionClose`; net-down
+  errors just retry until the deadline, after which `_giveUpRegrace` → `connectionLost`.
+- **Scope:** non-host drops + in-page blips only. A full page reload / tab-close is NOT
+  auto-rejoined (no persisted session identity).

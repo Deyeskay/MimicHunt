@@ -887,7 +887,9 @@ const Network = {
             // Carry our display name in the connection metadata so the host can
             // label us without a separate handshake message.
             connToHost = peer.connect('hnh3d-' + input, { metadata: { name: myName } });
+            currentHostId = connToHost.peer;   // remember the host id for reconnect-on-blip
             connToHost.on('open', () => {
+                joinedRoom = true;   // past the join handshake — network errors now trigger regrace, not a modal
                 // Show lobby UI for client
                 document.getElementById('menu-screen').style.display = 'none';
                 document.getElementById('lobby-screen').style.display = 'flex';
@@ -903,9 +905,37 @@ const Network = {
             }, 4000);
         });
 
-        peer.on('error', err => {
-            UI.showModal('Network Error', err.type, () => this.cleanup());
-        });
+        peer.on('error', err => this.handleClientPeerError(err));
+    },
+
+    /*=================================================================
+      Client-side peer error router. Before we've joined a room a network
+      error is fatal (show the modal). Once in a session, a transient
+      network/socket drop is OUR blip → kick off the 60s reconnect grace
+      instead of tearing down; a 'peer-unavailable' during regrace means
+      the host id is truly gone → escalate to host migration.
+    =================================================================*/
+    handleClientPeerError(err) {
+        const t = (err && err.type) || 'network';
+
+        if (reconnecting) {
+            // The regrace loop is already running. A confirmed-gone host id
+            // escalates to migration; anything else just lets the loop retry.
+            if (t === 'peer-unavailable') this._escalateToMigration();
+            return;
+        }
+
+        // In a live session, treat a transient disconnect as our own blip.
+        const transient = t === 'network' || t === 'disconnected' ||
+                          t === 'socket-error' || t === 'socket-closed' ||
+                          t === 'server-error';
+        if (joinedRoom && !isLeavingRoom && !sessionEnding && transient) {
+            this.handleHostLoss();
+            return;
+        }
+
+        // Pre-join / genuinely fatal — surface it and bail to the menu.
+        UI.showModal('Network Error', t, () => this.cleanup());
     },
 
     /*=================================================================
@@ -917,6 +947,7 @@ const Network = {
         this._usedSpawns = [];
         gameState.players = {};
         connections = [];
+        this._clearRejoinTimers();   // also clears any stale grace timers
 
         // Default the selected map to the first registered level.
         const levelNames = this.getLevelList();
@@ -959,6 +990,18 @@ const Network = {
                 if (wasExpected) {
                     clearTimeout(rejoinExpected[conn.peer]);
                     delete rejoinExpected[conn.peer];
+                }
+
+                // A player returning inside their 60s grace window — cancel the
+                // pending finalize-drop and announce the reconnect.
+                if (existing._grace) {
+                    existing._grace = false;
+                    if (graceTimers[conn.peer]) {
+                        clearTimeout(graceTimers[conn.peer]);
+                        delete graceTimers[conn.peer];
+                    }
+                    const rname = existing.name || 'A player';
+                    this.notify('✅ ' + rname + ' reconnected');
                 }
 
                 conn.send({
@@ -1131,6 +1174,12 @@ const Network = {
 
     /*=================================================================
       Host-side: a client connection closed (left or crashed).
+      ---------------------------------------------------------------
+      Instead of dropping the player instantly, we give them a 60s grace
+      window (GRACE_MS) to reconnect — their record and mesh are kept
+      (frozen) and others see "reconnecting…" rather than "left". Only if
+      the window expires do we finalize the drop. A voluntary 'leave'
+      already deleted the record + set conn._dropped, so it skips grace.
     =================================================================*/
     handleConnClose(conn) {
         // Dedupe: a watchdog-initiated drop and a later real 'close' must not
@@ -1138,27 +1187,85 @@ const Network = {
         if (conn._dropped) return;
         conn._dropped = true;
 
-        const dname = (gameState.players[conn.peer] && gameState.players[conn.peer].name) || 'A player';
-        delete gameState.players[conn.peer];
-        connections = connections.filter(c => c.peer !== conn.peer);
-        // Stop awaiting a survivor that will never reconnect.
-        if (rejoinExpected[conn.peer]) {
-            clearTimeout(rejoinExpected[conn.peer]);
-            delete rejoinExpected[conn.peer];
+        // A reconnect can briefly leave TWO connections for the same peer id
+        // (the client keeps one and closes the duplicate). If a newer live
+        // connection for this peer still exists, this closing one is a
+        // superseded duplicate — remove only THIS conn object (by identity,
+        // not by peer id, or we'd wipe the live one too) and stop.
+        if (connections.some(c => c !== conn && c.peer === conn.peer)) {
+            connections = connections.filter(c => c !== conn);
+            return;
         }
+
+        const p = gameState.players[conn.peer];
+        // Grace-eligible: the player still has a record, is not already in grace,
+        // and we're in a real session (not a terminal transition). Otherwise fall
+        // straight through to finalize.
+        const graceable = p && !p._grace && !isLeavingRoom &&
+                          gameState.phase !== 'ENDED';
+        if (graceable) {
+            this.enterGrace(conn);
+            return;
+        }
+
+        const dname = (p && p.name) || 'A player';
+        this.finalizeDrop(conn.peer, dname);
+    },
+
+    /*=================================================================
+      Start a dropped player's 60s reconnect grace. Keep the record (so
+      level.js leaves the mesh in place — it just stops moving), pull the
+      dead conn out of the broadcast set, and arm the finalize timer.
+    =================================================================*/
+    enterGrace(conn) {
+        const peerId = conn.peer;
+        const p = gameState.players[peerId];
+        if (!p) { this.finalizeDrop(peerId, 'A player'); return; }
+        const name = p.name || 'A player';
+
+        p._grace = true;
+        connections = connections.filter(c => c.peer !== peerId);
+        if (graceTimers[peerId]) clearTimeout(graceTimers[peerId]);
+        graceTimers[peerId] = setTimeout(() => this.finalizeDrop(peerId, name), GRACE_MS);
+
         UI.updateLobby();
         this.broadcast({ type: 'lobbySync', players: gameState.players });
-        this.notify('⚠️ ' + dname + ' disconnected');
+        this.notify('🔌 ' + name + ' reconnecting…');
+    },
+
+    /*=================================================================
+      Finalize a drop: the grace window expired (or the drop was never
+      graceable). Remove the record, clear timers, announce "left".
+    =================================================================*/
+    finalizeDrop(peerId, name) {
+        if (graceTimers[peerId]) {
+            clearTimeout(graceTimers[peerId]);
+            delete graceTimers[peerId];
+        }
+        const existed = !!gameState.players[peerId];
+        delete gameState.players[peerId];
+        connections = connections.filter(c => c.peer !== peerId);
+        // Stop awaiting a survivor that will never reconnect.
+        if (rejoinExpected[peerId]) {
+            clearTimeout(rejoinExpected[peerId]);
+            delete rejoinExpected[peerId];
+        }
+        if (!existed) return;   // already gone (e.g. re-entrant) — nothing to announce
+        UI.updateLobby();
+        this.broadcast({ type: 'lobbySync', players: gameState.players });
+        this.notify('⚠️ ' + name + ' left');
         this.checkHostAlone();
     },
 
     /*=================================================================
       Feature 1B: if every joiner has left during an active match and only
       the host remains, tell the host and return them to the main menu.
+      Players still inside their reconnect grace window count as present.
     =================================================================*/
     checkHostAlone() {
         const active = gameState.phase !== 'LOBBY' && gameState.phase !== 'ENDED';
-        if (active && connections.length === 0 && !isLeavingRoom) {
+        const graceHeld = Object.keys(graceTimers).length > 0;
+        if (active && connections.length === 0 && !graceHeld && !isLeavingRoom) {
             gameState.phase = 'ENDED';   // host loops early-return on ENDED
             UI.showModal('All players left', 'Everyone has left the match.',
                          () => this.cleanup());
@@ -1294,7 +1401,7 @@ const Network = {
     =================================================================*/
     wireClientHandlers(conn) {
         conn.on('data', data => this.handleHostData(data));
-        conn.on('close', () => this.onHostConnectionClose());
+        conn.on('close', () => this.handleHostLoss());
     },
 
     /*=================================================================
@@ -1668,9 +1775,9 @@ const Network = {
             // 20 Hz clientMove already does this; the lobby has no other traffic).
             if (gameState.phase === 'LOBBY') this.sendToHost({ type: 'clientPing' });
 
-            if (isLeavingRoom || migrating || sessionEnding) return;
+            if (isLeavingRoom || migrating || sessionEnding || reconnecting) return;
             if (this.now() - this._lastHostMsgTime > HOST_TIMEOUT_MS) {
-                this.onHostConnectionClose();
+                this.handleHostLoss();
             }
         }, WATCHDOG_MS);
     },
@@ -1767,6 +1874,109 @@ const Network = {
       deterministic election over its roster, so exactly one promotes
       itself and the rest reconnect to it. No voting messages needed.
     =================================================================*/
+
+    /*=================================================================
+      Client-side host loss (blip vs. real host death).
+      ---------------------------------------------------------------
+      Entry point for both the watchdog silence and the conn 'close'. We
+      first assume it's OUR network that blipped: keep retrying the SAME
+      host for up to GRACE_MS while showing a "Reconnecting…" overlay. The
+      still-alive host is holding our slot (enterGrace), so a successful
+      reconnect resumes us via its rejoinAck. If instead the host is truly
+      gone, peer.connect(currentHostId) errors 'peer-unavailable' and we
+      escalate to the existing host-migration path. Hitting the deadline
+      with no reconnect gives up (connectionLost).
+    =================================================================*/
+    handleHostLoss() {
+        if (isLeavingRoom || migrating || sessionEnding || reconnecting) return;
+        if (!currentHostId) { this.onHostConnectionClose(); return; }
+
+        reconnecting = true;
+        reconnectDeadline = this.now() + GRACE_MS;
+        departedHostId = (connToHost && connToHost.peer) || currentHostId;
+        if (connToHost) { try { connToHost.close(); } catch (e) {} }
+        connToHost = null;
+        // Peer errors during regrace are routed by the persistent
+        // handleClientPeerError handler (peer-unavailable → escalate, else retry).
+
+        UI.showReconnecting(Math.ceil(GRACE_MS / 1000));
+        this.attemptRegrace();   // fire immediately, then on an interval
+        if (reconnectInterval) clearInterval(reconnectInterval);
+        reconnectInterval = setInterval(() => this.attemptRegrace(), 2000);
+    },
+
+    // One reconnect attempt to the original host. Called on a 2s cadence.
+    // Only ever ONE dial is in flight (this._regraceDialing): a second concurrent
+    // connect would open a duplicate conn to the host (same peer id), and closing
+    // that duplicate would trip the host's disconnect handling for the live one.
+    attemptRegrace() {
+        if (!reconnecting) return;
+
+        const remain = reconnectDeadline - this.now();
+        if (remain <= 0) { this._giveUpRegrace(); return; }
+        UI.showReconnecting(Math.ceil(remain / 1000));
+
+        if (this._regraceDialing) return;   // an attempt is already outstanding
+
+        // Make sure the peer can still signal before dialing the host.
+        if (!peer || peer.destroyed) {
+            try {
+                peer = new Peer(myId);
+                peer.on('error', err => this.handleClientPeerError(err));
+                peer.on('open', () => { if (reconnecting) this.attemptRegrace(); });
+            } catch (e) {}
+            return;   // wait for the fresh peer to open before connecting
+        }
+        if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} return; }
+
+        let conn;
+        try { conn = peer.connect(currentHostId, { metadata: { name: myName } }); }
+        catch (e) { return; }   // transient — next tick retries
+        if (!conn) return;
+
+        this._regraceDialing = true;
+        // If this dial doesn't open in time, release the in-flight lock so the
+        // next tick can retry with a fresh connection.
+        const dialTimeout = setTimeout(() => {
+            if (this._regraceDialing) {
+                this._regraceDialing = false;
+                try { conn.close(); } catch (e) {}
+            }
+        }, 4000);
+
+        conn.on('open', () => {
+            clearTimeout(dialTimeout);
+            this._regraceDialing = false;
+            if (!reconnecting) { try { conn.close(); } catch (e) {} return; }
+            this._endRegrace();
+            connToHost = conn;
+            currentHostId = conn.peer;
+            joinedRoom = true;
+            this.wireClientHandlers(conn);
+            this.startClientLoops();
+            // The host still has our record → it sends rejoinAck → we resume.
+        });
+    },
+
+    // Stop the regrace loop and hide the overlay (shared cleanup).
+    _endRegrace() {
+        reconnecting = false;
+        this._regraceDialing = false;
+        if (reconnectInterval) { clearInterval(reconnectInterval); reconnectInterval = null; }
+        UI.hideReconnecting();
+    },
+
+    // Host confirmed gone mid-regrace → hand off to the migration path.
+    _escalateToMigration() {
+        this._endRegrace();
+        this.onHostConnectionClose();
+    },
+
+    // Grace window expired with no reconnect → give up to the menu.
+    _giveUpRegrace() {
+        this._endRegrace();
+        this.connectionLost();
+    },
 
     // Called from a client's connToHost 'close'. Decides migrate vs. give up.
     onHostConnectionClose() {
@@ -1871,6 +2081,8 @@ const Network = {
         conn.on('open', () => {
             opened = true;
             connToHost = conn;
+            currentHostId = conn.peer;   // track the new host for reconnect-on-blip
+            joinedRoom = true;
             migrating = false;
             this.wireClientHandlers(conn);
             this.startClientLoops();
@@ -1978,6 +2190,10 @@ const Network = {
             clearTimeout(rejoinExpected[id]);
         }
         rejoinExpected = {};
+        for (const id in graceTimers) {
+            clearTimeout(graceTimers[id]);
+        }
+        graceTimers = {};
     },
 
     /*=================================================================
@@ -2001,8 +2217,13 @@ const Network = {
         this._lastSnapshotT = undefined;
         this._snapshotBuffer = [];
 
-        // Reset host-migration state
+        // Reset host-migration + reconnect-grace state
         this._clearRejoinTimers();
+        if (reconnectInterval) { clearInterval(reconnectInterval); reconnectInterval = null; }
+        reconnecting = false;
+        currentHostId = null;
+        joinedRoom = false;
+        UI.hideReconnecting();
         migrating = false;
         sessionEnding = false;
         departedHostId = null;

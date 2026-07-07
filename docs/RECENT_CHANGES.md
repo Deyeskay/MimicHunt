@@ -5,6 +5,42 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-08
 
+- **PUBG-style 60s reconnect grace for a dropped non-host player.** Files: `js/globals.js`,
+  `js/network.js`, `js/ui.js`, `index.html`, `css/style.css`. Previously a client's network
+  blip was instant + terminal on both sides — the host reaped the roster slot in 3s and
+  toasted `⚠️ disconnected`, while the client's own watchdog dumped it to the menu. Now:
+  - **Host holds the slot for `GRACE_MS` (60s).** `handleConnClose` splits into `enterGrace`
+    (keep the record + mesh frozen in place, pull the dead conn out of `connections`, toast
+    `🔌 <name> reconnecting…`, arm a `graceTimers[peer]` finalize timer) vs. `finalizeDrop`
+    (the old delete + `⚠️ <name> left` + `checkHostAlone`, fired only when the 60s expire).
+    A voluntary `leave` still finalizes instantly (it pre-deletes + sets `conn._dropped`).
+    `checkHostAlone` now waits while any grace timer is pending; `_clearRejoinTimers` also
+    clears grace timers.
+  - **Reconnect reuses the existing rejoin branch.** Since the blip is in-page, `myId`
+    survives in memory, so the client reconnects with the **same peer id** → the host's
+    `acceptConnection` existing-record branch matches, clears grace, toasts `✅ reconnected`,
+    and resyncs via the existing `rejoinAck` (role/disguise/position intact).
+  - **Duplicate-connection race fix.** A reconnect could briefly open two host connections
+    sharing the client's peer id; the client closes the extra, and the host's
+    `connections.filter(c => c.peer !== …)` removed BOTH — emptying `connections` and firing a
+    bogus "All players left" a few seconds after the player reconnected. Now `attemptRegrace`
+    keeps only one dial in flight (`_regraceDialing` + a 4s dial timeout), and `handleConnClose`
+    ignores a superseded duplicate (removes it by object identity, not peer id).
+  - **Peer-error router.** The client `peer.on('error')` no longer pops a terminal "Network
+    Error" modal for an in-session blip. `handleClientPeerError` routes it: before joining →
+    modal (fatal); once `joinedRoom` and a transient type (`network`/`disconnected`/`socket-*`/
+    `server-error`) → `handleHostLoss` (regrace); `peer-unavailable` mid-regrace → escalate to
+    migration. (This was the bug where the dropped player got stuck on a "Network Error" popup
+    while others already saw them reconnect.)
+  - **Client retries the same host before giving up.** New `handleHostLoss` → `attemptRegrace`
+    loop (2s cadence, up to 60s) shows a non-blocking **"Reconnecting… (Ns)"** overlay
+    (`#reconnect-overlay`, `UI.showReconnecting`/`hideReconnecting`) while the frozen scene
+    keeps rendering. It recreates/`reconnect()`s the peer as needed and redials `currentHostId`.
+    Host-migration is preserved: a `peer-unavailable` error (host id truly gone) escalates to
+    the unchanged `onHostConnectionClose` migration path; net-down errors just keep retrying.
+    Scope: **non-host player drops + in-page blips only** (a full page reload is not
+    auto-rejoined). The lobby roster dims + tags a `_grace` player as reconnecting.
+
 - **Sensitivity sliders reworked to a 0–13 "strength" scale + shoot sens added to the
   Settings screen.** Files: `index.html`, `js/app.js`, `js/globals.js`. Camera and shoot
   sensitivity are still **stored raw** in `GAME_SETTINGS` (`mouseSensitivity` /

@@ -155,6 +155,22 @@ const UI = {
         setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur);
     },
 
+    // Non-blocking "Reconnecting… (Ns)" overlay shown while our own connection
+    // blipped and Network.attemptRegrace is retrying the host. `secs` is the
+    // remaining grace countdown; called repeatedly to update it.
+    showReconnecting: function(secs) {
+        const ov = document.getElementById('reconnect-overlay');
+        if (!ov) return;
+        ov.style.display = 'flex';
+        const s = document.getElementById('reconnect-secs');
+        if (s) s.innerText = Math.max(0, secs | 0);
+    },
+
+    hideReconnecting: function() {
+        const ov = document.getElementById('reconnect-overlay');
+        if (ov) ov.style.display = 'none';
+    },
+
     // AAA-style centre-screen announcement (power / key pickups): a beveled hexagon panel
     // with a translucent (see-through) fill, a small subtitle on top and a big gradient
     // title below, that rises up and fades. Renders in #center-announce.
@@ -364,12 +380,13 @@ const UI = {
             if (p.isReady) readyCount++;
 
             const item = document.createElement('div');
-            item.className = 'player-item';
+            item.className = 'player-item' + (p._grace ? ' player-reconnecting' : '');
 
-            // Name (+ host tag)
+            // Name (+ host tag, + reconnecting tag during the grace window)
             const nameSpan = document.createElement('span');
             let label = p.name || (id === myId ? 'You' : `Player ${index + 1}`);
             if (id === hostId) label += ' (Host)';
+            if (p._grace) label = '🔌 ' + label + ' — reconnecting…';
             nameSpan.textContent = label;
             item.appendChild(nameSpan);
 

@@ -95,6 +95,15 @@ let currentRoomCode = null;    // the room code shown in the lobby (for the shar
 let rejoinExpected = {};       // successor: { peerId: timeoutHandle } of survivors we await
 let codePeer = null;           // successor's second Peer (code alias) accepting brand-new joiners
 
+// --- RECONNECT GRACE (PUBG-style 60s hold for a dropped non-host player) ---
+const GRACE_MS = 60000;        // host holds a dropped player's slot this long before finalizing
+let graceTimers = {};          // host: { peerId: timeoutHandle } of players in the grace window
+let reconnecting = false;      // client: a regrace loop to the original host is in flight
+let reconnectDeadline = 0;     // client: performance.now() past which we give up regrace
+let reconnectInterval = null;  // client: regrace retry interval handle
+let currentHostId = null;      // client: peer id of the host we're connected to (for retry)
+let joinedRoom = false;        // client: true once past the join handshake — a network error now means regrace, not a fatal modal
+
 // Network transmission rate (Hz). Physics/render stay at 60 FPS.
 const NETWORK_SEND_RATE = 20;
 // A stationary client skips clientMove sends, but forces one at least this often

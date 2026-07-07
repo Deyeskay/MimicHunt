@@ -258,6 +258,16 @@
         <!-- Event toasts (player left / eliminated / disconnected), stacked above the bottom HUD. -->
         <div id="toast-container"></div>
 
+        <!-- Reconnect overlay: shown while our own connection blipped and we're
+             retrying the host for up to 60s (non-blocking; scene keeps rendering). -->
+        <div id="reconnect-overlay" style="display:none;">
+            <div id="reconnect-card">
+                <div id="reconnect-spinner"></div>
+                <div id="reconnect-title">🔌 Connection lost</div>
+                <div id="reconnect-sub">Reconnecting… <span id="reconnect-secs">60</span>s</div>
+            </div>
+        </div>
+
         <div id="mouse-hint" style="position:absolute; top: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; display: none;">
             Click screen to Lock Mouse. Press ESC to unlock.
         </div>
