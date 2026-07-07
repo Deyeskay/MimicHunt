@@ -534,9 +534,9 @@ registerLevel("Bazaar", [
         "id": "pot_1",
         "model": "pot",
         "x": -13.1,
-        "y": -0.31,
+        "y": 0,
         "z": 5.4,
-        "bottomY": -0.31,
+        "bottomY": -0.32,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -677,9 +677,9 @@ registerLevel("Bazaar", [
         "id": "pot_2",
         "model": "pot",
         "x": -13.1,
-        "y": -0.31,
+        "y": 0,
         "z": 17.4,
-        "bottomY": -0.31,
+        "bottomY": -0.32,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -820,9 +820,9 @@ registerLevel("Bazaar", [
         "id": "pot_3",
         "model": "pot",
         "x": 11.59,
-        "y": 0.71,
+        "y": 1.02,
         "z": -16.95,
-        "bottomY": 0.71,
+        "bottomY": 0.7,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -1339,9 +1339,9 @@ registerLevel("Bazaar", [
         "id": "pot_4",
         "model": "pot",
         "x": 8.32,
-        "y": -0.28,
+        "y": 0.03,
         "z": 19.03,
-        "bottomY": -0.28,
+        "bottomY": -0.29,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -1540,9 +1540,9 @@ registerLevel("Bazaar", [
         "id": "pot_5",
         "model": "pot",
         "x": 21.5,
-        "y": -0.28,
+        "y": 0.03,
         "z": 26.4,
-        "bottomY": -0.28,
+        "bottomY": -0.29,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -1939,9 +1939,9 @@ registerLevel("Bazaar", [
         "id": "pot_6",
         "model": "pot",
         "x": -16,
-        "y": -0.31,
+        "y": 0,
         "z": 6,
-        "bottomY": -0.31,
+        "bottomY": -0.32,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -2029,9 +2029,9 @@ registerLevel("Bazaar", [
         "id": "pot_7",
         "model": "pot",
         "x": -19,
-        "y": -0.31,
+        "y": 0,
         "z": -5,
-        "bottomY": -0.31,
+        "bottomY": -0.32,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -2648,9 +2648,9 @@ registerLevel("Bazaar", [
         "id": "pot_139",
         "model": "pot",
         "x": -2.27,
-        "y": 0.86,
+        "y": 1.17,
         "z": 2.4,
-        "bottomY": 0.86,
+        "bottomY": 0.85,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -2666,9 +2666,9 @@ registerLevel("Bazaar", [
         "id": "pot_140",
         "model": "pot",
         "x": 1.3,
-        "y": 0.86,
+        "y": 1.17,
         "z": -1.5,
-        "bottomY": 0.86,
+        "bottomY": 0.85,
         "scale": {
             "x": 0.5,
             "y": 0.5,
@@ -2716,12 +2716,63 @@ registerLevel("Bazaar", [
             "z": -180
         }
     },
-    { "id": "door_1", "model": "door", "x": -25, "y": 0, "z": 12, "bottomY": 0,
-      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true },
-    { "id": "door_2", "model": "door", "x": 25, "y": 0, "z": -12, "bottomY": 0,
-      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true },
-    { "id": "door_3", "model": "door", "x": 0, "y": 0, "z": 30, "bottomY": 0,
-      "scale": { "x": 1, "y": 1, "z": 1 }, "rotation": { "x": 0, "y": 0, "z": 0 }, "exitDoor": true }
+    {
+        "id": "door_1",
+        "model": "door",
+        "x": -25,
+        "y": 0,
+        "z": 12,
+        "bottomY": -1.48,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "exitDoor": true
+    },
+    {
+        "id": "door_2",
+        "model": "door",
+        "x": 25,
+        "y": 0,
+        "z": -12,
+        "bottomY": -1.48,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "exitDoor": true
+    },
+    {
+        "id": "door_3",
+        "model": "door",
+        "x": 0,
+        "y": 0,
+        "z": 30,
+        "bottomY": -1.48,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "exitDoor": true
+    }
 ], {
     "ground": {
         "texture": "sandy_ground_texture.jpg",

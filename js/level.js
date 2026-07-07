@@ -626,8 +626,17 @@ const Level = {
     // center-origin props (barrel/crate/pot/…) that would otherwise sink — and,
     // because disguise meshes clone the same library entry, keeps disguises grounded.
     groundModel: function(scene) {
-        const box = new THREE.Box3().setFromObject(scene);
-        if (isFinite(box.min.y)) scene.position.y -= box.min.y;
+        // Honor an authored pivot: props exported from the GLB pivot tool carry a
+        // 'PivotRoot' node whose origin IS the intended pivot. Re-grounding those
+        // would snap the pivot to the lowest vertex (e.g. a drooping leaf) instead
+        // of the authored base — so skip grounding for them. Legacy center-origin
+        // props (no PivotRoot) keep sinking-prevention grounding unchanged.
+        let authored = false;
+        scene.traverse(o => { if (o.name === 'PivotRoot') authored = true; });
+        if (!authored) {
+            const box = new THREE.Box3().setFromObject(scene);
+            if (isFinite(box.min.y)) scene.position.y -= box.min.y;
+        }
         const group = new THREE.Group();
         group.add(scene);
         return group;
