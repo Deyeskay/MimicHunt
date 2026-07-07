@@ -5,6 +5,18 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-08
 
+- **Sensitivity sliders reworked to a 0–13 "strength" scale + shoot sens added to the
+  Settings screen.** Files: `index.html`, `js/app.js`, `js/globals.js`. Camera and shoot
+  sensitivity are still **stored raw** in `GAME_SETTINGS` (`mouseSensitivity` /
+  `shootDragSensitivity`) but the UI now shows an **integer 0–13** instead of the raw
+  `0.00xx` value: point 0 = `0.003`, point 13 = `0.015`, linear
+  (`ptsToSens`/`sensToPts` in `js/app.js`, consts `SENS_MIN`/`SENS_MAX`/`SENS_PTS`). Both
+  controls now live in **both** places — the menu **Settings screen** and the in-game
+  **Controls panel** — kept in sync both ways. Labels renamed for consistency: "MOUSE
+  SENSITIVITY"/"CAMERA LOOK SENS." → **CAMERA SENSITIVITY**; "SHOOT DRAG SENS." → **SHOOT
+  SENSITIVITY**. Defaults moved to `0.0067` (~point 4) since the old `0.002` default sits
+  below the new `0.003` floor (older saves below the floor clamp to point 0 on display).
+
 - **PUBG-style gyroscope aiming (mobile).** Files: `js/globals.js`, `js/mechanics.js`,
   `index.html`, `js/app.js`, `css/style.css`. A new **GYRO AIM** option in the Settings
   screen and the in-game Controls panel lets players tilt the phone to orbit the camera.

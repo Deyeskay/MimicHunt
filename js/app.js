@@ -146,16 +146,30 @@ document.getElementById('spectate-next').addEventListener('click', () => Network
 // invert mirror GAME_SETTINGS (same values as the Settings screen, kept in sync
 // both ways); shoot-drag sens is unique to the mobile fire button. Changes apply
 // live and persist when the panel is dismissed.
+// --- Sensitivity "strength" mapping (UI 0–13 points <-> raw rad/px) ---
+// Both camera look (mouseSensitivity) and shoot drag (shootDragSensitivity) are
+// STORED raw but SHOWN as an integer strength 0–13: point 0 = 0.003, 13 = 0.015.
+// Sliders/chips speak points; GAME_SETTINGS + the input handlers speak raw.
+const SENS_MIN = 0.003, SENS_MAX = 0.015, SENS_PTS = 13;
+function ptsToSens(p) {
+    p = Math.max(0, Math.min(SENS_PTS, Math.round(Number(p) || 0)));
+    return SENS_MIN + p * (SENS_MAX - SENS_MIN) / SENS_PTS;
+}
+function sensToPts(raw) {
+    const p = Math.round((Number(raw) - SENS_MIN) / ((SENS_MAX - SENS_MIN) / SENS_PTS));
+    return Math.max(0, Math.min(SENS_PTS, p));
+}
+
 const controlsPanel = document.getElementById('controls-panel');
 function syncControlsDisplays() {
-    setChip('ctl-val-sensitivity', Number(GAME_SETTINGS.mouseSensitivity).toFixed(4));
-    setChip('ctl-val-shoot-sens', Number(GAME_SETTINGS.shootDragSensitivity).toFixed(4));
+    setChip('ctl-val-sensitivity', String(sensToPts(GAME_SETTINGS.mouseSensitivity)));
+    setChip('ctl-val-shoot-sens', String(sensToPts(GAME_SETTINGS.shootDragSensitivity)));
     setChip('ctl-val-fov', String(Math.round(GAME_SETTINGS.cameraFov)));
     setChip('ctl-val-gyro-sens', Number(GAME_SETTINGS.gyroSensitivity).toFixed(1));
 }
 function openControlsPanel() {
-    document.getElementById('ctl-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
-    document.getElementById('ctl-shoot-sens').value = GAME_SETTINGS.shootDragSensitivity;
+    document.getElementById('ctl-sensitivity').value = sensToPts(GAME_SETTINGS.mouseSensitivity);
+    document.getElementById('ctl-shoot-sens').value = sensToPts(GAME_SETTINGS.shootDragSensitivity);
     document.getElementById('ctl-fov').value = GAME_SETTINGS.cameraFov;
     document.getElementById('ctl-invert-y').checked = GAME_SETTINGS.invertY;
     document.getElementById('ctl-gyro-mode').value = GAME_SETTINGS.gyroMode;
@@ -173,9 +187,9 @@ document.getElementById('btn-controls').addEventListener('click', () => {
 });
 document.getElementById('btn-controls-close').addEventListener('click', closeControlsPanel);
 document.getElementById('btn-controls-reset').addEventListener('click', () => {
-    // Defaults mirror GAME_SETTINGS in js/globals.js.
-    GAME_SETTINGS.mouseSensitivity = 0.002;
-    GAME_SETTINGS.shootDragSensitivity = 0.003;
+    // Defaults mirror GAME_SETTINGS in js/globals.js (raw; ~= strength point 4).
+    GAME_SETTINGS.mouseSensitivity = 0.0067;
+    GAME_SETTINGS.shootDragSensitivity = 0.0067;
     GAME_SETTINGS.cameraFov = 60;
     GAME_SETTINGS.invertY = false;
     GAME_SETTINGS.gyroMode = 'off';
@@ -183,7 +197,8 @@ document.getElementById('btn-controls-reset').addEventListener('click', () => {
     Level.setFov(GAME_SETTINGS.cameraFov);
     openControlsPanel();   // repopulate this panel's inputs + chips
     // Keep the Settings screen inputs in sync (they share these values).
-    const s = document.getElementById('setting-sensitivity'); if (s) s.value = GAME_SETTINGS.mouseSensitivity;
+    const s = document.getElementById('setting-sensitivity'); if (s) s.value = sensToPts(GAME_SETTINGS.mouseSensitivity);
+    const sh = document.getElementById('setting-shoot-sens'); if (sh) sh.value = sensToPts(GAME_SETTINGS.shootDragSensitivity);
     const f = document.getElementById('setting-fov'); if (f) f.value = GAME_SETTINGS.cameraFov;
     const i = document.getElementById('setting-invert-y'); if (i) i.checked = GAME_SETTINGS.invertY;
     const gm = document.getElementById('setting-gyro-mode'); if (gm) gm.value = GAME_SETTINGS.gyroMode;
@@ -197,13 +212,14 @@ controlsPanel.addEventListener('click', (e) => { if (e.target === controlsPanel)
     const fov = document.getElementById('ctl-fov');
     const inv = document.getElementById('ctl-invert-y');
     sens.addEventListener('input', () => {
-        GAME_SETTINGS.mouseSensitivity = parseFloat(sens.value);
+        GAME_SETTINGS.mouseSensitivity = ptsToSens(sens.value);
         const s = document.getElementById('setting-sensitivity'); if (s) s.value = sens.value;
         syncControlsDisplays(); syncSettingDisplays();
     });
     shoot.addEventListener('input', () => {
-        GAME_SETTINGS.shootDragSensitivity = parseFloat(shoot.value);
-        syncControlsDisplays();
+        GAME_SETTINGS.shootDragSensitivity = ptsToSens(shoot.value);
+        const s = document.getElementById('setting-shoot-sens'); if (s) s.value = shoot.value;
+        syncControlsDisplays(); syncSettingDisplays();
     });
     fov.addEventListener('input', () => {
         GAME_SETTINGS.cameraFov = Math.round(Number(fov.value));
@@ -258,7 +274,8 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
     GAME_SETTINGS.hidingTime = parseInt(document.getElementById('setting-hide-time').value);
     // Hunting-time slider is in MINUTES (5–20); store huntingTime in seconds.
     GAME_SETTINGS.huntingTime = parseInt(document.getElementById('setting-hunt-time').value) * 60;
-    GAME_SETTINGS.mouseSensitivity = parseFloat(document.getElementById('setting-sensitivity').value);
+    GAME_SETTINGS.mouseSensitivity = ptsToSens(document.getElementById('setting-sensitivity').value);
+    GAME_SETTINGS.shootDragSensitivity = ptsToSens(document.getElementById('setting-shoot-sens').value);
     GAME_SETTINGS.cameraFov = parseInt(document.getElementById('setting-fov').value);
     GAME_SETTINGS.graphicsQuality = document.getElementById('setting-graphics').value;
     GAME_SETTINGS.invertY = document.getElementById('setting-invert-y').checked;
@@ -278,8 +295,10 @@ document.getElementById('btn-save-settings').addEventListener('click', () => {
 function setChip(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; }
 function syncSettingDisplays() {
     const s = document.getElementById('setting-sensitivity');
+    const sh = document.getElementById('setting-shoot-sens');
     const f = document.getElementById('setting-fov');
-    if (s) setChip('val-sensitivity', Number(s.value).toFixed(4));
+    if (s) setChip('val-sensitivity', String(parseInt(s.value)));
+    if (sh) setChip('val-shoot-sens', String(parseInt(sh.value)));
     if (f) setChip('val-fov', String(Math.round(Number(f.value))));
     const ht = document.getElementById('setting-hide-time');
     const hu = document.getElementById('setting-hunt-time');
@@ -290,11 +309,18 @@ function syncSettingDisplays() {
 }
 (function wireLiveSettings() {
     const sens = document.getElementById('setting-sensitivity');
+    const shoot = document.getElementById('setting-shoot-sens');
     const fov = document.getElementById('setting-fov');
     const hide = document.getElementById('setting-hide-time');
     const hunt = document.getElementById('setting-hunt-time');
     if (sens) sens.addEventListener('input', () => {
-        GAME_SETTINGS.mouseSensitivity = parseFloat(sens.value);
+        GAME_SETTINGS.mouseSensitivity = ptsToSens(sens.value);
+        const c = document.getElementById('ctl-sensitivity'); if (c) c.value = sens.value;
+        syncSettingDisplays();
+    });
+    if (shoot) shoot.addEventListener('input', () => {
+        GAME_SETTINGS.shootDragSensitivity = ptsToSens(shoot.value);
+        const c = document.getElementById('ctl-shoot-sens'); if (c) c.value = shoot.value;
         syncSettingDisplays();
     });
     if (fov) fov.addEventListener('input', () => {
@@ -676,7 +702,8 @@ if(savedSettings)
     const huntMin = Math.min(20, Math.max(5, Math.round(GAME_SETTINGS.huntingTime / 60)));
     GAME_SETTINGS.huntingTime = huntMin * 60;
     document.getElementById('setting-hunt-time').value = huntMin;
-    document.getElementById('setting-sensitivity').value = GAME_SETTINGS.mouseSensitivity;
+    document.getElementById('setting-sensitivity').value = sensToPts(GAME_SETTINGS.mouseSensitivity);
+    document.getElementById('setting-shoot-sens').value = sensToPts(GAME_SETTINGS.shootDragSensitivity);
     document.getElementById('setting-fov').value = GAME_SETTINGS.cameraFov;
     document.getElementById('setting-graphics').value = GAME_SETTINGS.graphicsQuality;
     document.getElementById('setting-invert-y').checked = GAME_SETTINGS.invertY;

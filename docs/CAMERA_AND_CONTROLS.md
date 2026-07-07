@@ -189,8 +189,11 @@ sens/FOV), persisted to `hidehunt_settings`.
   phones.
 
 ## Settings that affect controls (`GAME_SETTINGS`)
-`mouseSensitivity` (also scales touch look ×1.5), `shootDragSensitivity` (default
-`0.003`; drives the shoot-button slide-to-look only), `cameraFov` (default 60; read in
+`mouseSensitivity` (also scales touch look ×1.5), `shootDragSensitivity` (drives the
+shoot-button slide-to-look only). Both are **stored raw** but the Settings screen and the
+in-game Controls panel expose them as an integer **strength 0–13** (point 0 = `0.003`,
+13 = `0.015`; `ptsToSens`/`sensToPts` in `js/app.js`), default `0.0067` (~point 4).
+`cameraFov` (default 60; read in
 `Level.init`, changeable live via `Level.setFov` + the Settings FOV slider — clamped
 40–100), `invertY`, `showMobileControls` (toggles `.mobile-controls` via
 `body.hide-mobile-controls`), `gyroMode` + `gyroSensitivity` (gyro aim — see "Gyroscope

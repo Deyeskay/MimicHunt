@@ -14,11 +14,13 @@ const SHOW_FPS = true;
 let GAME_SETTINGS = {
     hidingTime: 20,
     huntingTime: 300,   // seconds (5 min); settings slider edits this in minutes (5–20)
-    mouseSensitivity: 0.002,
+    // Stored as a RAW radians-per-pixel value, but the UI exposes it as an integer
+    // "strength" 0–13 (see SENS_MIN/MAX/PTS + ptsToSens/sensToPts in js/app.js):
+    // point 0 = 0.003, point 13 = 0.015. Default ~= point 4.
+    mouseSensitivity: 0.0067,
     // Separate sensitivity for the PUBG-style "slide off the shoot button to
-    // look" gesture (see Mechanics shoot handler). Defaults to the same feel as
-    // the right-half look (mouseSensitivity * 1.5).
-    shootDragSensitivity: 0.003,
+    // look" gesture (see Mechanics shoot handler). Same 0–13 strength UI mapping.
+    shootDragSensitivity: 0.0067,
     cameraFov: 60,
     graphicsQuality: 'medium',   // 'low' | 'medium' | 'high' (see Level.setGraphicsQuality)
     invertY: false,

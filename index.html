@@ -171,17 +171,17 @@
                 <h2>🎚 Controls</h2>
                 <div class="settings-list">
                     <div class="setting-row">
-                        <label for="ctl-sensitivity"><span class="set-icon ic-mouse">🎯</span> CAMERA LOOK SENS.</label>
+                        <label for="ctl-sensitivity"><span class="set-icon ic-mouse">🎯</span> CAMERA SENSITIVITY</label>
                         <div class="setting-control">
-                            <input id="ctl-sensitivity" type="range" min="0.0005" max="0.01" step="0.0005">
-                            <span id="ctl-val-sensitivity" class="setting-value">0.0020</span>
+                            <input id="ctl-sensitivity" type="range" min="0" max="13" step="1">
+                            <span id="ctl-val-sensitivity" class="setting-value">4</span>
                         </div>
                     </div>
                     <div class="setting-row">
-                        <label for="ctl-shoot-sens"><span class="set-icon ic-shoot">🔫</span> SHOOT DRAG SENS.</label>
+                        <label for="ctl-shoot-sens"><span class="set-icon ic-shoot">🔫</span> SHOOT SENSITIVITY</label>
                         <div class="setting-control">
-                            <input id="ctl-shoot-sens" type="range" min="0.0005" max="0.01" step="0.0005">
-                            <span id="ctl-val-shoot-sens" class="setting-value">0.0030</span>
+                            <input id="ctl-shoot-sens" type="range" min="0" max="13" step="1">
+                            <span id="ctl-val-shoot-sens" class="setting-value">4</span>
                         </div>
                     </div>
                     <div class="setting-row">
@@ -343,10 +343,17 @@
                         </div>
                     </div>
                     <div class="setting-row">
-                        <label for="setting-sensitivity"><span class="set-icon ic-mouse">🎯</span> MOUSE SENSITIVITY</label>
+                        <label for="setting-sensitivity"><span class="set-icon ic-mouse">🎯</span> CAMERA SENSITIVITY</label>
                         <div class="setting-control">
-                            <input id="setting-sensitivity" type="range" min="0.0005" max="0.01" step="0.0005" value="0.002">
-                            <span id="val-sensitivity" class="setting-value">0.0020</span>
+                            <input id="setting-sensitivity" type="range" min="0" max="13" step="1" value="4">
+                            <span id="val-sensitivity" class="setting-value">4</span>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <label for="setting-shoot-sens"><span class="set-icon ic-shoot">🔫</span> SHOOT SENSITIVITY</label>
+                        <div class="setting-control">
+                            <input id="setting-shoot-sens" type="range" min="0" max="13" step="1" value="4">
+                            <span id="val-shoot-sens" class="setting-value">4</span>
                         </div>
                     </div>
                     <div class="setting-row">
