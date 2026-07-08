@@ -534,6 +534,7 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
                 <label><input type="checkbox" id="chkCollision"> Collision</label>
                 <label><input type="checkbox" id="chkClimbable"> Climbable</label>
                 <label><input type="checkbox" id="chkHideSpot"> Hide Spot</label>
+                <label title="Can hiders disguise as this prop? Overrides the prefab default per-instance."><input type="checkbox" id="chkCanDisguise"> Can Disguise</label>
                 <label><input type="checkbox" id="chkSpawnPoint"> Spawn Point</label>
                 <label><input type="checkbox" id="chkSeekerSpawn"> Seeker Spawn</label>
                 <label><input type="checkbox" id="chkHiderSpawn"> Hider Spawn</label>
@@ -784,6 +785,9 @@ body.pf-scrubbing, body.pf-scrubbing *{ cursor:ew-resize !important; user-select
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<!-- Draco-compressed props (chair/cupboard/books/barrel/bucket/pillar) need this or
+     GLTFLoader.parse throws "No DRACOLoader instance provided". Matches index.html. -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 <script src="js/prefabs.js?v=8"></script>
@@ -1913,6 +1917,7 @@ function attachInspectorInputListeners() {
     chkChange("chkCollision",  "collision");
     chkChange("chkClimbable",  "climbable");
     chkChange("chkHideSpot",   "hideSpot");
+    chkChange("chkCanDisguise","canDisguise");
     chkChange("chkSpawnPoint", "spawnPoint");
     chkChange("chkSeekerSpawn","seekerSpawn");
     chkChange("chkHiderSpawn", "hiderSpawn");
@@ -1932,7 +1937,7 @@ function clearInspector() {
         const el = document.getElementById(id); el.value = ''; el.placeholder = '';
     });
     uniformCheckbox.checked = false;
-    ['chkCollision','chkClimbable','chkHideSpot','chkSpawnPoint','chkSeekerSpawn','chkHiderSpawn'].forEach(id => {
+    ['chkCollision','chkClimbable','chkHideSpot','chkCanDisguise','chkSpawnPoint','chkSeekerSpawn','chkHiderSpawn'].forEach(id => {
         const el = document.getElementById(id); el.checked = false; el.indeterminate = false;
     });
     // Materials section → idle state.
@@ -2779,6 +2784,12 @@ scene.add(
 const loader =
 new THREE.GLTFLoader();
 
+// Draco-compressed GLBs need a DRACOLoader or parse throws. Decoder pulled from
+// the same CDN/version as three (see index.html / Level.makeDracoLoader).
+const _editorDraco = new THREE.DRACOLoader();
+_editorDraco.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/");
+loader.setDRACOLoader(_editorDraco);
+
 // Ground a loaded GLB so its bbox bottom sits at y=0, wrapped in a Group — must
 // match Level.groundModel in js/level.js so the editor previews props (and their
 // disguises) exactly as the game places them (center-origin meshes don't sink).
@@ -2809,12 +2820,83 @@ function loadModel(name,path)
             modelLibrary[name] =
                 groundModel(gltf.scene);
 
+            // A level uploaded before this GLB arrived skipped its props (async
+            // race). Rebuild any that were waiting on THIS model now it's here.
+            drainPendingProps(name);
+
             // If the prefab modal is open, refresh so the model appears once loaded.
             if (pfRenderer && document.getElementById('prefabModal').style.display === 'block') {
                 buildPrefabPreviewContent();
             }
+        },
+        undefined,
+        err =>
+        {
+            // Real load failure (404 / parse error) — surface it instead of the
+            // silent skip that used to masquerade as a timing race.
+            console.error("Failed to load model '" + name + "' from " + path, err);
+            const waiting = pendingProps.filter(p => p.model === name).length;
+            if (waiting)
+                alert("Model '" + name + "' failed to load (" + path + ") — " +
+                      waiting + " object(s) using it were dropped. See console.");
+            pendingProps = pendingProps.filter(p => p.model !== name);
         }
     );
+}
+
+// Props skipped during load because their GLB hadn't arrived yet. Each entry is
+// the raw exported prop; drainPendingProps rebuilds them as models finish loading.
+let pendingProps = [];
+
+let _pendingWatchdog = null;
+
+// Rebuild queued props whose model just became available.
+function drainPendingProps(name)
+{
+    const ready = pendingProps.filter(p => p.model === name);
+    if(!ready.length) return;
+    pendingProps = pendingProps.filter(p => p.model !== name);
+    ready.forEach(buildEditorObject);
+    objectId = Math.max(objectId, placedObjects.length + 1);
+    refreshHierarchy();
+
+    if(pendingProps.length)
+        setLoadStatus(pendingProps.length + " object(s) waiting on models still loading…");
+    else {
+        clearTimeout(_pendingWatchdog);
+        setLoadStatus(null);
+    }
+}
+
+// Watchdog: if props are still queued long after load, a model likely never
+// resolved (parse error that never fires onError). Tell the user which ones.
+function checkPendingStalled()
+{
+    if(!pendingProps.length) { setLoadStatus(null); return; }
+    const models = [...new Set(pendingProps.map(p => p.model))].join(", ");
+    setLoadStatus(null);
+    alert(pendingProps.length + " object(s) never loaded — model(s) failed: " +
+          models + ". Check the console / that the GLB(s) exist.");
+    pendingProps = [];
+}
+
+// Small bottom-left banner reporting async load progress. Pass null to hide.
+function setLoadStatus(msg)
+{
+    let el = document.getElementById('loadStatus');
+    if(!msg) { if(el) el.style.display = 'none'; return; }
+    if(!el)
+    {
+        el = document.createElement('div');
+        el.id = 'loadStatus';
+        el.style.cssText = "position:fixed;left:12px;bottom:12px;z-index:9999;" +
+            "background:rgba(20,24,33,.92);color:#cfe;padding:8px 14px;border-radius:8px;" +
+            "font:13px/1.3 system-ui,sans-serif;box-shadow:0 2px 12px rgba(0,0,0,.4);" +
+            "pointer-events:none;max-width:60vw;";
+        document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.style.display = 'block';
 }
 
 // Keep this list in sync with Level.loadModels() in js/level.js.
@@ -3131,6 +3213,8 @@ window.addEventListener(
 
                     hideSpot:def.hideSpot,
 
+                    canDisguise:def.canDisguise,
+
                     spawnPoint:isSpawn,
 
                     seekerSpawn:false,
@@ -3236,16 +3320,26 @@ function selectModel(model, button)
 function propOverrides(d)
 {
     const ov = [];
-    const pf = (typeof PrefabLibrary !== 'undefined' && PrefabLibrary[d.model]) || null;
+    let pf = null;
+    try { pf = PropLevel.getPrefab(d.model); } catch (e) {}
 
+    // wall/cube/spawn/door aren't prefab-backed props — they're built-in editor
+    // primitives. Their "prefab" baseline reads "primitive" rather than "none".
+    const PRIMITIVES = ['wall', 'cube', 'spawn', 'door'];
+    const noBase = PRIMITIVES.indexOf(d.model) !== -1 ? 'primitive' : 'none';
+
+    // Each label reads "<field>: <value>  (prefab: <baseline>)" so the tooltip shows
+    // both the override AND what the pure prefab would have used.
+    const line = (f, val, base) => f + ': ' + val + '   (prefab: ' + base + ')';
+
+    // Material: prefabs carry no material, so any material is an override.
     if (d.material)
-        ov.push('material: ' + (typeof d.material === 'string' ? d.material : 'custom'));
-    if (d.canDisguise === false) ov.push('canDisguise: false');
-    else if (d.canDisguise === true) ov.push('canDisguise: true');
+        ov.push(line('material', typeof d.material === 'string' ? d.material : 'custom', noBase));
 
+    // Gameplay flags — flagged only when they differ from the prefab default.
     if (pf) {
-        ['collision', 'climbable', 'hideSpot'].forEach(f => {
-            if (d[f] !== undefined && d[f] !== pf[f]) ov.push(f + ': ' + d[f]);
+        ['canDisguise', 'collision', 'climbable', 'hideSpot'].forEach(f => {
+            if (d[f] !== undefined && d[f] !== pf[f]) ov.push(line(f, d[f], pf[f]));
         });
     }
 
@@ -3253,7 +3347,7 @@ function propOverrides(d)
     if (d.texture) {
         let def = null;
         try { def = PropLevel.defaultTextureFor(d.model); } catch (e) {}
-        if (!def || d.texture !== def) ov.push('texture: ' + d.texture);
+        if (!def || d.texture !== def) ov.push(line('texture', d.texture, def || noBase));
     }
 
     return ov;
@@ -3489,6 +3583,7 @@ function updateInspectorFields() {
     _setChkField('chkCollision',  _commonBool('collision'));
     _setChkField('chkClimbable',  _commonBool('climbable'));
     _setChkField('chkHideSpot',   _commonBool('hideSpot'));
+    _setChkField('chkCanDisguise',_commonBool('canDisguise'));
     _setChkField('chkSpawnPoint', _commonBool('spawnPoint'));
     _setChkField('chkSeekerSpawn',_commonBool('seekerSpawn'));
     _setChkField('chkHiderSpawn', _commonBool('hiderSpawn'));
@@ -3534,19 +3629,27 @@ function duplicateSelected()
                 collision:source.collision,
                 climbable:source.climbable,
                 hideSpot:source.hideSpot,
+                canDisguise:source.canDisguise,
                 spawnPoint:source.spawnPoint,
                 seekerSpawn:source.seekerSpawn,
                 hiderSpawn:source.hiderSpawn,
                 exitDoor:source.exitDoor,
                 texture:source.texture,
                 tileX:source.tileX,
-                tileY:source.tileY
+                tileY:source.tileY,
+                material:source.material
             }
         };
 
         // Carry the source prop's custom texture + tiling onto the duplicate's material.
         if(source.texture)
             PropLevel.applyPropTexture(clone, source.texture, _dataTiling(clone.userData.data));
+
+        // Carry a material preset too, else the copy reverts to the model's stock look.
+        if(source.material) {
+            PropLevel.applyMaterialPreset(clone, source.material);
+            if (typeof source.material === 'string') clone.userData._matName = source.material;
+        }
 
         PropLevel.syncBoundsToData(clone);
         clone.traverse(child => { child.userData.editorObject = true; });
@@ -3600,8 +3703,10 @@ function snapshotObject(o) {
         },
         scale: { x: o.scale.x, y: o.scale.y, z: o.scale.z },
         collision: d.collision, climbable: d.climbable, hideSpot: d.hideSpot,
+        canDisguise: d.canDisguise,
         spawnPoint: d.spawnPoint, seekerSpawn: d.seekerSpawn, hiderSpawn: d.hiderSpawn,
-        exitDoor: d.exitDoor
+        exitDoor: d.exitDoor,
+        texture: d.texture, tileX: d.tileX, tileY: d.tileY, material: d.material
     };
 }
 function snapshotScene() { return placedObjects.map(snapshotObject); }
@@ -3925,6 +4030,7 @@ function buildEditorObject(prop)
                 collision:   prop.collision   ?? def.collision,
                 climbable:   prop.climbable    ?? def.climbable,
                 hideSpot:    prop.hideSpot     ?? def.hideSpot,
+                canDisguise: prop.canDisguise  ?? def.canDisguise,
                 spawnPoint:  prop.spawnPoint   ?? false,
                 seekerSpawn: prop.seekerSpawn  ?? false,
                 hiderSpawn:  prop.hiderSpawn   ?? false,
@@ -4022,17 +4128,35 @@ function applyLevelData(raw)
     }
     setGroundConfig(options && options.ground);
 
+    // A fresh load supersedes anything still queued from a prior load.
+    pendingProps = [];
+
     let loaded = 0;
-    const missing = [];
-    props.forEach(p => { if(buildEditorObject(p)) loaded++; else missing.push(p.model); });
+    const unknown = [];     // model name not in EDITOR_MODELS — truly can't build
+    let queued = 0;         // known model still loading — will build on arrival
+    props.forEach(p =>
+    {
+        if(buildEditorObject(p)) { loaded++; return; }
+        if(EDITOR_MODELS[p.model]) { pendingProps.push(p); queued++; }
+        else unknown.push(p.model);
+    });
 
     // Keep auto-generated names from colliding with loaded ones.
     objectId = Math.max(objectId, placedObjects.length + 1);
     refreshHierarchy();
 
-    if(missing.length)
-        alert("Loaded " + loaded + " object(s). Skipped (model not loaded yet): " +
-              [...new Set(missing)].join(", "));
+    if(unknown.length)
+        alert("Loaded " + loaded + " object(s). Unknown model(s), skipped: " +
+              [...new Set(unknown)].join(", "));
+    else if(queued)
+    {
+        // Don't leave the user staring at a partial scene with no explanation:
+        // show a live status line, then a safety net in case a model never
+        // resolves (e.g. a GLB whose parse throws — onError never fires).
+        setLoadStatus(queued + " object(s) waiting on models still loading…");
+        clearTimeout(_pendingWatchdog);
+        _pendingWatchdog = setTimeout(checkPendingStalled, 10000);
+    }
 
     return true;
 }

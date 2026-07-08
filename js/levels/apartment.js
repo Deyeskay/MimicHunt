@@ -1281,6 +1281,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_65",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": -0.49,
@@ -1303,6 +1304,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_66",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 0.17,
@@ -1325,6 +1327,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_67",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 0.84,
@@ -1347,6 +1350,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_68",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 1.51,
@@ -1369,6 +1373,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_69",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 2.17,
@@ -1391,6 +1396,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_70",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 2.84,
@@ -1413,6 +1419,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_71",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 3.51,
@@ -1435,6 +1442,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_72",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 4.17,
@@ -1457,6 +1465,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_73",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 4.84,
@@ -1479,6 +1488,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_74",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 5.51,
@@ -1501,6 +1511,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_75",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 6.17,
@@ -1523,6 +1534,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_76",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 6.84,
@@ -1545,6 +1557,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_77",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": -0.48,
@@ -1567,6 +1580,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_78",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 0.19,
@@ -1589,6 +1603,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_79",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 0.86,
@@ -1611,6 +1626,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_80",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 1.52,
@@ -1633,6 +1649,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_81",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 2.19,
@@ -1655,6 +1672,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_82",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 2.86,
@@ -1677,6 +1695,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_83",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 3.52,
@@ -1699,6 +1718,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_84",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 4.19,
@@ -1721,6 +1741,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_85",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 4.86,
@@ -1743,6 +1764,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_86",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 5.52,
@@ -1765,6 +1787,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_87",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 6.19,
@@ -1787,6 +1810,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_88",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 6.86,
@@ -1809,6 +1833,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_89",
+        "canDisguise": false,
         "model": "cube",
         "x": 11.25,
         "y": -0.44,
@@ -1831,6 +1856,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_90",
+        "canDisguise": false,
         "model": "cube",
         "x": 12.65,
         "y": 0.22,
@@ -1853,6 +1879,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_91",
+        "canDisguise": false,
         "model": "cube",
         "x": 14.05,
         "y": 0.89,
@@ -1875,6 +1902,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_92",
+        "canDisguise": false,
         "model": "cube",
         "x": 15.45,
         "y": 1.56,
@@ -1897,6 +1925,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_93",
+        "canDisguise": false,
         "model": "cube",
         "x": 16.85,
         "y": 2.22,
@@ -1919,6 +1948,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_94",
+        "canDisguise": false,
         "model": "cube",
         "x": 18.25,
         "y": 2.89,
@@ -1941,6 +1971,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_95",
+        "canDisguise": false,
         "model": "cube",
         "x": 19.65,
         "y": 3.56,
@@ -1963,6 +1994,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_96",
+        "canDisguise": false,
         "model": "cube",
         "x": 21.05,
         "y": 4.22,
@@ -1985,6 +2017,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_97",
+        "canDisguise": false,
         "model": "cube",
         "x": 22.45,
         "y": 4.89,
@@ -2007,6 +2040,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_98",
+        "canDisguise": false,
         "model": "cube",
         "x": 23.85,
         "y": 5.56,
@@ -2029,6 +2063,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_99",
+        "canDisguise": false,
         "model": "cube",
         "x": 25.25,
         "y": 6.22,
@@ -2051,6 +2086,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_100",
+        "canDisguise": false,
         "model": "cube",
         "x": 26.65,
         "y": 6.89,
@@ -2073,6 +2109,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_101",
+        "canDisguise": false,
         "model": "cube",
         "x": -11.28,
         "y": -0.45,
@@ -2095,6 +2132,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_102",
+        "canDisguise": false,
         "model": "cube",
         "x": -12.68,
         "y": 0.21,
@@ -2117,6 +2155,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_103",
+        "canDisguise": false,
         "model": "cube",
         "x": -14.08,
         "y": 0.88,
@@ -2139,6 +2178,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_104",
+        "canDisguise": false,
         "model": "cube",
         "x": -15.48,
         "y": 1.55,
@@ -2161,6 +2201,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_105",
+        "canDisguise": false,
         "model": "cube",
         "x": -16.88,
         "y": 2.21,
@@ -2183,6 +2224,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_106",
+        "canDisguise": false,
         "model": "cube",
         "x": -18.28,
         "y": 2.88,
@@ -2205,6 +2247,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_107",
+        "canDisguise": false,
         "model": "cube",
         "x": -19.68,
         "y": 3.55,
@@ -2227,6 +2270,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_108",
+        "canDisguise": false,
         "model": "cube",
         "x": -21.08,
         "y": 4.21,
@@ -2249,6 +2293,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_109",
+        "canDisguise": false,
         "model": "cube",
         "x": -22.48,
         "y": 4.88,
@@ -2271,6 +2316,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_110",
+        "canDisguise": false,
         "model": "cube",
         "x": -23.88,
         "y": 5.55,
@@ -2293,6 +2339,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_111",
+        "canDisguise": false,
         "model": "cube",
         "x": -25.28,
         "y": 6.21,
@@ -2315,6 +2362,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_112",
+        "canDisguise": false,
         "model": "cube",
         "x": -26.68,
         "y": 6.88,
@@ -2337,6 +2385,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_113",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 7.98,
@@ -2359,6 +2408,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_114",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 8.65,
@@ -2381,6 +2431,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_115",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 9.32,
@@ -2403,6 +2454,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_116",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 9.98,
@@ -2425,6 +2477,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_117",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 10.65,
@@ -2447,6 +2500,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_118",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 11.32,
@@ -2469,6 +2523,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_119",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 11.98,
@@ -2491,6 +2546,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_120",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 12.65,
@@ -2513,6 +2569,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_121",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 13.32,
@@ -2535,6 +2592,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_122",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 13.98,
@@ -2557,6 +2615,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_123",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 14.65,
@@ -2579,6 +2638,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_124",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 15.32,
@@ -2601,6 +2661,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_125",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 7.98,
@@ -2623,6 +2684,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_126",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 8.65,
@@ -2645,6 +2707,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_127",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 9.32,
@@ -2667,6 +2730,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_128",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 9.98,
@@ -2689,6 +2753,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_129",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 10.65,
@@ -2711,6 +2776,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_130",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 11.32,
@@ -2733,6 +2799,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_131",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 11.98,
@@ -2755,6 +2822,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_132",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 12.65,
@@ -2777,6 +2845,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_133",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 13.32,
@@ -2799,6 +2868,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_134",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 13.98,
@@ -2821,6 +2891,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_135",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 14.65,
@@ -2843,6 +2914,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_136",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 15.32,
@@ -2865,6 +2937,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_137",
+        "canDisguise": false,
         "model": "cube",
         "x": 10.7,
         "y": 7.98,
@@ -2887,6 +2960,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_138",
+        "canDisguise": false,
         "model": "cube",
         "x": 12.1,
         "y": 8.65,
@@ -2909,6 +2983,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_139",
+        "canDisguise": false,
         "model": "cube",
         "x": 13.5,
         "y": 9.32,
@@ -2931,6 +3006,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_140",
+        "canDisguise": false,
         "model": "cube",
         "x": 14.9,
         "y": 9.98,
@@ -2953,6 +3029,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_141",
+        "canDisguise": false,
         "model": "cube",
         "x": 16.3,
         "y": 10.65,
@@ -2975,6 +3052,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_142",
+        "canDisguise": false,
         "model": "cube",
         "x": 17.7,
         "y": 11.32,
@@ -2997,6 +3075,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_143",
+        "canDisguise": false,
         "model": "cube",
         "x": 19.1,
         "y": 11.98,
@@ -3019,6 +3098,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_144",
+        "canDisguise": false,
         "model": "cube",
         "x": 20.5,
         "y": 12.65,
@@ -3041,6 +3121,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_145",
+        "canDisguise": false,
         "model": "cube",
         "x": 21.9,
         "y": 13.32,
@@ -3063,6 +3144,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_146",
+        "canDisguise": false,
         "model": "cube",
         "x": 23.3,
         "y": 13.98,
@@ -3085,6 +3167,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_147",
+        "canDisguise": false,
         "model": "cube",
         "x": 24.7,
         "y": 14.65,
@@ -3107,6 +3190,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_148",
+        "canDisguise": false,
         "model": "cube",
         "x": 26.1,
         "y": 15.32,
@@ -3129,6 +3213,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_149",
+        "canDisguise": false,
         "model": "cube",
         "x": -10.7,
         "y": 7.98,
@@ -3151,6 +3236,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_150",
+        "canDisguise": false,
         "model": "cube",
         "x": -12.1,
         "y": 8.65,
@@ -3173,6 +3259,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_151",
+        "canDisguise": false,
         "model": "cube",
         "x": -13.5,
         "y": 9.32,
@@ -3195,6 +3282,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_152",
+        "canDisguise": false,
         "model": "cube",
         "x": -14.9,
         "y": 9.98,
@@ -3217,6 +3305,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_153",
+        "canDisguise": false,
         "model": "cube",
         "x": -16.3,
         "y": 10.65,
@@ -3239,6 +3328,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_154",
+        "canDisguise": false,
         "model": "cube",
         "x": -17.7,
         "y": 11.32,
@@ -3261,6 +3351,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_155",
+        "canDisguise": false,
         "model": "cube",
         "x": -19.1,
         "y": 11.98,
@@ -3283,6 +3374,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_156",
+        "canDisguise": false,
         "model": "cube",
         "x": -20.5,
         "y": 12.65,
@@ -3305,6 +3397,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_157",
+        "canDisguise": false,
         "model": "cube",
         "x": -21.9,
         "y": 13.32,
@@ -3327,6 +3420,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_158",
+        "canDisguise": false,
         "model": "cube",
         "x": -23.3,
         "y": 13.98,
@@ -3349,6 +3443,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_159",
+        "canDisguise": false,
         "model": "cube",
         "x": -24.7,
         "y": 14.65,
@@ -3371,6 +3466,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_160",
+        "canDisguise": false,
         "model": "cube",
         "x": -26.1,
         "y": 15.32,
@@ -3393,6 +3489,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_161",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 15.98,
@@ -3415,6 +3512,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_162",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 16.65,
@@ -3437,6 +3535,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_163",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 17.32,
@@ -3459,6 +3558,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_164",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 17.98,
@@ -3481,6 +3581,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_165",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 18.65,
@@ -3503,6 +3604,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_166",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 19.32,
@@ -3525,6 +3627,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_167",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 19.98,
@@ -3547,6 +3650,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_168",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 20.65,
@@ -3569,6 +3673,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_169",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 21.32,
@@ -3591,6 +3696,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_170",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 21.98,
@@ -3613,6 +3719,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_171",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 22.65,
@@ -3635,6 +3742,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_172",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 23.32,
@@ -3657,6 +3765,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_173",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 15.98,
@@ -3679,6 +3788,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_174",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 16.65,
@@ -3701,6 +3811,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_175",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 17.32,
@@ -3723,6 +3834,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_176",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 17.98,
@@ -3745,6 +3857,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_177",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 18.65,
@@ -3767,6 +3880,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_178",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 19.32,
@@ -3789,6 +3903,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_179",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 19.98,
@@ -3811,6 +3926,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_180",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 20.65,
@@ -3833,6 +3949,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_181",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 21.32,
@@ -3855,6 +3972,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_182",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 21.98,
@@ -3877,6 +3995,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_183",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 22.65,
@@ -3899,6 +4018,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_184",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 23.32,
@@ -3921,6 +4041,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_185",
+        "canDisguise": false,
         "model": "cube",
         "x": 10.7,
         "y": 15.98,
@@ -3943,6 +4064,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_186",
+        "canDisguise": false,
         "model": "cube",
         "x": 12.1,
         "y": 16.65,
@@ -3965,6 +4087,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_187",
+        "canDisguise": false,
         "model": "cube",
         "x": 13.5,
         "y": 17.32,
@@ -3987,6 +4110,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_188",
+        "canDisguise": false,
         "model": "cube",
         "x": 14.9,
         "y": 17.98,
@@ -4009,6 +4133,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_189",
+        "canDisguise": false,
         "model": "cube",
         "x": 16.3,
         "y": 18.65,
@@ -4031,6 +4156,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_190",
+        "canDisguise": false,
         "model": "cube",
         "x": 17.7,
         "y": 19.32,
@@ -4053,6 +4179,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_191",
+        "canDisguise": false,
         "model": "cube",
         "x": 19.1,
         "y": 19.98,
@@ -4075,6 +4202,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_192",
+        "canDisguise": false,
         "model": "cube",
         "x": 20.5,
         "y": 20.65,
@@ -4097,6 +4225,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_193",
+        "canDisguise": false,
         "model": "cube",
         "x": 21.9,
         "y": 21.32,
@@ -4119,6 +4248,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_194",
+        "canDisguise": false,
         "model": "cube",
         "x": 23.3,
         "y": 21.98,
@@ -4141,6 +4271,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_195",
+        "canDisguise": false,
         "model": "cube",
         "x": 24.7,
         "y": 22.65,
@@ -4163,6 +4294,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_196",
+        "canDisguise": false,
         "model": "cube",
         "x": 26.1,
         "y": 23.32,
@@ -4185,6 +4317,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_197",
+        "canDisguise": false,
         "model": "cube",
         "x": -10.7,
         "y": 15.98,
@@ -4207,6 +4340,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_198",
+        "canDisguise": false,
         "model": "cube",
         "x": -12.1,
         "y": 16.65,
@@ -4229,6 +4363,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_199",
+        "canDisguise": false,
         "model": "cube",
         "x": -13.5,
         "y": 17.32,
@@ -4251,6 +4386,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_200",
+        "canDisguise": false,
         "model": "cube",
         "x": -14.9,
         "y": 17.98,
@@ -4273,6 +4409,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_201",
+        "canDisguise": false,
         "model": "cube",
         "x": -16.3,
         "y": 18.65,
@@ -4295,6 +4432,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_202",
+        "canDisguise": false,
         "model": "cube",
         "x": -17.7,
         "y": 19.32,
@@ -4317,6 +4455,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_203",
+        "canDisguise": false,
         "model": "cube",
         "x": -19.1,
         "y": 19.98,
@@ -4339,6 +4478,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_204",
+        "canDisguise": false,
         "model": "cube",
         "x": -20.5,
         "y": 20.65,
@@ -4361,6 +4501,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_205",
+        "canDisguise": false,
         "model": "cube",
         "x": -21.9,
         "y": 21.32,
@@ -4383,6 +4524,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_206",
+        "canDisguise": false,
         "model": "cube",
         "x": -23.3,
         "y": 21.98,
@@ -4405,6 +4547,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_207",
+        "canDisguise": false,
         "model": "cube",
         "x": -24.7,
         "y": 22.65,
@@ -4427,6 +4570,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_208",
+        "canDisguise": false,
         "model": "cube",
         "x": -26.1,
         "y": 23.32,
@@ -4449,6 +4593,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_209",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 23.98,
@@ -4471,6 +4616,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_210",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 24.65,
@@ -4493,6 +4639,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_211",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 25.32,
@@ -4515,6 +4662,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_212",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 25.98,
@@ -4537,6 +4685,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_213",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 26.65,
@@ -4559,6 +4708,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_214",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 27.32,
@@ -4581,6 +4731,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_215",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 27.98,
@@ -4603,6 +4754,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_216",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 28.65,
@@ -4625,6 +4777,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_217",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 29.32,
@@ -4647,6 +4800,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_218",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 29.98,
@@ -4669,6 +4823,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_219",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 30.65,
@@ -4691,6 +4846,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_220",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 31.32,
@@ -4713,6 +4869,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_221",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 23.98,
@@ -4735,6 +4892,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_222",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 24.65,
@@ -4757,6 +4915,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_223",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 25.32,
@@ -4779,6 +4938,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_224",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 25.98,
@@ -4801,6 +4961,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_225",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 26.65,
@@ -4823,6 +4984,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_226",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 27.32,
@@ -4845,6 +5007,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_227",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 27.98,
@@ -4867,6 +5030,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_228",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 28.65,
@@ -4889,6 +5053,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_229",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 29.32,
@@ -4911,6 +5076,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_230",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 29.98,
@@ -4933,6 +5099,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_231",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 30.65,
@@ -4955,6 +5122,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_232",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 31.32,
@@ -4977,6 +5145,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_233",
+        "canDisguise": false,
         "model": "cube",
         "x": 10.7,
         "y": 23.98,
@@ -4999,6 +5168,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_234",
+        "canDisguise": false,
         "model": "cube",
         "x": 12.1,
         "y": 24.65,
@@ -5021,6 +5191,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_235",
+        "canDisguise": false,
         "model": "cube",
         "x": 13.5,
         "y": 25.32,
@@ -5043,6 +5214,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_236",
+        "canDisguise": false,
         "model": "cube",
         "x": 14.9,
         "y": 25.98,
@@ -5065,6 +5237,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_237",
+        "canDisguise": false,
         "model": "cube",
         "x": 16.3,
         "y": 26.65,
@@ -5087,6 +5260,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_238",
+        "canDisguise": false,
         "model": "cube",
         "x": 17.7,
         "y": 27.32,
@@ -5109,6 +5283,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_239",
+        "canDisguise": false,
         "model": "cube",
         "x": 19.1,
         "y": 27.98,
@@ -5131,6 +5306,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_240",
+        "canDisguise": false,
         "model": "cube",
         "x": 20.5,
         "y": 28.65,
@@ -5153,6 +5329,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_241",
+        "canDisguise": false,
         "model": "cube",
         "x": 21.9,
         "y": 29.32,
@@ -5175,6 +5352,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_242",
+        "canDisguise": false,
         "model": "cube",
         "x": 23.3,
         "y": 29.98,
@@ -5197,6 +5375,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_243",
+        "canDisguise": false,
         "model": "cube",
         "x": 24.7,
         "y": 30.65,
@@ -5219,6 +5398,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_244",
+        "canDisguise": false,
         "model": "cube",
         "x": 26.1,
         "y": 31.32,
@@ -5241,6 +5421,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_245",
+        "canDisguise": false,
         "model": "cube",
         "x": -10.7,
         "y": 23.98,
@@ -5263,6 +5444,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_246",
+        "canDisguise": false,
         "model": "cube",
         "x": -12.1,
         "y": 24.65,
@@ -5285,6 +5467,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_247",
+        "canDisguise": false,
         "model": "cube",
         "x": -13.5,
         "y": 25.32,
@@ -5307,6 +5490,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_248",
+        "canDisguise": false,
         "model": "cube",
         "x": -14.9,
         "y": 25.98,
@@ -5329,6 +5513,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_249",
+        "canDisguise": false,
         "model": "cube",
         "x": -16.3,
         "y": 26.65,
@@ -5351,6 +5536,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_250",
+        "canDisguise": false,
         "model": "cube",
         "x": -17.7,
         "y": 27.32,
@@ -5373,6 +5559,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_251",
+        "canDisguise": false,
         "model": "cube",
         "x": -19.1,
         "y": 27.98,
@@ -5395,6 +5582,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_252",
+        "canDisguise": false,
         "model": "cube",
         "x": -20.5,
         "y": 28.65,
@@ -5417,6 +5605,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_253",
+        "canDisguise": false,
         "model": "cube",
         "x": -21.9,
         "y": 29.32,
@@ -5439,6 +5628,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_254",
+        "canDisguise": false,
         "model": "cube",
         "x": -23.3,
         "y": 29.98,
@@ -5461,6 +5651,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_255",
+        "canDisguise": false,
         "model": "cube",
         "x": -24.7,
         "y": 30.65,
@@ -5483,6 +5674,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "step_256",
+        "canDisguise": false,
         "model": "cube",
         "x": -26.1,
         "y": 31.32,
@@ -10793,6 +10985,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_545",
+        "canDisguise": false,
         "model": "cube",
         "x": 15,
         "y": 4,
@@ -10813,6 +11006,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_546",
+        "canDisguise": false,
         "model": "cube",
         "x": -15,
         "y": 4,
@@ -10833,6 +11027,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_547",
+        "canDisguise": false,
         "model": "cube",
         "x": -15,
         "y": 4,
@@ -10853,6 +11048,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_548",
+        "canDisguise": false,
         "model": "cube",
         "x": 15,
         "y": 4,
@@ -10873,6 +11069,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_549",
+        "canDisguise": false,
         "model": "cube",
         "x": 28,
         "y": 4,
@@ -10893,6 +11090,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_550",
+        "canDisguise": false,
         "model": "cube",
         "x": 12,
         "y": 4,
@@ -10913,6 +11111,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_551",
+        "canDisguise": false,
         "model": "cube",
         "x": -28,
         "y": 4,
@@ -10933,6 +11132,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_552",
+        "canDisguise": false,
         "model": "cube",
         "x": -12,
         "y": 4,
@@ -10953,6 +11153,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_553",
+        "canDisguise": false,
         "model": "cube",
         "x": 28,
         "y": 4,
@@ -10973,6 +11174,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_554",
+        "canDisguise": false,
         "model": "cube",
         "x": -12,
         "y": 4,
@@ -10993,6 +11195,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_555",
+        "canDisguise": false,
         "model": "cube",
         "x": -28,
         "y": 4,
@@ -11013,6 +11216,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_556",
+        "canDisguise": false,
         "model": "cube",
         "x": 12,
         "y": 4,
@@ -11033,6 +11237,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_557",
+        "canDisguise": false,
         "model": "cube",
         "x": 28,
         "y": 4,
@@ -11053,6 +11258,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_558",
+        "canDisguise": false,
         "model": "cube",
         "x": -28,
         "y": 4,
@@ -11073,6 +11279,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_559",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 4,
@@ -11093,6 +11300,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "col_560",
+        "canDisguise": false,
         "model": "cube",
         "x": 0,
         "y": 4,
@@ -11449,6 +11657,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "tank_582",
+        "canDisguise": false,
         "model": "cube",
         "x": 24,
         "y": 33.25,
@@ -11469,6 +11678,7 @@ registerLevel("Apartment", [
     },
     {
         "id": "tank_583",
+        "canDisguise": false,
         "model": "cube",
         "x": -24,
         "y": 33,

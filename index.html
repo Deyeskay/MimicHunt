@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D P2P Hide & Hunt</title>
+    <title>Hunt & Hide — Casual Multiplayer Game</title>
+    <meta name="description" content="Hunt & Hide — a casual multiplayer 3D hide-and-seek shooter in your browser. Hiders disguise as props; seekers hunt them. No downloads.">
+    <meta name="application-name" content="Hunt & Hide">
+    <meta name="keywords" content="Hunt & Hide, casual multiplayer game, hide and seek, browser game, 3D shooter">
+
+    <!-- Open Graph / social share -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Hunt & Hide — Casual Multiplayer Game">
+    <meta property="og:description" content="Casual multiplayer 3D hide-and-seek, right in your browser. Disguise as props or hunt the mimics.">
+    <meta property="og:image" content="assets/icons/icon-512.png">
+
+    <!-- Twitter card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Hunt & Hide — Casual Multiplayer Game">
+    <meta name="twitter:description" content="Casual multiplayer 3D hide-and-seek, right in your browser.">
+    <meta name="twitter:image" content="assets/icons/icon-512.png">
 
     <!-- Google tag (gtag.js) — GA4 property "huntnhide" (G-BNV1CHY5CV) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-BNV1CHY5CV"></script>
@@ -21,7 +36,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Hide & Hunt">
+    <meta name="apple-mobile-web-app-title" content="Hunt & Hide">
     <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="assets/icons/icon.svg">
 
@@ -470,6 +485,7 @@
                 <span id="lobby-name-text">Player</span>
                 <input id="lobby-name-input" type="text" maxlength="16" autocomplete="off" style="display:none;">
             </div>
+            <button id="btn-lobby-fullscreen" class="lobby-icon-btn interactive fs-toggle" title="Fullscreen" aria-label="Fullscreen">⛶</button>
             <button id="btn-lobby-settings" class="lobby-icon-btn interactive" title="Settings" aria-label="Settings">⚙</button>
         </div>
 
@@ -514,6 +530,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Some props (barrel/books/bucket/chair/cupboard/pillar) + hunter.glb are Draco-
+         compressed; GLTFLoader needs DRACOLoader wired or they fail with "No DRACOLoader
+         instance provided". See Level.loadModels / editor.html loader setup. -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
     <!-- Post-processing (bloom) for High graphics. Order matters: shaders → composer → passes. -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>

@@ -770,6 +770,8 @@ const PropLevel = {
         if (data.collision !== def.collision) out.collision = data.collision;
         if (data.climbable !== def.climbable) out.climbable = data.climbable;
         if (data.hideSpot !== def.hideSpot) out.hideSpot = data.hideSpot;
+        if (data.canDisguise !== undefined && data.canDisguise !== def.canDisguise)
+            out.canDisguise = data.canDisguise;
 
         // Spawn flags are per-instance — emit only when set.
         if (data.spawnPoint) out.spawnPoint = true;

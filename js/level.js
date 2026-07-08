@@ -643,10 +643,22 @@ const Level = {
         return group;
     },
 
+    // A DRACOLoader pointed at the r128 decoder on the same CDN as three itself.
+    // Draco-compressed GLBs (barrel/books/bucket/chair/cupboard/pillar + hunter)
+    // fail to parse without one. Cache a single instance across loaders.
+    makeDracoLoader: function() {
+        if (this._draco) return this._draco;
+        const d = new THREE.DRACOLoader();
+        d.setDecoderPath("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/draco/");
+        this._draco = d;
+        return d;
+    },
+
     // onProgress(loaded, total) — optional; called after each asset resolves
     // (success OR failure) so the boot loading screen can show real progress.
     loadModels: function(callback, onProgress) {
         const loader = new THREE.GLTFLoader();
+        loader.setDRACOLoader(this.makeDracoLoader());
         const files = [
             { key: "tree", path: "assets/models/tree1.glb" },
             { key: "rock", path: "assets/models/rock1.glb" },

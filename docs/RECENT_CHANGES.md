@@ -3,6 +3,82 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-09
+
+- **Editor: per-instance "Can Disguise" override + richer override tooltip.** Files:
+  `editor.html`, `js/props.js`. Added a **Can Disguise** checkbox to the inspector's
+  Gameplay section, wired like the other flags (multi-select aware). `data.canDisguise`
+  is now resolved from the prefab at build/place time and carried through duplicate,
+  undo/redo (`snapshotObject`), and load; `exportProp` emits it only when it differs
+  from the prefab default (slim output). The game already honored per-instance
+  `canDisguise` (`PropLevel.canDisguiseAs`), so a level author can now opt a single prop
+  in/out of disguise from the UI. The hierarchy ✎ tooltip (`propOverrides`) now shows
+  the **prefab baseline** alongside each override — e.g. `material: Apartment Marble Wall
+  (prefab: none)`, `canDisguise: false (prefab: true)` — and only flags gameplay flags
+  when they actually differ from the prefab. Also fixed two latent bugs surfaced here:
+  duplicating a prop dropped its `material`, and undo/redo dropped `texture` + `material`
+  (snapshot now carries them).
+
+- **Fix: Draco-compressed GLBs never loaded (game + editor) — DRACOLoader now wired.**
+  Files: `index.html`, `editor.html`, `js/level.js`. 7 GLBs carry
+  `KHR_draco_mesh_compression` — `barrel1`, `books`, `bucket`, `chair`, `cupboard`,
+  `pillar`, and **`hunter.glb`** (the Seeker rig). `GLTFLoader` was created without a
+  `DRACOLoader`, so parsing each threw `THREE.GLTFLoader: No DRACOLoader instance
+  provided` — the props silently vanished from levels and seekers fell back to box
+  primitives. Fix: load `examples/js/loaders/DRACOLoader.js` in both HTML entry points
+  and attach a `DRACOLoader` (decoder from the matching `three@0.128.0` CDN path) to
+  every `GLTFLoader`. In `level.js` via new `Level.makeDracoLoader()` (cached, shared by
+  the prop + rig loaders); in `editor.html` on the module-level `loader`.
+- **Editor: queue props waiting on async models instead of dropping them, with a
+  visible status.** File: `editor.html`. Earlier this looked like a load-timing race
+  (it wasn't — it was the Draco failure above), but the async gap is real: a level
+  loaded before its GLBs arrive now parks those props in a `pendingProps` list and
+  `drainPendingProps(name)` rebuilds them as each model resolves (no re-import). A
+  bottom-left `#loadStatus` banner reports "N object(s) waiting…"; a 10s watchdog
+  (`checkPendingStalled`) alerts which model(s) never loaded so a genuine failure can't
+  fail silently in the background. Truly unknown models still alert immediately.
+
+- **Fix: results "Back to Lobby" / "Leave" buttons unclickable with a full roster.**
+  File: `css/style.css`. `.results-card` is a flex column capped at
+  `max-height: calc(100dvh - 48px)` with default (visible) overflow, and
+  `.results-table-wrap` had only `overflow:auto` — no flex sizing. With several
+  players the scoreboard table kept its full content height (flex `min-height:auto`),
+  growing the card past the viewport and pushing `.results-hint` + `.results-actions`
+  **below the screen**, so the buttons rendered but couldn't be clicked. Symptom:
+  host mashes the dead **Back to Lobby**, accidentally hits **Leave**, and lands in a
+  fresh auto-hosted lobby (`leaveMatch`→`shutdownHost`→`cleanup(rehost)`→
+  `autoHostLobby`) — new room code, previous players gone. Fix: `.results-table-wrap`
+  now `flex: 1 1 auto; min-height: 0;` so the table absorbs leftover card height and
+  scrolls **internally**, keeping hint + action buttons inside the card on any screen
+  size / roster count.
+
+- **PC defaults SHOW MOBILE CONTROLS off.** File: `js/app.js`. Mirroring the mobile
+  graphics-quality default, a fresh non-touch device (`!isMobileDevice()`) now boots
+  with `showMobileControls=false` + the settings checkbox unchecked. The toggle stays
+  visible (a touch-laptop can re-enable), and returning users' saved choice is
+  untouched. The on-screen pad was already hidden on desktop by `@media (pointer:
+  coarse)`; this also flips PC players to the held-power pill path (`ui.js`).
+
+- **Loading-screen CONTINUE now also enters fullscreen.** File: `js/app.js`. The
+  `LoadingScreen.dismiss()` path (fired by the CONTINUE button click or Enter — both
+  user gestures) now calls `enterFullscreen()` when not already fullscreen, so the game
+  starts edge-to-edge / with the mobile address bar collapsed. No-op if already
+  fullscreen; the `.fs-toggle` buttons still toggle it back out.
+
+- **Fix: fullscreen icon missing from the PUBG lobby.** File: `index.html`. The old
+  floating fullscreen button lived on `#menu-screen` (now unused DOM after the lobby
+  overlay rewrite), so the lobby/loading states had no fullscreen toggle. Added
+  `#btn-lobby-fullscreen` (`.lobby-icon-btn .fs-toggle` ⛶) to `.lobby-tr` beside the
+  settings gear. No JS/CSS change needed — the existing `.fs-toggle` click handler and
+  `syncFullscreenButtons()` glyph-swap ([app.js](../js/app.js)) pick it up since the
+  lobby DOM exists at load. In-game HUD button (`#btn-fullscreen`) unchanged.
+
+- **Fix: client Back-to-Lobby left `sessionEnding` armed.** File: `js/network.js`.
+  `clientBackToLobby()` now clears `sessionEnding` + `migrating` (like the host's
+  `returnToLobby`). Previously a client that clicked its own **Back to Lobby** before
+  the host broadcast `returnLobby` stayed with `sessionEnding=true`, so a host crash in
+  that window was read as intentional → no migration → client stranded in a dead lobby.
+
 ## 2026-07-08
 
 - **Lobby garden backdrop (JPG behind character).** Files: `index.html`, `css/style.css`,
