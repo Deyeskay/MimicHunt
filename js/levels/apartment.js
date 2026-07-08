@@ -1280,9 +1280,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_65",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_65",        "model": "cube",
         "x": 0,
         "y": -0.49,
         "z": 11.21,
@@ -1303,9 +1301,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_66",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_66",        "model": "cube",
         "x": 0,
         "y": 0.17,
         "z": 12.61,
@@ -1326,9 +1322,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_67",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_67",        "model": "cube",
         "x": 0,
         "y": 0.84,
         "z": 14.01,
@@ -1349,9 +1343,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_68",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_68",        "model": "cube",
         "x": 0,
         "y": 1.51,
         "z": 15.41,
@@ -1372,9 +1364,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_69",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_69",        "model": "cube",
         "x": 0,
         "y": 2.17,
         "z": 16.81,
@@ -1395,9 +1385,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_70",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_70",        "model": "cube",
         "x": 0,
         "y": 2.84,
         "z": 18.21,
@@ -1418,9 +1406,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_71",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_71",        "model": "cube",
         "x": 0,
         "y": 3.51,
         "z": 19.61,
@@ -1441,9 +1427,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_72",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_72",        "model": "cube",
         "x": 0,
         "y": 4.17,
         "z": 21.01,
@@ -1464,9 +1448,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_73",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_73",        "model": "cube",
         "x": 0,
         "y": 4.84,
         "z": 22.41,
@@ -1487,9 +1469,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_74",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_74",        "model": "cube",
         "x": 0,
         "y": 5.51,
         "z": 23.81,
@@ -1510,9 +1490,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_75",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_75",        "model": "cube",
         "x": 0,
         "y": 6.17,
         "z": 25.21,
@@ -1533,9 +1511,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_76",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_76",        "model": "cube",
         "x": 0,
         "y": 6.84,
         "z": 26.58,
@@ -1556,9 +1532,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_77",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_77",        "model": "cube",
         "x": 0,
         "y": -0.48,
         "z": -11.26,
@@ -1579,9 +1553,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_78",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_78",        "model": "cube",
         "x": 0,
         "y": 0.19,
         "z": -12.66,
@@ -1602,9 +1574,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_79",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_79",        "model": "cube",
         "x": 0,
         "y": 0.86,
         "z": -14.06,
@@ -1625,9 +1595,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_80",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_80",        "model": "cube",
         "x": 0,
         "y": 1.52,
         "z": -15.46,
@@ -1648,9 +1616,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_81",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_81",        "model": "cube",
         "x": 0,
         "y": 2.19,
         "z": -16.86,
@@ -1671,9 +1637,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_82",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_82",        "model": "cube",
         "x": 0,
         "y": 2.86,
         "z": -18.26,
@@ -1694,9 +1658,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_83",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_83",        "model": "cube",
         "x": 0,
         "y": 3.52,
         "z": -19.66,
@@ -1717,9 +1679,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_84",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_84",        "model": "cube",
         "x": 0,
         "y": 4.19,
         "z": -21.06,
@@ -1740,9 +1700,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_85",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_85",        "model": "cube",
         "x": 0,
         "y": 4.86,
         "z": -22.46,
@@ -1763,9 +1721,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_86",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_86",        "model": "cube",
         "x": 0,
         "y": 5.52,
         "z": -23.86,
@@ -1786,9 +1742,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_87",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_87",        "model": "cube",
         "x": 0,
         "y": 6.19,
         "z": -25.26,
@@ -1809,9 +1763,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_88",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_88",        "model": "cube",
         "x": 0,
         "y": 6.86,
         "z": -26.66,
@@ -1832,9 +1784,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_89",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_89",        "model": "cube",
         "x": 11.25,
         "y": -0.44,
         "z": 0,
@@ -1855,9 +1805,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_90",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_90",        "model": "cube",
         "x": 12.65,
         "y": 0.22,
         "z": 0,
@@ -1878,9 +1826,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_91",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_91",        "model": "cube",
         "x": 14.05,
         "y": 0.89,
         "z": 0,
@@ -1901,9 +1847,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_92",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_92",        "model": "cube",
         "x": 15.45,
         "y": 1.56,
         "z": 0,
@@ -1924,9 +1868,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_93",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_93",        "model": "cube",
         "x": 16.85,
         "y": 2.22,
         "z": 0,
@@ -1947,9 +1889,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_94",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_94",        "model": "cube",
         "x": 18.25,
         "y": 2.89,
         "z": 0,
@@ -1970,9 +1910,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_95",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_95",        "model": "cube",
         "x": 19.65,
         "y": 3.56,
         "z": 0,
@@ -1993,9 +1931,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_96",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_96",        "model": "cube",
         "x": 21.05,
         "y": 4.22,
         "z": 0,
@@ -2016,9 +1952,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_97",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_97",        "model": "cube",
         "x": 22.45,
         "y": 4.89,
         "z": 0,
@@ -2039,9 +1973,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_98",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_98",        "model": "cube",
         "x": 23.85,
         "y": 5.56,
         "z": 0,
@@ -2062,9 +1994,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_99",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_99",        "model": "cube",
         "x": 25.25,
         "y": 6.22,
         "z": 0,
@@ -2085,9 +2015,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_100",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_100",        "model": "cube",
         "x": 26.65,
         "y": 6.89,
         "z": 0,
@@ -2108,9 +2036,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_101",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_101",        "model": "cube",
         "x": -11.28,
         "y": -0.45,
         "z": 0,
@@ -2131,9 +2057,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_102",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_102",        "model": "cube",
         "x": -12.68,
         "y": 0.21,
         "z": 0,
@@ -2154,9 +2078,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_103",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_103",        "model": "cube",
         "x": -14.08,
         "y": 0.88,
         "z": 0,
@@ -2177,9 +2099,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_104",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_104",        "model": "cube",
         "x": -15.48,
         "y": 1.55,
         "z": 0,
@@ -2200,9 +2120,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_105",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_105",        "model": "cube",
         "x": -16.88,
         "y": 2.21,
         "z": 0,
@@ -2223,9 +2141,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_106",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_106",        "model": "cube",
         "x": -18.28,
         "y": 2.88,
         "z": 0,
@@ -2246,9 +2162,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_107",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_107",        "model": "cube",
         "x": -19.68,
         "y": 3.55,
         "z": 0,
@@ -2269,9 +2183,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_108",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_108",        "model": "cube",
         "x": -21.08,
         "y": 4.21,
         "z": 0,
@@ -2292,9 +2204,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_109",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_109",        "model": "cube",
         "x": -22.48,
         "y": 4.88,
         "z": 0,
@@ -2315,9 +2225,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_110",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_110",        "model": "cube",
         "x": -23.88,
         "y": 5.55,
         "z": 0,
@@ -2338,9 +2246,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_111",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_111",        "model": "cube",
         "x": -25.28,
         "y": 6.21,
         "z": 0,
@@ -2361,9 +2267,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_112",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_112",        "model": "cube",
         "x": -26.68,
         "y": 6.88,
         "z": 0,
@@ -2384,9 +2288,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_113",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_113",        "model": "cube",
         "x": 0,
         "y": 7.98,
         "z": 10.7,
@@ -2407,9 +2309,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_114",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_114",        "model": "cube",
         "x": 0,
         "y": 8.65,
         "z": 12.1,
@@ -2430,9 +2330,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_115",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_115",        "model": "cube",
         "x": 0,
         "y": 9.32,
         "z": 13.5,
@@ -2453,9 +2351,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_116",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_116",        "model": "cube",
         "x": 0,
         "y": 9.98,
         "z": 14.9,
@@ -2476,9 +2372,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_117",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_117",        "model": "cube",
         "x": 0,
         "y": 10.65,
         "z": 16.3,
@@ -2499,9 +2393,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_118",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_118",        "model": "cube",
         "x": 0,
         "y": 11.32,
         "z": 17.7,
@@ -2522,9 +2414,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_119",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_119",        "model": "cube",
         "x": 0,
         "y": 11.98,
         "z": 19.1,
@@ -2545,9 +2435,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_120",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_120",        "model": "cube",
         "x": 0,
         "y": 12.65,
         "z": 20.5,
@@ -2568,9 +2456,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_121",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_121",        "model": "cube",
         "x": 0,
         "y": 13.32,
         "z": 21.9,
@@ -2591,9 +2477,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_122",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_122",        "model": "cube",
         "x": 0,
         "y": 13.98,
         "z": 23.3,
@@ -2614,9 +2498,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_123",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_123",        "model": "cube",
         "x": 0,
         "y": 14.65,
         "z": 24.7,
@@ -2637,9 +2519,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_124",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_124",        "model": "cube",
         "x": 0,
         "y": 15.32,
         "z": 26.1,
@@ -2660,9 +2540,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_125",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_125",        "model": "cube",
         "x": 0,
         "y": 7.98,
         "z": -10.7,
@@ -2683,9 +2561,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_126",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_126",        "model": "cube",
         "x": 0,
         "y": 8.65,
         "z": -12.1,
@@ -2706,9 +2582,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_127",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_127",        "model": "cube",
         "x": 0,
         "y": 9.32,
         "z": -13.5,
@@ -2729,9 +2603,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_128",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_128",        "model": "cube",
         "x": 0,
         "y": 9.98,
         "z": -14.9,
@@ -2752,9 +2624,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_129",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_129",        "model": "cube",
         "x": 0,
         "y": 10.65,
         "z": -16.3,
@@ -2775,9 +2645,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_130",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_130",        "model": "cube",
         "x": 0,
         "y": 11.32,
         "z": -17.7,
@@ -2798,9 +2666,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_131",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_131",        "model": "cube",
         "x": 0,
         "y": 11.98,
         "z": -19.1,
@@ -2821,9 +2687,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_132",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_132",        "model": "cube",
         "x": 0,
         "y": 12.65,
         "z": -20.5,
@@ -2844,9 +2708,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_133",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_133",        "model": "cube",
         "x": 0,
         "y": 13.32,
         "z": -21.9,
@@ -2867,9 +2729,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_134",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_134",        "model": "cube",
         "x": 0,
         "y": 13.98,
         "z": -23.3,
@@ -2890,9 +2750,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_135",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_135",        "model": "cube",
         "x": 0,
         "y": 14.65,
         "z": -24.7,
@@ -2913,9 +2771,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_136",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_136",        "model": "cube",
         "x": 0,
         "y": 15.32,
         "z": -26.1,
@@ -2936,9 +2792,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_137",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_137",        "model": "cube",
         "x": 10.7,
         "y": 7.98,
         "z": 0,
@@ -2959,9 +2813,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_138",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_138",        "model": "cube",
         "x": 12.1,
         "y": 8.65,
         "z": 0,
@@ -2982,9 +2834,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_139",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_139",        "model": "cube",
         "x": 13.5,
         "y": 9.32,
         "z": 0,
@@ -3005,9 +2855,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_140",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_140",        "model": "cube",
         "x": 14.9,
         "y": 9.98,
         "z": 0,
@@ -3028,9 +2876,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_141",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_141",        "model": "cube",
         "x": 16.3,
         "y": 10.65,
         "z": 0,
@@ -3051,9 +2897,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_142",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_142",        "model": "cube",
         "x": 17.7,
         "y": 11.32,
         "z": 0,
@@ -3074,9 +2918,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_143",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_143",        "model": "cube",
         "x": 19.1,
         "y": 11.98,
         "z": 0,
@@ -3097,9 +2939,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_144",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_144",        "model": "cube",
         "x": 20.5,
         "y": 12.65,
         "z": 0,
@@ -3120,9 +2960,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_145",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_145",        "model": "cube",
         "x": 21.9,
         "y": 13.32,
         "z": 0,
@@ -3143,9 +2981,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_146",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_146",        "model": "cube",
         "x": 23.3,
         "y": 13.98,
         "z": 0,
@@ -3166,9 +3002,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_147",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_147",        "model": "cube",
         "x": 24.7,
         "y": 14.65,
         "z": 0,
@@ -3189,9 +3023,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_148",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_148",        "model": "cube",
         "x": 26.1,
         "y": 15.32,
         "z": 0,
@@ -3212,9 +3044,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_149",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_149",        "model": "cube",
         "x": -10.7,
         "y": 7.98,
         "z": 0,
@@ -3235,9 +3065,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_150",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_150",        "model": "cube",
         "x": -12.1,
         "y": 8.65,
         "z": 0,
@@ -3258,9 +3086,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_151",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_151",        "model": "cube",
         "x": -13.5,
         "y": 9.32,
         "z": 0,
@@ -3281,9 +3107,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_152",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_152",        "model": "cube",
         "x": -14.9,
         "y": 9.98,
         "z": 0,
@@ -3304,9 +3128,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_153",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_153",        "model": "cube",
         "x": -16.3,
         "y": 10.65,
         "z": 0,
@@ -3327,9 +3149,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_154",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_154",        "model": "cube",
         "x": -17.7,
         "y": 11.32,
         "z": 0,
@@ -3350,9 +3170,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_155",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_155",        "model": "cube",
         "x": -19.1,
         "y": 11.98,
         "z": 0,
@@ -3373,9 +3191,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_156",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_156",        "model": "cube",
         "x": -20.5,
         "y": 12.65,
         "z": 0,
@@ -3396,9 +3212,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_157",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_157",        "model": "cube",
         "x": -21.9,
         "y": 13.32,
         "z": 0,
@@ -3419,9 +3233,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_158",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_158",        "model": "cube",
         "x": -23.3,
         "y": 13.98,
         "z": 0,
@@ -3442,9 +3254,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_159",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_159",        "model": "cube",
         "x": -24.7,
         "y": 14.65,
         "z": 0,
@@ -3465,9 +3275,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_160",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_160",        "model": "cube",
         "x": -26.1,
         "y": 15.32,
         "z": 0,
@@ -3488,9 +3296,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_161",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_161",        "model": "cube",
         "x": 0,
         "y": 15.98,
         "z": 10.7,
@@ -3511,9 +3317,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_162",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_162",        "model": "cube",
         "x": 0,
         "y": 16.65,
         "z": 12.1,
@@ -3534,9 +3338,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_163",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_163",        "model": "cube",
         "x": 0,
         "y": 17.32,
         "z": 13.5,
@@ -3557,9 +3359,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_164",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_164",        "model": "cube",
         "x": 0,
         "y": 17.98,
         "z": 14.9,
@@ -3580,9 +3380,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_165",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_165",        "model": "cube",
         "x": 0,
         "y": 18.65,
         "z": 16.3,
@@ -3603,9 +3401,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_166",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_166",        "model": "cube",
         "x": 0,
         "y": 19.32,
         "z": 17.7,
@@ -3626,9 +3422,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_167",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_167",        "model": "cube",
         "x": 0,
         "y": 19.98,
         "z": 19.1,
@@ -3649,9 +3443,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_168",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_168",        "model": "cube",
         "x": 0,
         "y": 20.65,
         "z": 20.5,
@@ -3672,9 +3464,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_169",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_169",        "model": "cube",
         "x": 0,
         "y": 21.32,
         "z": 21.9,
@@ -3695,9 +3485,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_170",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_170",        "model": "cube",
         "x": 0,
         "y": 21.98,
         "z": 23.3,
@@ -3718,9 +3506,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_171",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_171",        "model": "cube",
         "x": 0,
         "y": 22.65,
         "z": 24.7,
@@ -3741,9 +3527,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_172",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_172",        "model": "cube",
         "x": 0,
         "y": 23.32,
         "z": 26.1,
@@ -3764,9 +3548,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_173",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_173",        "model": "cube",
         "x": 0,
         "y": 15.98,
         "z": -10.7,
@@ -3787,9 +3569,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_174",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_174",        "model": "cube",
         "x": 0,
         "y": 16.65,
         "z": -12.1,
@@ -3810,9 +3590,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_175",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_175",        "model": "cube",
         "x": 0,
         "y": 17.32,
         "z": -13.5,
@@ -3833,9 +3611,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_176",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_176",        "model": "cube",
         "x": 0,
         "y": 17.98,
         "z": -14.9,
@@ -3856,9 +3632,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_177",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_177",        "model": "cube",
         "x": 0,
         "y": 18.65,
         "z": -16.3,
@@ -3879,9 +3653,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_178",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_178",        "model": "cube",
         "x": 0,
         "y": 19.32,
         "z": -17.7,
@@ -3902,9 +3674,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_179",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_179",        "model": "cube",
         "x": 0,
         "y": 19.98,
         "z": -19.1,
@@ -3925,9 +3695,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_180",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_180",        "model": "cube",
         "x": 0,
         "y": 20.65,
         "z": -20.5,
@@ -3948,9 +3716,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_181",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_181",        "model": "cube",
         "x": 0,
         "y": 21.32,
         "z": -21.9,
@@ -3971,9 +3737,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_182",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_182",        "model": "cube",
         "x": 0,
         "y": 21.98,
         "z": -23.3,
@@ -3994,9 +3758,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_183",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_183",        "model": "cube",
         "x": 0,
         "y": 22.65,
         "z": -24.7,
@@ -4017,9 +3779,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_184",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_184",        "model": "cube",
         "x": 0,
         "y": 23.32,
         "z": -26.1,
@@ -4040,9 +3800,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_185",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_185",        "model": "cube",
         "x": 10.7,
         "y": 15.98,
         "z": 0,
@@ -4063,9 +3821,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_186",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_186",        "model": "cube",
         "x": 12.1,
         "y": 16.65,
         "z": 0,
@@ -4086,9 +3842,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_187",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_187",        "model": "cube",
         "x": 13.5,
         "y": 17.32,
         "z": 0,
@@ -4109,9 +3863,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_188",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_188",        "model": "cube",
         "x": 14.9,
         "y": 17.98,
         "z": 0,
@@ -4132,9 +3884,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_189",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_189",        "model": "cube",
         "x": 16.3,
         "y": 18.65,
         "z": 0,
@@ -4155,9 +3905,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_190",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_190",        "model": "cube",
         "x": 17.7,
         "y": 19.32,
         "z": 0,
@@ -4178,9 +3926,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_191",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_191",        "model": "cube",
         "x": 19.1,
         "y": 19.98,
         "z": 0,
@@ -4201,9 +3947,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_192",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_192",        "model": "cube",
         "x": 20.5,
         "y": 20.65,
         "z": 0,
@@ -4224,9 +3968,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_193",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_193",        "model": "cube",
         "x": 21.9,
         "y": 21.32,
         "z": 0,
@@ -4247,9 +3989,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_194",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_194",        "model": "cube",
         "x": 23.3,
         "y": 21.98,
         "z": 0,
@@ -4270,9 +4010,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_195",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_195",        "model": "cube",
         "x": 24.7,
         "y": 22.65,
         "z": 0,
@@ -4293,9 +4031,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_196",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_196",        "model": "cube",
         "x": 26.1,
         "y": 23.32,
         "z": 0,
@@ -4316,9 +4052,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_197",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_197",        "model": "cube",
         "x": -10.7,
         "y": 15.98,
         "z": 0,
@@ -4339,9 +4073,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_198",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_198",        "model": "cube",
         "x": -12.1,
         "y": 16.65,
         "z": 0,
@@ -4362,9 +4094,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_199",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_199",        "model": "cube",
         "x": -13.5,
         "y": 17.32,
         "z": 0,
@@ -4385,9 +4115,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_200",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_200",        "model": "cube",
         "x": -14.9,
         "y": 17.98,
         "z": 0,
@@ -4408,9 +4136,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_201",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_201",        "model": "cube",
         "x": -16.3,
         "y": 18.65,
         "z": 0,
@@ -4431,9 +4157,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_202",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_202",        "model": "cube",
         "x": -17.7,
         "y": 19.32,
         "z": 0,
@@ -4454,9 +4178,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_203",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_203",        "model": "cube",
         "x": -19.1,
         "y": 19.98,
         "z": 0,
@@ -4477,9 +4199,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_204",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_204",        "model": "cube",
         "x": -20.5,
         "y": 20.65,
         "z": 0,
@@ -4500,9 +4220,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_205",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_205",        "model": "cube",
         "x": -21.9,
         "y": 21.32,
         "z": 0,
@@ -4523,9 +4241,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_206",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_206",        "model": "cube",
         "x": -23.3,
         "y": 21.98,
         "z": 0,
@@ -4546,9 +4262,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_207",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_207",        "model": "cube",
         "x": -24.7,
         "y": 22.65,
         "z": 0,
@@ -4569,9 +4283,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_208",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_208",        "model": "cube",
         "x": -26.1,
         "y": 23.32,
         "z": 0,
@@ -4592,9 +4304,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_209",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_209",        "model": "cube",
         "x": 0,
         "y": 23.98,
         "z": 10.7,
@@ -4615,9 +4325,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_210",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_210",        "model": "cube",
         "x": 0,
         "y": 24.65,
         "z": 12.1,
@@ -4638,9 +4346,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_211",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_211",        "model": "cube",
         "x": 0,
         "y": 25.32,
         "z": 13.5,
@@ -4661,9 +4367,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_212",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_212",        "model": "cube",
         "x": 0,
         "y": 25.98,
         "z": 14.9,
@@ -4684,9 +4388,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_213",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_213",        "model": "cube",
         "x": 0,
         "y": 26.65,
         "z": 16.3,
@@ -4707,9 +4409,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_214",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_214",        "model": "cube",
         "x": 0,
         "y": 27.32,
         "z": 17.7,
@@ -4730,9 +4430,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_215",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_215",        "model": "cube",
         "x": 0,
         "y": 27.98,
         "z": 19.1,
@@ -4753,9 +4451,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_216",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_216",        "model": "cube",
         "x": 0,
         "y": 28.65,
         "z": 20.5,
@@ -4776,9 +4472,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_217",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_217",        "model": "cube",
         "x": 0,
         "y": 29.32,
         "z": 21.9,
@@ -4799,9 +4493,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_218",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_218",        "model": "cube",
         "x": 0,
         "y": 29.98,
         "z": 23.3,
@@ -4822,9 +4514,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_219",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_219",        "model": "cube",
         "x": 0,
         "y": 30.65,
         "z": 24.7,
@@ -4845,9 +4535,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_220",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_220",        "model": "cube",
         "x": 0,
         "y": 31.32,
         "z": 26.1,
@@ -4868,9 +4556,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_221",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_221",        "model": "cube",
         "x": 0,
         "y": 23.98,
         "z": -10.7,
@@ -4891,9 +4577,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_222",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_222",        "model": "cube",
         "x": 0,
         "y": 24.65,
         "z": -12.1,
@@ -4914,9 +4598,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_223",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_223",        "model": "cube",
         "x": 0,
         "y": 25.32,
         "z": -13.5,
@@ -4937,9 +4619,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_224",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_224",        "model": "cube",
         "x": 0,
         "y": 25.98,
         "z": -14.9,
@@ -4960,9 +4640,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_225",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_225",        "model": "cube",
         "x": 0,
         "y": 26.65,
         "z": -16.3,
@@ -4983,9 +4661,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_226",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_226",        "model": "cube",
         "x": 0,
         "y": 27.32,
         "z": -17.7,
@@ -5006,9 +4682,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_227",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_227",        "model": "cube",
         "x": 0,
         "y": 27.98,
         "z": -19.1,
@@ -5029,9 +4703,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_228",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_228",        "model": "cube",
         "x": 0,
         "y": 28.65,
         "z": -20.5,
@@ -5052,9 +4724,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_229",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_229",        "model": "cube",
         "x": 0,
         "y": 29.32,
         "z": -21.9,
@@ -5075,9 +4745,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_230",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_230",        "model": "cube",
         "x": 0,
         "y": 29.98,
         "z": -23.3,
@@ -5098,9 +4766,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_231",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_231",        "model": "cube",
         "x": 0,
         "y": 30.65,
         "z": -24.7,
@@ -5121,9 +4787,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_232",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_232",        "model": "cube",
         "x": 0,
         "y": 31.32,
         "z": -26.1,
@@ -5144,9 +4808,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_233",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_233",        "model": "cube",
         "x": 10.7,
         "y": 23.98,
         "z": 0,
@@ -5167,9 +4829,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_234",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_234",        "model": "cube",
         "x": 12.1,
         "y": 24.65,
         "z": 0,
@@ -5190,9 +4850,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_235",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_235",        "model": "cube",
         "x": 13.5,
         "y": 25.32,
         "z": 0,
@@ -5213,9 +4871,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_236",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_236",        "model": "cube",
         "x": 14.9,
         "y": 25.98,
         "z": 0,
@@ -5236,9 +4892,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_237",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_237",        "model": "cube",
         "x": 16.3,
         "y": 26.65,
         "z": 0,
@@ -5259,9 +4913,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_238",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_238",        "model": "cube",
         "x": 17.7,
         "y": 27.32,
         "z": 0,
@@ -5282,9 +4934,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_239",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_239",        "model": "cube",
         "x": 19.1,
         "y": 27.98,
         "z": 0,
@@ -5305,9 +4955,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_240",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_240",        "model": "cube",
         "x": 20.5,
         "y": 28.65,
         "z": 0,
@@ -5328,9 +4976,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_241",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_241",        "model": "cube",
         "x": 21.9,
         "y": 29.32,
         "z": 0,
@@ -5351,9 +4997,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_242",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_242",        "model": "cube",
         "x": 23.3,
         "y": 29.98,
         "z": 0,
@@ -5374,9 +5018,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_243",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_243",        "model": "cube",
         "x": 24.7,
         "y": 30.65,
         "z": 0,
@@ -5397,9 +5039,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_244",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_244",        "model": "cube",
         "x": 26.1,
         "y": 31.32,
         "z": 0,
@@ -5420,9 +5060,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_245",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_245",        "model": "cube",
         "x": -10.7,
         "y": 23.98,
         "z": 0,
@@ -5443,9 +5081,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_246",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_246",        "model": "cube",
         "x": -12.1,
         "y": 24.65,
         "z": 0,
@@ -5466,9 +5102,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_247",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_247",        "model": "cube",
         "x": -13.5,
         "y": 25.32,
         "z": 0,
@@ -5489,9 +5123,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_248",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_248",        "model": "cube",
         "x": -14.9,
         "y": 25.98,
         "z": 0,
@@ -5512,9 +5144,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_249",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_249",        "model": "cube",
         "x": -16.3,
         "y": 26.65,
         "z": 0,
@@ -5535,9 +5165,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_250",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_250",        "model": "cube",
         "x": -17.7,
         "y": 27.32,
         "z": 0,
@@ -5558,9 +5186,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_251",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_251",        "model": "cube",
         "x": -19.1,
         "y": 27.98,
         "z": 0,
@@ -5581,9 +5207,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_252",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_252",        "model": "cube",
         "x": -20.5,
         "y": 28.65,
         "z": 0,
@@ -5604,9 +5228,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_253",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_253",        "model": "cube",
         "x": -21.9,
         "y": 29.32,
         "z": 0,
@@ -5627,9 +5249,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_254",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_254",        "model": "cube",
         "x": -23.3,
         "y": 29.98,
         "z": 0,
@@ -5650,9 +5270,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_255",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_255",        "model": "cube",
         "x": -24.7,
         "y": 30.65,
         "z": 0,
@@ -5673,9 +5291,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "step_256",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "step_256",        "model": "cube",
         "x": -26.1,
         "y": 31.32,
         "z": 0,
@@ -10984,9 +10600,7 @@ registerLevel("Apartment", [
         "material": "Apartment Marble Wall"
     },
     {
-        "id": "col_545",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_545",        "model": "cube",
         "x": 15,
         "y": 4,
         "z": 15,
@@ -11005,9 +10619,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_546",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_546",        "model": "cube",
         "x": -15,
         "y": 4,
         "z": 15,
@@ -11026,9 +10638,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_547",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_547",        "model": "cube",
         "x": -15,
         "y": 4,
         "z": -15,
@@ -11047,9 +10657,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_548",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_548",        "model": "cube",
         "x": 15,
         "y": 4,
         "z": -15,
@@ -11068,9 +10676,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_549",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_549",        "model": "cube",
         "x": 28,
         "y": 4,
         "z": 12,
@@ -11089,9 +10695,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_550",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_550",        "model": "cube",
         "x": 12,
         "y": 4,
         "z": 28,
@@ -11110,9 +10714,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_551",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_551",        "model": "cube",
         "x": -28,
         "y": 4,
         "z": -12,
@@ -11131,9 +10733,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_552",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_552",        "model": "cube",
         "x": -12,
         "y": 4,
         "z": -28,
@@ -11152,9 +10752,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_553",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_553",        "model": "cube",
         "x": 28,
         "y": 4,
         "z": -12,
@@ -11173,9 +10771,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_554",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_554",        "model": "cube",
         "x": -12,
         "y": 4,
         "z": 28,
@@ -11194,9 +10790,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_555",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_555",        "model": "cube",
         "x": -28,
         "y": 4,
         "z": 12,
@@ -11215,9 +10809,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_556",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_556",        "model": "cube",
         "x": 12,
         "y": 4,
         "z": -28,
@@ -11236,9 +10828,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_557",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_557",        "model": "cube",
         "x": 28,
         "y": 4,
         "z": 0,
@@ -11257,9 +10847,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_558",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_558",        "model": "cube",
         "x": -28,
         "y": 4,
         "z": 0,
@@ -11278,9 +10866,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_559",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_559",        "model": "cube",
         "x": 0,
         "y": 4,
         "z": 28,
@@ -11299,9 +10885,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "col_560",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "col_560",        "model": "cube",
         "x": 0,
         "y": 4,
         "z": -28,
@@ -11656,9 +11240,7 @@ registerLevel("Apartment", [
         "material": "Apartment Marble Wall"
     },
     {
-        "id": "tank_582",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "tank_582",        "model": "cube",
         "x": 24,
         "y": 33.25,
         "z": -24,
@@ -11677,9 +11259,7 @@ registerLevel("Apartment", [
         "material": "Apartment Concrete Floor"
     },
     {
-        "id": "tank_583",
-        "canDisguise": false,
-        "model": "cube",
+        "id": "tank_583",        "model": "cube",
         "x": -24,
         "y": 33,
         "z": 24,

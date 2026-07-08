@@ -208,6 +208,9 @@ const HIDER_MAX_HP = 12;       // hider hit points — sized so a full 8-round m
 const SHOT_DAMAGE = 1;         // HP removed per normal hit (reduced share of max HP vs
                                // the old 1-of-5 model → hiders take less relative damage)
 const SHOT_RANGE = 60;         // max pulse travel / hit range (world units)
+const DISGUISE_VERTICAL_BAND = 3; // max |feetY - propBase| to disguise as a prop; keeps
+                               // floors (~7.8 apart) from bleeding into each other so a
+                               // hider can't disguise as a prop on the floor above/below.
 const HIT_SCORE = 100;         // points per hit
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
 const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit

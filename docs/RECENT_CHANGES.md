@@ -5,6 +5,45 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-09
 
+- **UI: shrink the join-code input + dark-reskin the in-game Controls popup for
+  consistency.** File: `css/style.css`. (1) The lobby "Join a room" code field
+  (`.ljp-card input`) was oversized/chunky — `letter-spacing: 4px`, `font-size:
+  1.05rem`, `font-weight: 800`; brought it in line with the standard input
+  (`1px` / `0.95rem` / `600`). (2) The in-game Controls popup (`#controls-panel`,
+  opened from the ☰ menu) still used the wooden `.menu-card` theme while the
+  Settings screen (`.settings-pubg`) and lobby popups are dark PUBG panels. Added
+  a scoped dark re-skin (card background, heading, and the shared
+  `.setting-row`/value/select/range/checkbox controls) mirroring `.settings-pubg`
+  so it matches the rest of the UI.
+
+- **Fix: `cube` primitive was disguisable by default — floor slabs / ramps could be
+  mimicked.** File: `js/prefabs.js`. The `cube` prefab had `canDisguise: true`, so any
+  `model:"cube"` instance without an explicit override inherited it. In Apartment that
+  meant the 64 `slab_*` floor pieces and 16 `ramp_*` pieces were disguisable (the
+  `step_*` / `col_*` / `tank_*` cubes were spared only because they carried per-instance
+  `canDisguise:false`). Flipped the `cube` prefab default to `false` so all box
+  primitives are non-disguisable unless a level author opts a specific instance in with
+  `canDisguise:true`. Other primitives (`wall`, `spawn`, `door`, `fence`, `steps`,
+  `pillar`) were already `false`; `crate` (own prefab) stays disguisable. Also stripped
+  the now-redundant per-instance `canDisguise:false` overrides from all 210
+  `step_*`/`col_*`/`tank_*` cubes in `js/levels/apartment.js` (they match the prefab
+  default now).
+
+- **Fix: disguise ability offered for props on a different floor.** Files:
+  `js/mechanics.js`, `js/globals.js`. `findNearestDisguiseProp()` measured
+  proximity on the **XZ plane only** — `Math.hypot(localPos.x-center.x,
+  localPos.z-center.z)` — so a hider standing on the ground floor directly under a
+  disguisable prop on the 1st floor still saw the "disguise as prop" prompt (props
+  on stacked floors share an XZ footprint; Apartment floors are ~7.8 units apart).
+  Added a **vertical band check**: compute the player's feet Y (same base-height
+  rule as `move()` — full base in own form, `localDisguise.size/2` mid-disguise),
+  and skip any prop whose base (`prop.bottomY ?? prop.y`) is more than
+  `DISGUISE_VERTICAL_BAND` (=3, new const in `globals.js`) from the feet. `3` ≈
+  full player height, well under the floor spacing, so adjacent floors are excluded
+  while same-floor props raised slightly (e.g. `y: 0.4`) still qualify. Base-match
+  (feet vs prop base) chosen over span-overlap so a tall prop reaching down can't
+  leak into the floor below.
+
 - **Editor: per-instance "Can Disguise" override + richer override tooltip.** Files:
   `editor.html`, `js/props.js`. Added a **Can Disguise** checkbox to the inspector's
   Gameplay section, wired like the other flags (multi-select aware). `data.canDisguise`

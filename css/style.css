@@ -1474,7 +1474,7 @@ body.layout-editing .le-selected {
 }
 .ljp-card h3 { margin: 0 0 14px; font-size: 1.2rem; font-weight: 800; letter-spacing: .5px; }
 .ljp-card input {
-    width: 100%; text-align: center; letter-spacing: 4px; font-size: 1.05rem; font-weight: 800;
+    width: 100%; text-align: center; letter-spacing: 1px; font-size: 0.95rem; font-weight: 600;
     padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.25);
     background: rgba(0,0,0,0.35); color: #fff; outline: none; font-family: inherit;
 }
@@ -1640,6 +1640,49 @@ body.layout-editing .le-selected {
     .settings-pubg .setting-row > label { font-size: 0.82rem; }
     .settings-foot { padding: 10px 14px 12px; }
     .settings-save { padding: 11px; font-size: 1rem; }
+}
+
+/* =====================================================================
+   IN-GAME CONTROLS popup (#controls-panel) — dark PUBG re-skin so it
+   matches the Settings screen (.settings-pubg) + lobby popups instead of
+   the wooden .menu-card theme. Reuses the same shared .setting-row markup.
+   ===================================================================== */
+#controls-panel .menu-card {
+    border: 1px solid rgba(255,255,255,0.12);
+    background: linear-gradient(180deg, rgba(28,35,50,0.97), rgba(18,23,34,0.97));
+    box-shadow: 0 24px 60px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06);
+    color: #eaf0f8; border-radius: 18px;
+}
+#controls-panel .menu-card h2:not(.panel-title) {
+    color: #fff; -webkit-text-stroke: 0; text-shadow: none;
+    font-weight: 800; font-size: 1.25rem; letter-spacing: 1.5px; text-transform: uppercase;
+}
+#controls-panel .settings-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+#controls-panel .setting-row {
+    background: rgba(255,255,255,0.045);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+#controls-panel .setting-row > label { color: #e8edf5; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+#controls-panel .setting-unit { color: #8b97a7; }
+#controls-panel .setting-value,
+#controls-panel .setting-select {
+    background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.16); color: #fff; box-shadow: none;
+}
+#controls-panel .setting-select option { background: #1a2130; color: #fff; }
+#controls-panel input[type="range"] {
+    background: rgba(0,0,0,0.45); border: 1px solid rgba(255,255,255,0.12); box-shadow: none;
+}
+#controls-panel input[type="range"]::-webkit-slider-thumb {
+    background: radial-gradient(circle at 35% 30%, #ffe082, #f0a91e); border-color: #a86f0e;
+}
+#controls-panel input[type="range"]::-moz-range-thumb {
+    background: radial-gradient(circle at 35% 30%, #ffe082, #f0a91e); border-color: #a86f0e;
+}
+#controls-panel .setting-row input[type="checkbox"] {
+    background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.14); box-shadow: none;
+}
+#controls-panel .setting-row input[type="checkbox"]:checked {
+    background: linear-gradient(180deg, #4ade80, #22a75a); border-color: #147a3f;
 }
 
 /* =====================================================================

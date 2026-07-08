@@ -586,8 +586,18 @@ const Mechanics = {
     // Used both to perform the swap and to label the disguise button.
     findNearestDisguiseProp: function() {
         let nearest = null, nearestDist = Infinity;
+        // Player's feet Y (same base-height rule as move(): full base when in own
+        // form, half the prop size when mid-disguise and switching props).
+        const baseHeight = localDisguise.type === 'player'
+            ? PropLevel.PLAYER_BASE_HEIGHT
+            : localDisguise.size / 2;
+        const feetY = localPos.y - baseHeight;
         for (let prop of mapProps3D) {
             if (!PropLevel.canDisguiseAs(prop)) continue;
+            // Must be on the same floor: reject props whose base sits more than one
+            // band from the player's feet (props share XZ footprints across floors).
+            const propBase = prop.bottomY != null ? prop.bottomY : (prop.y || 0);
+            if (Math.abs(feetY - propBase) > DISGUISE_VERTICAL_BAND) continue;
             const center = PropLevel.getPropCenter(prop);
             const dist = Math.hypot(localPos.x - center.x, localPos.z - center.z);
             // Must be standing next to the prop: its surface (radius) + the player's

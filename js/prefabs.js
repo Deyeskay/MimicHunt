@@ -109,7 +109,7 @@ const PrefabLibrary = {
         "collision": true,
         "climbable": true,
         "hideSpot": false,
-        "canDisguise": true,
+        "canDisguise": false,
         "colliderShape": "box"
     },
     "spawn": {
