@@ -1,7 +1,7 @@
 {
-  "name": "Hide & Hunt",
-  "short_name": "HideHunt",
-  "description": "Browser peer-to-peer 3D hide-and-seek shooter. Hiders disguise as props; seekers hunt them.",
+  "name": "Hunt & Hide — Casual Multiplayer Game",
+  "short_name": "Hunt & Hide",
+  "description": "Casual multiplayer 3D hide-and-seek shooter in your browser. Hiders disguise as props; seekers hunt them.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "fullscreen",

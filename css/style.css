@@ -1218,7 +1218,9 @@ body.layout-editing .le-selected {
     color: #b9c2cf;
 }
 .results-table-wrap {
-    overflow: auto;
+    flex: 1 1 auto;          /* absorb leftover card height... */
+    min-height: 0;           /* ...and allow shrinking so it scrolls internally */
+    overflow: auto;          /* instead of pushing hint/actions off-screen */
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
 }

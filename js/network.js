@@ -2468,6 +2468,11 @@ const Network = {
     // CLIENT: leave the results view locally; the host's returnLobby broadcast
     // carries the authoritative fresh roster and re-syncs us.
     clientBackToLobby() {
+        // Clear the terminal-transition flags the gameOver handler set, so a host
+        // drop in the window before the host's returnLobby arrives still triggers
+        // migration (mirrors the host's returnToLobby reset).
+        sessionEnding = false;
+        migrating = false;
         spectateId = null;
         gameState.phase = 'LOBBY';
         UI.hideResults();

@@ -821,6 +821,9 @@ const LoadingScreen = (function () {
 
     function dismiss() {
         if (!ready || dismissed) return;   // only after assets are ready, once
+        // CONTINUE (click/Enter) is a user gesture — go fullscreen here if we aren't
+        // already, so the game starts edge-to-edge (address bar collapsed on mobile).
+        if (typeof isFullscreen === 'function' && !isFullscreen()) enterFullscreen();
         dismissed = true;
         stopAuto();
         window.removeEventListener('keydown', onKey);
@@ -894,6 +897,14 @@ if(!savedSettings && isMobileDevice()) {
     GAME_SETTINGS.graphicsQuality = 'mobile';
     const g = document.getElementById('setting-graphics');
     if (g) g.value = 'mobile';
+}
+// PC (mouse-primary, non-touch): default SHOW MOBILE CONTROLS off — the on-screen
+// joystick/fire pad are pointless with a mouse. Fresh users only; a returning user's
+// saved choice is respected. Toggle stays visible so a touch-laptop can re-enable it.
+if(!savedSettings && !isMobileDevice()) {
+    GAME_SETTINGS.showMobileControls = false;
+    const mb = document.getElementById('setting-mobile-ui');
+    if (mb) mb.checked = false;
 }
 
 if(savedSettings)
