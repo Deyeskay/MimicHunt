@@ -18,6 +18,7 @@ const Level = {
             canvas: canvas,
             antialias: initQ !== 'mobile',
             powerPreference: 'high-performance',
+            alpha: true,   // lobby nulls its scene bg so #lobby-backdrop (JPG) shows through
         });
         renderer.shadowMap.enabled = true;
         // Cheaper hard-edged shadow filter on the low tiers; PCFSoft only where it shows.
@@ -1865,7 +1866,9 @@ const Level = {
     initLobbyScene: function() {
         if (this.lobbyScene) return;
         const s = new THREE.Scene();
-        s.background = new THREE.Color(0x141c2b);   // dark studio backdrop, controls float over it
+        // Null background → canvas clears transparent so the CSS #lobby-backdrop
+        // (garden JPG, cover-fit) shows behind the character. Renderer built with alpha:true.
+        s.background = null;
         s.add(new THREE.AmbientLight(0xffffff, 1.0));
         s.add(new THREE.HemisphereLight(0xbfd8ff, 0x2a3550, 0.7));
         const dir = new THREE.DirectionalLight(0xffffff, 1.15);
@@ -1874,16 +1877,20 @@ const Level = {
         const rim = new THREE.DirectionalLight(0x88aaff, 0.55);
         rim.position.set(-7, 4, 4);
         s.add(rim);
-        // A dark ground disc grounds the characters without a full level.
+        // No visible ground: the #lobby-backdrop image (background.png) already has a
+        // grass foreground, so the character stands directly "on" the backdrop's grass.
+        // An invisible plane is kept only as an anchor for the pink selection ring.
         const ground = new THREE.Mesh(
-            new THREE.CircleGeometry(40, 48),
-            new THREE.MeshStandardMaterial({ color: 0x1d2740, roughness: 1, metalness: 0 })
+            new THREE.CircleGeometry(40, 8),
+            new THREE.MeshBasicMaterial({ visible: false })
         );
         ground.rotation.x = -Math.PI / 2;
         s.add(ground);
+        // Camera framed so the character's feet land on the backdrop's grass and the
+        // full garden scene stays visible (tuned live against the reference image).
         const cam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
-        cam.position.set(0, 3, 9);
-        cam.lookAt(0, 1.4, 0);
+        cam.position.set(0, 2.45, 8.4);
+        cam.lookAt(0, 1.75, 0);
         this.lobbyScene = s;
         this.lobbyCam = cam;
         this.lobbyMeshes = {};
@@ -1907,15 +1914,16 @@ const Level = {
         const nm = name || roleText;
 
         // --- name line (with optional gold tick, centred as a unit) ---
-        ctx.font = 'bold 54px "Fredoka", system-ui, sans-serif';
+        // Sized to roughly match the DOM role-select / subtitle text on screen.
+        ctx.font = 'bold 42px "Fredoka", system-ui, sans-serif';
         const tick = ready ? '✓' : '';
-        const gap = ready ? 20 : 0;
+        const gap = ready ? 12 : 0;
         const tickW = ready ? ctx.measureText(tick).width : 0;
         const nameW = ctx.measureText(nm).width;
         const totalW = tickW + gap + nameW;
         let x = W / 2 - totalW / 2;
-        const nameY = 56;
-        ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        const nameY = 74;
+        ctx.lineWidth = 5; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
         if (ready) {
             ctx.strokeText(tick, x, nameY);
             ctx.fillStyle = '#ffd54a';
@@ -1928,11 +1936,11 @@ const Level = {
 
         // --- role line ---
         ctx.textAlign = 'center';
-        ctx.font = 'bold 40px "Fredoka", system-ui, sans-serif';
-        ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
-        ctx.strokeText(roleText, W / 2, 122);
+        ctx.font = 'bold 33px "Fredoka", system-ui, sans-serif';
+        ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        ctx.strokeText(roleText, W / 2, 110);
         ctx.fillStyle = roleColor;
-        ctx.fillText(roleText, W / 2, 122);
+        ctx.fillText(roleText, W / 2, 110);
 
         const tex = new THREE.CanvasTexture(canvas);
         const mat = new THREE.SpriteMaterial({
@@ -2017,9 +2025,12 @@ const Level = {
             if (e) e.root.position.set(-totalW / 2 + i * spacing, 0, 0);
         });
         if (this.lobbyCam) {
-            const dist = Math.max(7, totalW * 0.72 + 6.5);
-            this.lobbyCam.position.set(0, 3.0, dist);
-            this.lobbyCam.lookAt(0, 1.4, 0);
+            // Near eye-level, gentle downward tilt so the character reads as standing
+            // ON the backdrop's grass (the ring flattens to match the ground plane),
+            // not viewed top-down.
+            const dist = Math.max(8.4, totalW * 0.72 + 7.5);
+            this.lobbyCam.position.set(0, 2.45, dist);
+            this.lobbyCam.lookAt(0, 1.75, 0);
         }
     },
 
@@ -2037,10 +2048,16 @@ const Level = {
     showLobby: function() {
         this.lobbyActive = true;
         if (!this.lobbyScene) this.initLobbyScene();
+        const bd = document.getElementById('lobby-backdrop');
+        if (bd) bd.style.display = 'block';
         this.syncLobbyModels();
     },
 
-    hideLobby: function() { this.lobbyActive = false; },
+    hideLobby: function() {
+        this.lobbyActive = false;
+        const bd = document.getElementById('lobby-backdrop');
+        if (bd) bd.style.display = 'none';
+    },
 
     disposeLobbyModels: function() {
         for (const id in (this.lobbyMeshes || {})) this._removeLobbyMesh(id);

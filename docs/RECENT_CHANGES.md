@@ -5,6 +5,27 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-08
 
+- **Lobby garden backdrop (JPG behind character).** Files: `index.html`, `css/style.css`,
+  `js/level.js`. Replaced the solid navy lobby scene fill (`s.background = 0x141c2b`) with
+  an image backdrop: the WebGL renderer is now built with `alpha: true`, `initLobbyScene`
+  sets `lobbyScene.background = null`, so the lobby canvas clears **transparent** and a new
+  full-screen `#lobby-backdrop` div (z-index 0, behind `#gameCanvas` z-1) shows a cover-fit
+  garden image (`assets/textures/background.png`) behind the idle character. Toggled by
+  `Level.showLobby` (display block) / `hideLobby` (none). Game maps set their own opaque
+  `scene.background`, so `alpha:true` never leaks transparency in-game. Swap the CSS `url()`
+  on `#lobby-backdrop` for a custom JPG. `background.png` already has a grass foreground, so
+  the old ground disc was **removed** (the lobby ground mesh is now an invisible anchor for
+  the pink selection ring) and the character stands directly on the backdrop's grass — no
+  seam. The lobby camera was dropped to **near eye-level with a gentle downward tilt**
+  (`_layoutLobby`: `pos (0,2.45,dist≥8.4)` / `lookAt (0,1.75,0)`, was `(0,3.0,dist≥7)` /
+  `(0,1.4,0)`) so the character reads as standing ON the ground (the ring flattens to match
+  the backdrop's ground plane) instead of being viewed top-down. Camera + lookAt share the
+  same vertical offset so the pitch is fixed while the character sits screen-centre. Tuned
+  live in-browser against the reference image. The floating lobby label (`makeLobbyLabel`,
+  a canvas sprite) was shrunk to roughly match the DOM chrome on screen: **name 54→30px**,
+  **role 40→26px** canvas font (name ≈ the role-select text, role ≈ the subtitle), with the
+  two lines pulled closer (`nameY 56→74`, `roleY 122→110`) and lighter strokes.
+
 - **Lobby refresh icon + role-aware refresh/JOIN/leave chrome.** Files: `index.html`,
   `css/style.css`, `js/app.js`, `js/ui.js`. Added a small **refresh** icon
   (`#btn-lobby-refresh` ⟳, `.lobby-refresh`) beside the room code in `.lobby-bl`. The
