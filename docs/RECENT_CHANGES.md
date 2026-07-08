@@ -5,6 +5,91 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-08
 
+- **Lobby refresh icon + role-aware refresh/JOIN/leave chrome.** Files: `index.html`,
+  `css/style.css`, `js/app.js`, `js/ui.js`. Added a small **refresh** icon
+  (`#btn-lobby-refresh` ⟳, `.lobby-refresh`) beside the room code in `.lobby-bl`. The
+  bottom refresh/JOIN/leave controls now reconcile per role & occupancy in
+  `UI.updateLobby` (`hostAlone = isHost && total <= 1`): **host alone** → refresh
+  shown+enabled + JOIN shown, door (`#btn-lobby-leave`) hidden; **host with players**
+  (total > 1) → refresh shown but **disabled**, JOIN hidden, door shown; **client** →
+  refresh hidden, JOIN hidden, door shown. Refresh runs the same rehost path as leaving
+  (`Network.leaveMatch()` → for a host `shutdownHost()` → `cleanup(rehost)` →
+  `autoHostLobby()` → fresh code) behind a **"Refresh room?"** confirm; the door now
+  also prompts a **"Leave lobby?"** confirm (both via the existing `UI.showConfirm`).
+  The leave button ships `display:none` in markup (fresh boot = host-alone) to avoid a
+  one-frame flash before the first `updateLobby`. **Layout:** the bottom-left block
+  (`.lobby-bl`) is a 2-col grid (`1fr 44px`) with explicit cell placement — row 1 JOIN
+  pill + share 🔗 icon, row 2 room-code + refresh ⟳ icon — so JOIN and the code label are
+  equal-width (col 1) and the two icons align (col 2) on every screen size, and hiding
+  JOIN/share never reflows the columns. The code label reads **"ROOM ID: NNNN"** (renamed
+  from "ROOM CODE", smaller font) so 4 digits stay fully visible in the narrow cell. The
+  share/invite button also moved here from the top-right cluster.
+
+- **Custom themed dropdowns (`.csel`) replace native `<select>` popups.** Files:
+  `js/app.js`, `js/ui.js`, `css/style.css`. Native option lists render in OS chrome (a
+  white box on desktop, a picker on mobile) and can't be themed, so the lobby map/role +
+  settings Graphics/Gyro dropdowns looked inconsistent. `enhanceSelect(select)` (js/app.js)
+  now keeps the `<select>` as a hidden source of truth (`.csel-native`) and builds a dark
+  in-page trigger (with a ▾ caret that flips on open) + option panel matching the lobby/
+  settings theme; picking an option sets `select.value` + dispatches `change` so all
+  existing handlers fire unchanged. `refreshAllCSelects()` / `el._csel.refresh()|.rebuild()`
+  re-sync the trigger after code changes value/options/disabled — called from
+  `UI.updateLobby` + `UI.renderLevelSelector` (lobby) and the settings-open handlers. Panels
+  open upward when they'd be clipped by their scroll container (e.g. a select low in the
+  settings body). Enhanced: `lobby-map-select`, `lobby-role-select`, `setting-graphics`,
+  `setting-gyro-mode`.
+
+- **Settings screen redesigned dark + BASIC/ADVANCED tabs** (matches the new lobby).
+  Files: `index.html`, `css/style.css`, `js/app.js`. `#settings-screen` is now a dark
+  PUBG-style panel (`.settings-pubg`) — header (back · title · tab switch), scrollable
+  body, full-width SAVE footer — instead of the wooden `.menu-card`. Two tabs:
+  **BASIC** = *Match* (hiding/hunting time) + *Display* (Graphics, show-mobile-controls);
+  **ADVANCED** = *Camera* (camera sensitivity, FOV, invert-Y) + *Combat & Aim* (shoot
+  sensitivity, gyro aim, gyro sens). `wireSettingsTabs` (`js/app.js`) toggles
+  `.settings-group[hidden]` per `.settings-tab[data-tab]`. **All input ids/val chips are
+  unchanged**, so the existing live-apply + Save handlers keep working verbatim; only the
+  markup grouping + a dark re-skin of the shared `.setting-row`/`.setting-value`/
+  `.setting-select`/range/checkbox rules changed. Back arrow still returns to the lobby
+  via the `settingsFromLobby` flag.
+
+- **PUBG-style lobby redesign + auto-host-on-load flow.** Files: `index.html`,
+  `css/style.css`, `js/app.js`, `js/network.js`, `js/level.js`, `js/ui.js`. The old
+  two-screen menu (name + Host/Join card) → lobby (wooden card, map carousel, text
+  player-list) is replaced by a single **full-screen PUBG-style lobby** you land in
+  directly:
+  - **Auto-host on load.** Boot no longer reveals `#menu-screen`; `js/app.js`'s
+    `LoadingScreen.markReady` calls **`Network.autoHostLobby()`** (a `?room=CODE` deep
+    link auto-**joins** instead). `autoHostLobby` seeds a default name if none saved and
+    calls `initHost`, which now retries on `unavailable-id` via `_openHostPeer` (silent
+    hosting makes code collisions likelier). `initHost`/`initClient(codeArg)` show the
+    lobby immediately via `UI.transitionToLobby()` (with a "Creating…/Connecting…"
+    subtitle) instead of manual `display` toggles. **`#menu-screen` is now unused DOM.**
+  - **Never a dead menu.** `Network.cleanup(rehost=true)` drops back into a fresh
+    auto-hosted lobby after any leave/teardown; pass `rehost=false` when the caller
+    hosts/joins next (e.g. `switchToClient`) or a fatal modal is up. `transitionToMenu`
+    is now dead code.
+  - **In-lobby controls (corner overlays over a live 3D backdrop).** Top-left: contextual
+    **START GAME** (host, gated on ≥1 Hunter + ≥1 Seeker + all ready) / **READY–UNREADY**
+    (client) `#btn-lobby-action` + **map** `<select>` (`#lobby-map-select`, host-editable)
+    + **role** `<select>` (`#lobby-role-select`). Top-right: **settings gear**
+    (`#btn-lobby-settings`, back arrow returns to the lobby via a `settingsFromLobby`
+    flag) + **name pill** (`#lobby-name-pill`, click-to-edit → `Network.setLocalName`, a
+    new `nameChange` message mirroring `roleChange`) + **invite** (`#btn-share-room`).
+    Bottom-left: **room code** (`#lobby-title`) + **JOIN** (`#btn-lobby-join` → 4-digit
+    popover → `Network.switchToClient`). Bottom-right: **leave** (`#btn-lobby-leave`).
+    Bottom-centre: waiting/composition messages (`#lobby-subtitle`/`#lobby-warning`).
+  - **3D player models in the lobby.** A dedicated, isolated `Level.lobbyScene` (its own
+    camera + lights + ground) renders one idle-animated character per `gameState.players`
+    entry via the reused `Level.makeCharacterMesh`; `Level.syncLobbyModels` diffs the
+    roster (rebuild on join/role-change, relabel on name/ready/grace change) and
+    `_layoutLobby` spaces them in a row + frames the camera. Labels are canvas sprites
+    (`Level.makeLobbyLabel`: name + role, gold **✓** when ready). `animate()` computes a
+    `dt` and branches to **`Level.renderLobby(dt)`** while `Level.lobbyActive` (set by
+    `Level.showLobby`/`hideLobby` from the screen transitions); the in-game
+    `Level.render()` runs only in-match — never both. `UI.updateLobby` no longer builds
+    DOM rows (players ARE the 3D row); `UI.renderLevelSelector` now populates the map
+    `<select>` (was a `.level-card` carousel).
+
 - **PUBG-style 60s reconnect grace for a dropped non-host player.** Files: `js/globals.js`,
   `js/network.js`, `js/ui.js`, `index.html`, `css/style.css`. Previously a client's network
   blip was instant + terminal on both sides — the host reaped the roster slot in 3s and

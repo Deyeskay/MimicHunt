@@ -332,106 +332,176 @@
         </div>
     </div>
 
-    <div id="settings-screen" class="menu-screen" style="display:none;">
-        <div class="menu-card settings-card">
-            <button id="btn-back-menu" class="close-x" title="Back">←</button>
-            <h2 class="panel-title">SETTINGS</h2>
-            <div class="form-group">
-                <div class="settings-list">
-                    <div class="setting-row">
-                        <label for="setting-hide-time"><span class="set-icon ic-time">⏱️</span> HIDING TIME <span class="setting-unit">sec</span></label>
-                        <div class="setting-control">
-                            <input id="setting-hide-time" type="range" min="5" max="60" step="5" value="20">
-                            <span id="val-hide-time" class="setting-value">20</span>
+    <!-- Settings: dark, PUBG-style panel matching the lobby. Split into BASIC /
+         ADVANCED tabs. Every input id is preserved so js/app.js keeps binding. -->
+    <div id="settings-screen" class="settings-pubg" style="display:none;">
+        <div class="settings-panel">
+            <div class="settings-head">
+                <button id="btn-back-menu" class="settings-back" title="Back" aria-label="Back">←</button>
+                <h2 class="settings-title">SETTINGS</h2>
+                <div class="settings-tabs">
+                    <button type="button" class="settings-tab is-active" data-tab="basic">BASIC</button>
+                    <button type="button" class="settings-tab" data-tab="advanced">ADVANCED</button>
+                </div>
+            </div>
+
+            <div class="settings-body">
+                <!-- ===================== BASIC ===================== -->
+                <div class="settings-group" data-group="basic">
+                    <div class="settings-section-label">Match</div>
+                    <div class="settings-list">
+                        <div class="setting-row">
+                            <label for="setting-hide-time"><span class="set-icon ic-time">⏱️</span> HIDING TIME <span class="setting-unit">sec</span></label>
+                            <div class="setting-control">
+                                <input id="setting-hide-time" type="range" min="5" max="60" step="5" value="20">
+                                <span id="val-hide-time" class="setting-value">20</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label for="setting-hunt-time"><span class="set-icon ic-hunt">🔦</span> HUNTING TIME <span class="setting-unit">min</span></label>
+                            <div class="setting-control">
+                                <input id="setting-hunt-time" type="range" min="5" max="20" step="1" value="5">
+                                <span id="val-hunt-time" class="setting-value">5</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="setting-row">
-                        <label for="setting-hunt-time"><span class="set-icon ic-hunt">🔦</span> HUNTING TIME <span class="setting-unit">min</span></label>
-                        <div class="setting-control">
-                            <input id="setting-hunt-time" type="range" min="5" max="20" step="1" value="5">
-                            <span id="val-hunt-time" class="setting-value">5</span>
+
+                    <div class="settings-section-label">Display</div>
+                    <div class="settings-list">
+                        <div class="setting-row">
+                            <label for="setting-graphics"><span class="set-icon ic-gfx">🎨</span> GRAPHICS</label>
+                            <select id="setting-graphics" class="setting-select">
+                                <option value="mobile">Mobile</option>
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
                         </div>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-sensitivity"><span class="set-icon ic-mouse">🎯</span> CAMERA SENSITIVITY</label>
-                        <div class="setting-control">
-                            <input id="setting-sensitivity" type="range" min="0" max="13" step="1" value="4">
-                            <span id="val-sensitivity" class="setting-value">4</span>
+                        <div class="setting-row">
+                            <label for="setting-mobile-ui"><span class="set-icon ic-mobile">📱</span> SHOW MOBILE CONTROLS</label>
+                            <input id="setting-mobile-ui" type="checkbox" checked>
                         </div>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-shoot-sens"><span class="set-icon ic-shoot">🔫</span> SHOOT SENSITIVITY</label>
-                        <div class="setting-control">
-                            <input id="setting-shoot-sens" type="range" min="0" max="13" step="1" value="4">
-                            <span id="val-shoot-sens" class="setting-value">4</span>
-                        </div>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-fov"><span class="set-icon ic-fov">📷</span> CAMERA FOV</label>
-                        <div class="setting-control">
-                            <input id="setting-fov" type="range" min="45" max="90" step="1" value="60">
-                            <span id="val-fov" class="setting-value">60</span>
-                        </div>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-graphics"><span class="set-icon ic-gfx">🎨</span> GRAPHICS</label>
-                        <select id="setting-graphics" class="setting-select">
-                            <option value="mobile">Mobile</option>
-                            <option value="low">Low</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="high">High</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-invert-y"><span class="set-icon ic-invert">🔄</span> INVERT CAMERA</label>
-                        <input id="setting-invert-y" type="checkbox">
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-gyro-mode"><span class="set-icon ic-gyro">🧭</span> GYRO AIM</label>
-                        <select id="setting-gyro-mode" class="setting-select">
-                            <option value="off" selected>Off</option>
-                            <option value="scope">While Firing</option>
-                            <option value="always">Always</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-gyro-sens"><span class="set-icon ic-gyro">🧭</span> GYRO SENS.</label>
-                        <div class="setting-control">
-                            <input id="setting-gyro-sens" type="range" min="0.2" max="3" step="0.1" value="1.0">
-                            <span id="val-gyro-sens" class="setting-value">1.0</span>
-                        </div>
-                    </div>
-                    <div class="setting-row">
-                        <label for="setting-mobile-ui"><span class="set-icon ic-mobile">📱</span> SHOW MOBILE CONTROLS</label>
-                        <input id="setting-mobile-ui" type="checkbox" checked>
                     </div>
                 </div>
-                <div class="btn-row">
-                    <button id="btn-save-settings" class="success"> SAVE </button>
+
+                <!-- ===================== ADVANCED ===================== -->
+                <div class="settings-group" data-group="advanced" hidden>
+                    <div class="settings-section-label">Camera</div>
+                    <div class="settings-list">
+                        <div class="setting-row">
+                            <label for="setting-sensitivity"><span class="set-icon ic-mouse">🎯</span> CAMERA SENSITIVITY</label>
+                            <div class="setting-control">
+                                <input id="setting-sensitivity" type="range" min="0" max="13" step="1" value="4">
+                                <span id="val-sensitivity" class="setting-value">4</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label for="setting-fov"><span class="set-icon ic-fov">📷</span> CAMERA FOV</label>
+                            <div class="setting-control">
+                                <input id="setting-fov" type="range" min="45" max="90" step="1" value="60">
+                                <span id="val-fov" class="setting-value">60</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label for="setting-invert-y"><span class="set-icon ic-invert">🔄</span> INVERT CAMERA</label>
+                            <input id="setting-invert-y" type="checkbox">
+                        </div>
+                    </div>
+
+                    <div class="settings-section-label">Combat &amp; Aim</div>
+                    <div class="settings-list">
+                        <div class="setting-row">
+                            <label for="setting-shoot-sens"><span class="set-icon ic-shoot">🔫</span> SHOOT SENSITIVITY</label>
+                            <div class="setting-control">
+                                <input id="setting-shoot-sens" type="range" min="0" max="13" step="1" value="4">
+                                <span id="val-shoot-sens" class="setting-value">4</span>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label for="setting-gyro-mode"><span class="set-icon ic-gyro">🧭</span> GYRO AIM</label>
+                            <select id="setting-gyro-mode" class="setting-select">
+                                <option value="off" selected>Off</option>
+                                <option value="scope">While Firing</option>
+                                <option value="always">Always</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label for="setting-gyro-sens"><span class="set-icon ic-gyro">🧭</span> GYRO SENS.</label>
+                            <div class="setting-control">
+                                <input id="setting-gyro-sens" type="range" min="0.2" max="3" step="0.1" value="1.0">
+                                <span id="val-gyro-sens" class="setting-value">1.0</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+
+            <div class="settings-foot">
+                <button id="btn-save-settings" class="settings-save">SAVE</button>
             </div>
         </div>
     </div>
 
-    <div id="lobby-screen" class="menu-screen" style="display: none;">
-        <div class="menu-card">
-            <!-- Room code + a share button that copies / opens the OS share sheet with a
-                 join link (?room=CODE). Friends who open the link auto-join this room. -->
-            <div class="lobby-code-row">
-                <h2 id="lobby-title" style="color: var(--accent-blue);">LOBBY ROOM</h2>
-                <button id="btn-share-room" class="share-room-btn interactive" title="Share room link" aria-label="Share room link" style="display:none;">🔗</button>
+    <!-- PUBG-style lobby: a full-screen HUD overlaid on the live 3D backdrop
+         (#gameCanvas renders the lobby character row behind this). The container is
+         click-through (pointer-events:none); only .interactive controls catch input. -->
+    <div id="lobby-screen" class="lobby-pubg" style="display: none;">
+
+        <!-- Top-left: primary CTA + map/role dropdowns -->
+        <div class="lobby-tl">
+            <button id="btn-lobby-action" class="lobby-start-btn interactive success">START GAME</button>
+            <label class="lobby-drop interactive">
+                <span class="lobby-drop-ic">🗺️</span>
+                <select id="lobby-map-select"></select>
+            </label>
+            <label class="lobby-drop interactive">
+                <span class="lobby-drop-ic">🎭</span>
+                <select id="lobby-role-select">
+                    <option value="Hider">🙈 Hider</option>
+                    <option value="Seeker">🔦 Hunter</option>
+                </select>
+            </label>
+        </div>
+
+        <!-- Top-right: name+avatar pill (click to rename), settings gear -->
+        <div class="lobby-tr">
+            <div id="lobby-name-pill" class="lobby-name-pill interactive" title="Click to edit your name">
+                <span class="lobby-avatar">👤</span>
+                <span id="lobby-name-text">Player</span>
+                <input id="lobby-name-input" type="text" maxlength="16" autocomplete="off" style="display:none;">
             </div>
-            <!-- One row: "Map: X" pinned left, status centered in the card. -->
-            <div class="lobby-meta">
-                <span id="lobby-map" class="lobby-level-status"></span>
-                <p id="lobby-subtitle">Waiting for all players...</p>
-            </div>
-            <div id="lobby-level"></div>
-            <div class="player-list" id="player-list-container"></div>
-            <div id="lobby-warning" style="color: var(--accent-red); font-size: 0.85rem; min-height: 1.1em; margin: 6px 0;"></div>
-            <div class="btn-row">
-                <button id="btn-lobby-leave" class="secondary">Leave Lobby</button>
-                <button id="btn-lobby-action" class="success">Mark Ready</button>
+            <button id="btn-lobby-settings" class="lobby-icon-btn interactive" title="Settings" aria-label="Settings">⚙</button>
+        </div>
+
+        <!-- Bottom-left: room code + join-another-room -->
+        <div class="lobby-bl">
+            <button id="btn-lobby-join" class="lobby-pill-btn interactive">＋ JOIN ROOM</button>
+            <button id="btn-share-room" class="lobby-icon-btn interactive" title="Invite friends (share room link)" aria-label="Invite friends" style="display:none;">🔗</button>
+            <h2 id="lobby-title" class="lobby-room-code">ROOM</h2>
+            <button id="btn-lobby-refresh" class="lobby-icon-btn lobby-refresh interactive" title="Refresh room ID" aria-label="Refresh room ID">⟳</button>
+        </div>
+
+        <!-- Bottom-right: leave lobby -->
+        <div class="lobby-br">
+            <button id="btn-lobby-leave" class="lobby-icon-btn lobby-leave interactive" title="Leave lobby" aria-label="Leave lobby" style="display:none;">🚪</button>
+        </div>
+
+        <!-- Bottom-center: waiting / composition messages -->
+        <div class="lobby-bc">
+            <p id="lobby-subtitle" class="lobby-status">Waiting for all players…</p>
+            <div id="lobby-warning" class="lobby-warn"></div>
+        </div>
+
+        <!-- Join-by-code popover (opened by JOIN) -->
+        <div id="lobby-join-pop" class="lobby-join-pop interactive" style="display:none;">
+            <div class="ljp-card">
+                <h3>Join a room</h3>
+                <input id="lobby-join-input" type="text" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="4-DIGIT CODE" autocomplete="off">
+                <div id="lobby-join-err" class="ljp-err"></div>
+                <div class="ljp-row">
+                    <button id="lobby-join-cancel" class="secondary">Cancel</button>
+                    <button id="lobby-join-go" class="success">Join</button>
+                </div>
             </div>
         </div>
     </div>

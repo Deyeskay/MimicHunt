@@ -805,6 +805,25 @@ const Network = {
         }
     },
 
+    // Live rename from the lobby name pill. Persists locally, updates our roster
+    // record, and syncs: host broadcasts the roster; a client tells the host,
+    // which applies + rebroadcasts (mirrors the roleChange path).
+    setLocalName(name) {
+        name = (name || '').trim().slice(0, 16);
+        if (!name) return;
+        myName = name;
+        GAME_SETTINGS.playerName = name;
+        try { localStorage.setItem('hidehunt_settings', JSON.stringify(GAME_SETTINGS)); } catch (e) {}
+        const me = gameState.players[myId];
+        if (me) me.name = name;
+        UI.updateLobby();
+        if (isHost) {
+            this.broadcast({ type: 'lobbySync', players: gameState.players });
+        } else {
+            this.sendToHost({ type: 'nameChange', name });
+        }
+    },
+
     /*=================================================================
       Level selection (lobby). Levels come from the bundled registry
       (LEVELS, populated by js/levels/*.js), so they are identical on
@@ -845,10 +864,20 @@ const Network = {
       Host initialization
     =================================================================*/
     initHost() {
-        UI.updateStatus('Starting engine...');
         isHost = true;
-        const code = this.generateCode();
+        this._hostRetries = 0;
+        // Show the lobby chrome immediately (3D backdrop + "creating room" copy)
+        // so there is no blank frame while PeerJS opens the connection.
+        UI.transitionToLobby();
+        const sub = document.getElementById('lobby-subtitle');
+        if (sub) sub.textContent = 'Creating room…';
+        this._openHostPeer();
+    },
 
+    // Open a host peer on a fresh 4-digit code, retrying on 'unavailable-id'
+    // (more likely now that hosting is silent/automatic on load).
+    _openHostPeer() {
+        const code = this.generateCode();
         peer = new Peer('hnh3d-' + code);
         peer.on('open', id => {
             myId = id;
@@ -857,34 +886,63 @@ const Network = {
             // lobbySync/rejoinAck broadcasts carry the real code, not null.
             pendingRoomCode = code;
             currentRoomCode = code;
-            // Show lobby UI (replicating previous manual DOM handling)
-            document.getElementById('menu-screen').style.display = 'none';
-            document.getElementById('lobby-screen').style.display = 'flex';
             UI.setLobbyCode(code);
             this.runHostLogic();
         });
 
         peer.on('error', err => {
             if (err.type === 'unavailable-id') {
-                document.getElementById('btn-host').click();
+                if ((this._hostRetries = (this._hostRetries || 0) + 1) <= 6) {
+                    try { if (peer) peer.destroy(); } catch (e) {}
+                    this._openHostPeer();   // try another code
+                } else {
+                    UI.showModal('Network Error',
+                        'Could not create a room. Please refresh and try again.',
+                        () => this.cleanup(false));
+                }
             } else {
-                UI.showModal('Network Error', err.type, () => this.cleanup());
+                UI.showModal('Network Error', err.type, () => this.cleanup(false));
             }
         });
+    },
+
+    // Boot / post-leave entry point: always land in a fresh auto-hosted lobby
+    // (there is no standalone menu screen any more).
+    autoHostLobby() {
+        // Seed a display name if none saved yet (editable via the lobby name pill).
+        if (!myName || !myName.trim()) {
+            myName = 'Player' + Math.floor(1000 + Math.random() * 9000);
+            GAME_SETTINGS.playerName = myName;
+            try { localStorage.setItem('hidehunt_settings', JSON.stringify(GAME_SETTINGS)); } catch (e) {}
+        }
+        this.initHost();
+    },
+
+    // Abandon the current (auto-hosted or joined) room and join another by code.
+    // Used by the in-lobby JOIN button and ?room= deep links.
+    switchToClient(code) {
+        code = (code || '').trim();
+        if (!/^\d{4}$/.test(code)) { UI.showModal('Invalid Code', 'Please enter exactly 4 digits.'); return; }
+        this.cleanup(false);        // tear down our room WITHOUT re-hosting
+        this.initClient(code);
     },
 
     /*=================================================================
       Client initialization
     =================================================================*/
-    initClient() {
-        const input = document.getElementById('input-room-id').value.trim();
+    initClient(codeArg) {
+        const input = (codeArg != null ? String(codeArg)
+                       : document.getElementById('input-room-id').value).trim();
         if (input.length !== 4) {
             UI.showModal('Invalid Code', 'Please enter exactly 4 digits.');
             return;
         }
 
-        UI.updateStatus('Connecting...');
         isHost = false;
+        // Show the lobby chrome immediately with a "connecting" state.
+        UI.transitionToLobby();
+        const sub = document.getElementById('lobby-subtitle');
+        if (sub) sub.textContent = 'Connecting to room ' + input + '…';
 
         peer = new Peer();
         peer.on('open', id => {
@@ -895,14 +953,11 @@ const Network = {
             currentHostId = connToHost.peer;   // remember the host id for reconnect-on-blip
             connToHost.on('open', () => {
                 joinedRoom = true;   // past the join handshake — network errors now trigger regrace, not a modal
-                // Show lobby UI for client
-                document.getElementById('menu-screen').style.display = 'none';
-                document.getElementById('lobby-screen').style.display = 'flex';
                 UI.setLobbyCode(input);
                 this.runClientLogic();
             });
 
-            // Timeout if host never answers
+            // Timeout if host never answers → bounce back to a fresh auto-hosted lobby.
             setTimeout(() => {
                 if (!connToHost || !connToHost.open) {
                     UI.showModal('Error', 'Room not found.', () => this.cleanup());
@@ -1102,6 +1157,17 @@ const Network = {
                     rp.color = data.role === 'Seeker' ? 0xff4757 : 0x2ed573;
                     UI.updateLobby();
                     this.broadcast({ type: 'lobbySync', players: gameState.players });
+                }
+                break;
+
+            case 'nameChange':
+                if (gameState.players[conn.peer] && typeof data.name === 'string') {
+                    const nm = data.name.trim().slice(0, 16);
+                    if (nm) {
+                        gameState.players[conn.peer].name = nm;
+                        UI.updateLobby();
+                        this.broadcast({ type: 'lobbySync', players: gameState.players });
+                    }
                 }
                 break;
 
@@ -2214,9 +2280,13 @@ const Network = {
     },
 
     /*=================================================================
-      Cleanup – returns to menu, clears globals, destroys PeerJS
+      Cleanup – clears globals, destroys PeerJS, and (by default) drops
+      straight back into a fresh auto-hosted lobby. Pass rehost=false to
+      leave the app peerless (e.g. switchToClient is about to initClient,
+      or a fatal error is showing a modal).
     =================================================================*/
-    cleanup() {
+    cleanup(rehost) {
+        if (rehost === undefined) rehost = true;
 
         if (isLeavingRoom)
             return;
@@ -2249,9 +2319,10 @@ const Network = {
         this._pendingHidersWin = false;
         this._pendingSeekersWin = false;
 
-        // Remove meshes
+        // Remove meshes (in-game player meshes + the separate lobby characters)
         for (let id in playerMeshes) scene.remove(playerMeshes[id]);
         playerMeshes = {};
+        if (typeof Level !== 'undefined' && Level.disposeLobbyModels) Level.disposeLobbyModels();
 
         // Reset networking globals
         connections = [];
@@ -2268,10 +2339,11 @@ const Network = {
         localDisguise = { type: 'player', size: 2 };
         cameraYaw = 0;
 
-        // UI reset
-        UI.transitionToMenu();
-
         isLeavingRoom = false;
+
+        // Never a dead menu — drop back into a fresh auto-hosted lobby, unless the
+        // caller is about to host/join something itself (rehost=false).
+        if (rehost) this.autoHostLobby();
     },
 
     /*=================================================================

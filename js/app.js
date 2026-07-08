@@ -257,17 +257,213 @@ document.getElementById('players-modal').addEventListener('click', (e) => {
 document.getElementById('btn-layout-save').addEventListener('click', () => LayoutEditor.save());
 document.getElementById('btn-layout-cancel').addEventListener('click', () => LayoutEditor.cancel());
 document.getElementById('btn-layout-reset').addEventListener('click', () => LayoutEditor.reset());
-document.getElementById('btn-lobby-leave').addEventListener('click', () => Network.leaveMatch());
+document.getElementById('btn-lobby-leave').addEventListener('click', () =>
+    UI.showConfirm('Leave lobby?', 'Are you sure you want to leave this lobby?',
+        () => Network.leaveMatch(), 'Yes'));
 
+// Settings can be opened from the (legacy) menu gear or the lobby gear. Remember
+// which, so the back arrow returns to the right screen.
+let settingsFromLobby = false;
 document.getElementById('btn-settings').addEventListener('click', () => {
+    settingsFromLobby = false;
     document.getElementById('menu-screen').style.display = 'none';
     document.getElementById('settings-screen').style.display = 'flex';
+    if (typeof refreshAllCSelects === 'function') refreshAllCSelects();
+});
+
+const btnLobbySettings = document.getElementById('btn-lobby-settings');
+if (btnLobbySettings) btnLobbySettings.addEventListener('click', () => {
+    settingsFromLobby = true;
+    document.getElementById('lobby-screen').style.display = 'none';
+    document.getElementById('settings-screen').style.display = 'flex';
+    if (typeof refreshAllCSelects === 'function') refreshAllCSelects();
 });
 
 document.getElementById('btn-back-menu').addEventListener('click', () => {
     document.getElementById('settings-screen').style.display = 'none';
-    document.getElementById('menu-screen').style.display = 'flex';
+    if (settingsFromLobby) {
+        settingsFromLobby = false;
+        document.getElementById('lobby-screen').style.display = 'flex';
+    } else {
+        document.getElementById('menu-screen').style.display = 'flex';
+    }
 });
+
+// Settings BASIC / ADVANCED tab switch.
+(function wireSettingsTabs() {
+    const tabs = document.querySelectorAll('.settings-tab');
+    const groups = document.querySelectorAll('.settings-group');
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+        const name = tab.dataset.tab;
+        tabs.forEach(t => t.classList.toggle('is-active', t === tab));
+        groups.forEach(g => { g.hidden = (g.dataset.group !== name); });
+        const body = document.querySelector('.settings-body');
+        if (body) body.scrollTop = 0;
+    }));
+})();
+
+// --- Themed custom dropdown wrapping a native <select> --------------------
+// Native <option> lists render in OS chrome (white box on desktop, a picker on
+// mobile) and can't be themed. This keeps the <select> as the source of truth
+// (option click sets its value + dispatches 'change', so existing handlers fire)
+// but shows a consistent dark in-page panel + caret. After changing a select's
+// value/options/disabled in code, call `el._csel.refresh()` (or `.rebuild()` if
+// the option set changed) — `refreshAllCSelects()` refreshes every enhanced one.
+function closeAllCSelects() {
+    document.querySelectorAll('.csel.open').forEach(w => {
+        w.classList.remove('open', 'up');
+        // Drop the stacking bump applied to the host row when it opened.
+        if (w.parentElement) w.parentElement.style.zIndex = '';
+    });
+}
+function enhanceSelect(select) {
+    if (!select || select._csel) return select && select._csel;
+    const wrap = document.createElement('div');
+    wrap.className = 'csel';
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'csel-trigger interactive';
+    const label = document.createElement('span');
+    label.className = 'csel-label';
+    const caret = document.createElement('span');
+    caret.className = 'csel-caret';
+    caret.textContent = '▾';
+    trigger.appendChild(label);
+    trigger.appendChild(caret);
+    const panel = document.createElement('div');
+    panel.className = 'csel-panel interactive';
+    wrap.appendChild(trigger);
+    wrap.appendChild(panel);
+
+    select.classList.add('csel-native');   // visually hidden, keeps value + events
+    select.parentNode.insertBefore(wrap, select.nextSibling);
+
+    function refresh() {
+        const sel = select.options[select.selectedIndex];
+        label.textContent = sel ? sel.textContent : '';
+        wrap.classList.toggle('is-disabled', !!select.disabled);
+        Array.from(panel.children).forEach(c =>
+            c.classList.toggle('is-sel', c.dataset.value === select.value));
+    }
+    function rebuild() {
+        panel.innerHTML = '';
+        Array.from(select.options).forEach(o => {
+            const item = document.createElement('div');
+            item.className = 'csel-opt';
+            item.textContent = o.textContent;
+            item.dataset.value = o.value;
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (select.disabled) return;
+                select.value = o.value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                refresh();
+                wrap.classList.remove('open');
+            });
+            panel.appendChild(item);
+        });
+        refresh();
+    }
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (select.disabled) return;
+        const isOpen = wrap.classList.contains('open');
+        closeAllCSelects();
+        if (!isOpen) {
+            wrap.classList.add('open');
+            // Lift the host row above its siblings so the panel isn't painted
+            // behind a later sibling (e.g. the map panel behind the role row).
+            if (wrap.parentElement) wrap.parentElement.style.zIndex = '60';
+            // Open upward if the panel wouldn't fit below the trigger within its
+            // clipping container (e.g. a select low in the scrollable settings
+            // body) so the option list isn't cut off.
+            const r = trigger.getBoundingClientRect();
+            let top = 0, bottom = window.innerHeight, p = trigger.parentElement;
+            while (p) {
+                const oy = getComputedStyle(p).overflowY;
+                if (oy === 'auto' || oy === 'scroll' || oy === 'hidden') {
+                    const pr = p.getBoundingClientRect(); top = pr.top; bottom = pr.bottom; break;
+                }
+                p = p.parentElement;
+            }
+            const need = Math.min(select.options.length * 40 + 16, (bottom - top) * 0.9) + 12;
+            wrap.classList.toggle('up', (bottom - r.bottom) < need && (r.top - top) > need);
+        }
+    });
+
+    select._csel = { refresh, rebuild };
+    rebuild();
+    return select._csel;
+}
+function refreshAllCSelects() {
+    document.querySelectorAll('.csel-native').forEach(s => { if (s._csel) s._csel.refresh(); });
+}
+// Any outside click / scroll closes open dropdowns.
+document.addEventListener('click', closeAllCSelects);
+['lobby-map-select', 'lobby-role-select', 'setting-graphics', 'setting-gyro-mode']
+    .forEach(id => enhanceSelect(document.getElementById(id)));
+
+// --- Lobby controls: map / role dropdowns, name pill, JOIN popover ---
+(function wireLobbyControls() {
+    const roleSel = document.getElementById('lobby-role-select');
+    if (roleSel) roleSel.addEventListener('change', () => Network.setLocalRole(roleSel.value));
+
+    const mapSel = document.getElementById('lobby-map-select');
+    if (mapSel) mapSel.addEventListener('change', () => { if (isHost) Network.selectLevel(mapSel.value); });
+
+    // Name pill → inline edit → commit on Enter / blur.
+    const pill = document.getElementById('lobby-name-pill');
+    const nameText = document.getElementById('lobby-name-text');
+    const nameInput = document.getElementById('lobby-name-input');
+    if (pill && nameText && nameInput) {
+        const openEdit = () => {
+            nameInput.value = (myName || nameText.textContent || '').trim();
+            nameText.style.display = 'none';
+            nameInput.style.display = 'inline-block';
+            nameInput.focus();
+            nameInput.select();
+        };
+        const commit = () => {
+            const v = nameInput.value.trim();
+            nameInput.style.display = 'none';
+            nameText.style.display = '';
+            if (v) Network.setLocalName(v);
+        };
+        pill.addEventListener('click', (e) => { if (e.target !== nameInput) openEdit(); });
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); nameInput.blur(); }
+            else if (e.key === 'Escape') { nameInput.value = myName || ''; nameInput.blur(); }
+        });
+        nameInput.addEventListener('blur', commit);
+    }
+
+    // JOIN popover.
+    const pop = document.getElementById('lobby-join-pop');
+    const joinInput = document.getElementById('lobby-join-input');
+    const joinErr = document.getElementById('lobby-join-err');
+    const openPop = () => { if (joinErr) joinErr.textContent = ''; if (joinInput) joinInput.value = ''; if (pop) pop.style.display = 'flex'; if (joinInput) joinInput.focus(); };
+    const closePop = () => { if (pop) pop.style.display = 'none'; };
+    const btnJoin = document.getElementById('btn-lobby-join');
+    if (btnJoin) btnJoin.addEventListener('click', openPop);
+    const btnJoinCancel = document.getElementById('lobby-join-cancel');
+    if (btnJoinCancel) btnJoinCancel.addEventListener('click', closePop);
+    if (pop) pop.addEventListener('click', (e) => { if (e.target === pop) closePop(); });
+    const doJoin = () => {
+        const code = (joinInput ? joinInput.value : '').trim();
+        if (!/^\d{4}$/.test(code)) { if (joinErr) joinErr.textContent = 'Enter a 4-digit code.'; return; }
+        closePop();
+        Network.switchToClient(code);
+    };
+    const btnJoinGo = document.getElementById('lobby-join-go');
+    if (btnJoinGo) btnJoinGo.addEventListener('click', doJoin);
+    if (joinInput) joinInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doJoin(); } });
+
+    // Refresh room code (host, alone) — same rehost path as leaving, behind a confirm.
+    const btnLobbyRefresh = document.getElementById('btn-lobby-refresh');
+    if (btnLobbyRefresh) btnLobbyRefresh.addEventListener('click', () =>
+        UI.showConfirm('Refresh room?', 'This generates a new room ID. Continue?',
+            () => Network.leaveMatch(), 'Yes'));
+})();
 
 document.getElementById('btn-save-settings').addEventListener('click', () => {
 
@@ -378,8 +574,8 @@ document.getElementById('btn-lobby-action').addEventListener('click', () => {
         amIReady = !current;
 
         const btn = document.getElementById('btn-lobby-action');
-        btn.innerText = amIReady ? "Unready" : "Mark Ready";
-        btn.className = amIReady ? "secondary" : "success";
+        btn.innerText = amIReady ? "UNREADY" : "READY";
+        btn.className = "lobby-start-btn interactive " + (amIReady ? "secondary" : "success");
 
         if(connToHost && connToHost.open) connToHost.send({ type: 'lobbyReady', readyState: amIReady });
     }
@@ -415,6 +611,7 @@ function updateFps() {
 // 0 = uncapped (Low/Medium/High run at the display's native rate).
 const _FRAME_CAP_MOBILE = 60;
 let _lastFrameTs = 0;
+let _lastAnimTs = 0;
 function animate(now) {
     requestAnimationFrame(animate);
     const cap = (typeof GAME_SETTINGS !== 'undefined' && GAME_SETTINGS.graphicsQuality === 'mobile')
@@ -427,7 +624,14 @@ function animate(now) {
         _lastFrameTs = now;
     }
     updateFps();
-    if (gameState.phase !== 'LOBBY' && document.getElementById('gameCanvas').style.display === 'block') {
+    if (now === undefined) now = performance.now();
+    const dt = _lastAnimTs ? Math.min(0.1, (now - _lastAnimTs) / 1000) : 0;
+    _lastAnimTs = now;
+    // PUBG lobby renders its own dedicated 3D scene (idle character row); the game
+    // scene renders only in-match. Never both.
+    if (Level.lobbyActive) {
+        Level.renderLobby(dt);
+    } else if (gameState.phase !== 'LOBBY' && document.getElementById('gameCanvas').style.display === 'block') {
         Level.render();
     }
 }
@@ -660,15 +864,16 @@ loadLevelScripts().then(() =>
         // Assets ready → show "PRESS ENTER TO CONTINUE"; reveal the menu only when
         // the player confirms (Enter / tap), handled inside LoadingScreen.
         LoadingScreen.markReady(() => {
-            // Returning player (saved name) following a ?room= link joins straight into
-            // the lobby — DON'T flash the menu's Host/Join screen while initClient
-            // connects. First-timers / no-deep-link still get the menu revealed.
+            // No standalone menu any more: land straight in a PUBG-style lobby.
+            // A ?room= share link joins that room; otherwise auto-host a fresh one.
             const deepLinkCode = getRoomDeepLink();
-            const returningViaLink = deepLinkCode && myName && myName.trim();
-            if (!returningViaLink) {
-                document.getElementById('menu-screen').style.display = 'flex';
+            if (deepLinkCode) {
+                // Strip the query so a refresh doesn't re-fire the join.
+                try { history.replaceState(null, '', location.pathname); } catch (e) {}
+                Network.initClient(deepLinkCode);
+            } else {
+                Network.autoHostLobby();
             }
-            handleRoomDeepLink();
         });
     }, (loaded, total) => LoadingScreen.setProgress(loaded, total));
 });

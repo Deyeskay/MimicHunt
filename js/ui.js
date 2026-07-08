@@ -129,8 +129,8 @@ const UI = {
         currentRoomCode = code;
         const t = document.getElementById('lobby-title');
         if (!t) return;
-        t.innerHTML = '<span style="color:#ffd54a;">ROOM CODE:</span> ' +
-            '<span style="color:#ffffff; font-size:1.35em; font-weight:800;">' + code + '</span>';
+        t.innerHTML = '<span style="color:#ffd54a;">ROOM ID:</span> ' +
+            '<span style="color:#ffffff; font-size:1.15em; font-weight:800;">' + code + '</span>';
         const share = document.getElementById('btn-share-room');
         if (share) share.style.display = code ? 'flex' : 'none';
     },
@@ -287,54 +287,48 @@ const UI = {
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('ui-layer').style.display = 'flex';
         document.getElementById('gameCanvas').style.display = 'block';
+        if (typeof Level !== 'undefined' && Level.hideLobby) Level.hideLobby();   // stop the lobby scene render
         setTimeout(() => { Level.resize(); }, 50); // Ensures Canvas resizes to screen
         if (typeof WakeLock !== 'undefined') WakeLock.enable();   // keep the screen awake in-match
     },
 
     transitionToLobby: function() {
-        // Used when a client is dropped into a (new) host's lobby — e.g. after a
-        // host migration ends the round. Hides the game view, shows the lobby.
+        // The lobby is a PUBG-style full-screen overlay on the live 3D backdrop, so
+        // the canvas stays visible and Level.showLobby() drives a dedicated scene of
+        // idle character models. Used on host/join, rematch, and host-migration.
         this.hideResults();
-        document.getElementById('gameCanvas').style.display = 'none';
+        document.getElementById('gameCanvas').style.display = 'block';
         document.getElementById('ui-layer').style.display = 'none';
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'flex';
         if (typeof WakeLock !== 'undefined') WakeLock.disable();   // leaving the match → allow sleep
+        if (typeof Level !== 'undefined' && Level.showLobby) Level.showLobby();
+        setTimeout(() => { if (typeof Level !== 'undefined' && Level.resize) Level.resize(); }, 50);
         this.renderLevelSelector();
+        this.updateLobby();
     },
 
-    // Lobby map picker: a small status line + a horizontal carousel of level
-    // cards (from the bundled registry). The host can click a card to choose;
-    // everyone else sees the selection read-only. Rebuilt only on lobby entry /
-    // selection change (NOT from updateLobby) to avoid resetting scroll on every
-    // ready toggle.
+    // Lobby map picker: populate the map <select> from the bundled registry. The
+    // host can change it; everyone else sees it read-only (disabled). Rebuilt on
+    // lobby entry / selection change.
     renderLevelSelector: function() {
-        const wrap = document.getElementById('lobby-level');
-        if (!wrap) return;
+        const sel = document.getElementById('lobby-map-select');
+        if (!sel) return;
 
         const names = Network.getLevelList();
         const selected = gameState.levelName || names[0] || '';
 
-        wrap.innerHTML = '';
-
-        // "Map: X" lives in the .lobby-meta row (next to the subtitle), not here.
-        const mapLabel = document.getElementById('lobby-map');
-        if (mapLabel) mapLabel.innerHTML = 'Map: <b>' + (selected || '—') + '</b>';
-
-        const carousel = document.createElement('div');
-        carousel.className = 'level-carousel';
+        sel.innerHTML = '';
         names.forEach(name => {
-            const card = document.createElement('div');
-            card.className = 'level-card' + (name === selected ? ' selected' : '');
-            card.textContent = name;
-            if (isHost) {
-                card.style.cursor = 'pointer';
-                card.onclick = () => Network.selectLevel(name);
-            }
-            carousel.appendChild(card);
+            const o = document.createElement('option');
+            o.value = name;
+            o.textContent = name;
+            if (name === selected) o.selected = true;
+            sel.appendChild(o);
         });
-        wrap.appendChild(carousel);
+        sel.disabled = !isHost;   // only the host chooses the map
+        if (sel._csel) sel._csel.rebuild();   // option set changed → rebuild themed dropdown
     },
 
     transitionToMenu: function() {
@@ -347,6 +341,7 @@ const UI = {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('blind-overlay').style.display = 'none';
         document.getElementById('menu-screen').style.display = 'flex';
+        if (typeof Level !== 'undefined' && Level.hideLobby) Level.hideLobby();
         if (typeof WakeLock !== 'undefined') WakeLock.disable();   // back at menu → allow sleep
 
         // Reset the lobby action button so a stale label (e.g. "Unready" from a
@@ -363,61 +358,38 @@ const UI = {
     // everywhere in the logic/protocol; only what the UI shows changes.
     roleLabel: function(role) { return role === 'Seeker' ? 'Hunter' : role; },
 
+    // PUBG lobby: no DOM player-list — players are the 3D character row
+    // (Level.syncLobbyModels). This reconciles the corner controls (role/map
+    // dropdowns, name pill, Start/Ready CTA) + the bottom-centre status/warning
+    // from the authoritative roster, then refreshes the 3D models.
     updateLobby: function() {
-        const container = document.getElementById('player-list-container');
-        container.innerHTML = "";
-
-        const ids = Object.keys(gameState.players);
-        const hostId = isHost ? myId : (connToHost && connToHost.peer);
-        const ROLE_ICONS = { Hider: '🙈', Seeker: '🔦' };
-
+        const players = gameState.players || {};
+        const ids = Object.keys(players);
         let seekers = 0, hiders = 0, total = 0, readyCount = 0;
-
-        ids.forEach((id, index) => {
-            const p = gameState.players[id];
+        ids.forEach(id => {
+            const p = players[id];
             total++;
             if (p.role === 'Seeker') seekers++; else hiders++;
             if (p.isReady) readyCount++;
-
-            const item = document.createElement('div');
-            item.className = 'player-item' + (p._grace ? ' player-reconnecting' : '');
-
-            // Name (+ host tag, + reconnecting tag during the grace window)
-            const nameSpan = document.createElement('span');
-            let label = p.name || (id === myId ? 'You' : `Player ${index + 1}`);
-            if (id === hostId) label += ' (Host)';
-            if (p._grace) label = '🔌 ' + label + ' — reconnecting…';
-            nameSpan.textContent = label;
-            item.appendChild(nameSpan);
-
-            // Role: editable segmented toggle for the local player, read-only chip otherwise
-            if (id === myId) {
-                const roleWrap = document.createElement('span');
-                roleWrap.className = 'role-toggle';
-                ['Hider', 'Seeker'].forEach(r => {
-                    const b = document.createElement('button');
-                    b.textContent = `${ROLE_ICONS[r]} ${this.roleLabel(r)}`;
-                    b.dataset.role = r;
-                    b.className = 'role-btn' + (p.role === r ? ' role-active' : '');
-                    b.onclick = () => Network.setLocalRole(r);
-                    roleWrap.appendChild(b);
-                });
-                item.appendChild(roleWrap);
-            } else {
-                const roleSpan = document.createElement('span');
-                roleSpan.className = 'role-tag role-tag-' + (p.role === 'Seeker' ? 'seeker' : 'hider');
-                roleSpan.textContent = `${ROLE_ICONS[p.role] || ''} ${this.roleLabel(p.role)}`;
-                item.appendChild(roleSpan);
-            }
-
-            // Ready status
-            const statusSpan = document.createElement('span');
-            statusSpan.textContent = p.isReady ? 'READY' : 'NOT READY';
-            statusSpan.className = p.isReady ? 'status-ready' : 'status-not';
-            item.appendChild(statusSpan);
-
-            container.appendChild(item);
         });
+
+        const me = players[myId];
+
+        // Role dropdown reflects the local player's role.
+        const roleSel = document.getElementById('lobby-role-select');
+        if (roleSel && me) { roleSel.value = me.role; if (roleSel._csel) roleSel._csel.refresh(); }
+
+        // Map dropdown reflects the selected level + host-only editability.
+        const mapSel = document.getElementById('lobby-map-select');
+        if (mapSel) {
+            if (gameState.levelName) mapSel.value = gameState.levelName;
+            mapSel.disabled = !isHost;
+            if (mapSel._csel) mapSel._csel.refresh();
+        }
+
+        // Name pill.
+        const nameText = document.getElementById('lobby-name-text');
+        if (nameText) nameText.textContent = (me && me.name) || myName || 'Player';
 
         // Validation: need >=1 of each role AND everyone ready.
         const composOk = seekers >= 1 && hiders >= 1;
@@ -427,22 +399,46 @@ const UI = {
         else if (!allReady) warning = 'Waiting for all players to be ready.';
         const warnEl = document.getElementById('lobby-warning');
         if (warnEl) warnEl.textContent = warning;
+        const sub = document.getElementById('lobby-subtitle');
+        if (sub) {
+            sub.textContent = (composOk && allReady)
+                ? 'All set — ready to start!'
+                : (total <= 1 ? 'Waiting for players to join…' : ('Players in lobby: ' + total));
+        }
 
+        // Start (host) / Ready (client) CTA.
         const actionBtn = document.getElementById('btn-lobby-action');
+        if (actionBtn) {
+            if (isHost) {
+                const canStart = composOk && allReady;
+                actionBtn.innerText = 'START GAME';
+                actionBtn.disabled = !canStart;
+                actionBtn.className = 'lobby-start-btn interactive ' + (canStart ? 'success' : 'secondary');
+            } else {
+                // Drive the client's Ready button from the authoritative lobby state
+                // so a lobbySync that crosses a ready click can't desync it.
+                amIReady = !!(me && me.isReady);
+                actionBtn.disabled = false;
+                actionBtn.innerText = amIReady ? 'UNREADY' : 'READY';
+                actionBtn.className = 'lobby-start-btn interactive ' + (amIReady ? 'secondary' : 'success');
+            }
+        }
 
-        if (isHost) {
-            const canStart = composOk && allReady;
-            actionBtn.innerText = "Start Game";
-            actionBtn.disabled = !canStart;
-            actionBtn.className = canStart ? "success" : "secondary";
-        } else {
-            // Drive the client's Ready button from the authoritative lobby state
-            // so a lobbySync that crosses a ready click can't desync it.
-            const me = gameState.players[myId];
-            amIReady = !!(me && me.isReady);
-            actionBtn.disabled = false;
-            actionBtn.innerText = amIReady ? "Unready" : "Mark Ready";
-            actionBtn.className = amIReady ? "secondary" : "success";
+        // Refresh / Join / Leave chrome, per role & occupancy:
+        //   host alone   → refresh (enabled) + JOIN shown, door hidden
+        //   host+players → refresh (disabled), JOIN hidden, door shown
+        //   client       → refresh hidden, JOIN hidden, door shown
+        const hostAlone = isHost && total <= 1;
+        const refreshBtn = document.getElementById('btn-lobby-refresh');
+        const joinBtn = document.getElementById('btn-lobby-join');
+        const leaveBtn = document.getElementById('btn-lobby-leave');
+        if (refreshBtn) { refreshBtn.style.display = isHost ? '' : 'none'; refreshBtn.disabled = !hostAlone; }
+        if (joinBtn) joinBtn.style.display = hostAlone ? '' : 'none';
+        if (leaveBtn) leaveBtn.style.display = hostAlone ? 'none' : '';
+
+        // 3D character row.
+        if (typeof Level !== 'undefined' && Level.syncLobbyModels && Level.lobbyActive) {
+            Level.syncLobbyModels();
         }
     },
 

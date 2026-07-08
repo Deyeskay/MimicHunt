@@ -5,19 +5,37 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
 
 ## Screens (DOM, in `index.html`)
 - `#rotate-overlay` — portrait-only "rotate device" cover (landscape lock).
-- `#menu-screen` — name input, Host / Join (code). **Settings** is a chunky gear corner
-  button on the menu card (`#btn-settings .gear-corner`, mirrors the settings card's
-  corner button). Fullscreen stays a floating icon top-right (`#btn-fullscreen-menu`).
-- `#settings-screen` — corner **back** button (`#btn-back-menu .close-x`, ← arrow →
-  returns to menu); the old bottom BACK button is removed so the action row holds only
-  **SAVE** (full-width). Inline rows (`.settings-list`/`.setting-row`): hiding time (sec),
-  **hunting time (minutes, 5–20)**, Mouse Sensitivity (slider), Camera FOV (slider,
-  live), invert-Y, mobile-UI toggle. The hunt-time slider edits minutes but
+- `#menu-screen` — **legacy/unused DOM** since the PUBG-lobby redesign (2026-07-08). The
+  app now auto-hosts on load and lands directly in `#lobby-screen`; the old name +
+  Host/Join card is no longer shown (its `#btn-host`/`#btn-join`/name-input handlers stay
+  bound but dead). `UI.transitionToMenu` is likewise dead code.
+- `#settings-screen` (`.settings-pubg`) — **dark PUBG-style panel matching the lobby**,
+  split into **BASIC / ADVANCED** tabs (`.settings-tab[data-tab]` → shows/hides the
+  matching `.settings-group`; wired by `wireSettingsTabs` in `js/app.js`). Header = back
+  arrow (`#btn-back-menu`, ← returns to the **lobby** when opened from it via the
+  `settingsFromLobby` flag, else the legacy menu) · title · tab switch. Footer = full-width
+  **SAVE** (`#btn-save-settings`). **BASIC** → *Match* (hiding time sec, hunting time min)
+  + *Display* (Graphics, show-mobile-controls toggle). **ADVANCED** → *Camera* (camera
+  sensitivity, camera FOV, invert-Y toggle) + *Combat & Aim* (shoot sensitivity, gyro aim,
+  gyro sens). Rows keep the shared `.setting-row`/`.set-icon`/`.setting-value`/
+  `.setting-select`/range/checkbox structure re-skinned dark (all input ids unchanged, so
+  the `js/app.js` bindings are untouched). The hunt-time slider edits minutes but
   `GAME_SETTINGS.huntingTime` is stored in **seconds** (×60 on Save; ÷60 + clamp on load,
   which also normalises legacy seconds-based saves). Sliders apply live (sensitivity via
   `GAME_SETTINGS`, FOV via `Level.setFov`); Save persists to `localStorage`.
-- `#lobby-screen` — title/room code, level carousel (`#lobby-level`), player list,
-  warning, Ready / Leave.
+- `#lobby-screen` (`.lobby-pubg`) — **full-screen PUBG-style lobby overlaid on a live 3D
+  backdrop** (`#gameCanvas` renders `Level.lobbyScene`, a row of idle character models —
+  one per `gameState.players`, with name/role sprite labels + a gold ✓ when ready). The
+  container is `pointer-events:none`; only `.interactive` corner controls catch input:
+  top-left contextual **START GAME**/**READY** (`#btn-lobby-action`) + map/role `<select>`
+  (`#lobby-map-select`/`#lobby-role-select`); top-right gear (`#btn-lobby-settings`) +
+  name pill (`#lobby-name-pill`); bottom-left is a two-row stack (`.lobby-bl`) — top row
+  **JOIN** (`#btn-lobby-join` → `#lobby-join-pop` popover) + **invite** (`#btn-share-room`
+  🔗), bottom row **refresh** (`#btn-lobby-refresh` ⟳ → confirm → new room code) + room
+  code (`#lobby-title`); bottom-right leave (`#btn-lobby-leave`,
+  now behind a "Leave lobby?" confirm); bottom-centre status/warning
+  (`#lobby-subtitle`/`#lobby-warning`). The refresh/JOIN/leave trio is reconciled per role
+  & occupancy by `UI.updateLobby` (see below).
 - `#ui-layer` — in-game HUD + crosshair + mobile controls (`pointer-events:none`
   except `.interactive` children).
 - `#blind-overlay` — seekers' "YOU ARE BLINDED" during HIDING.
@@ -37,13 +55,16 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
 
 ## Flow
 ```
-menu ──host/join──► lobby ──(all ready, ≥1 hider & ≥1 seeker)──► game(HIDING→HUNTING)
-  ▲                     ▲                                              │
-  │                     │        gameOver ──► results screen ──────────┤
-  │                     └──── Back to Lobby (returnLobby, peer kept) ◄──┤
-  └──────────────── roomClosing / host-alone / Leave ◄─────────────────┘
-                    (migration may drop clients into a new host's lobby)
+boot ──auto-host (or ?room= auto-join)──► lobby ──(all ready, ≥1 hider & ≥1 seeker)──► game(HIDING→HUNTING)
+                          ▲   ▲                                              │
+   JOIN code (switchToClient) │        gameOver ──► results screen ──────────┤
+                          │   └──── Back to Lobby (returnLobby, peer kept) ◄──┤
+                          └── Leave / roomClosing / host-alone ──► cleanup ──► FRESH auto-hosted lobby
+                              (migration may drop clients into a new host's lobby)
 ```
+- **No menu screen.** The app auto-hosts on load (`Network.autoHostLobby`); a `?room=`
+  deep link auto-joins instead. `cleanup()` re-auto-hosts (never a dead menu) unless
+  called with `rehost=false` (e.g. `switchToClient` about to `initClient`).
 - **`gameOver` no longer tears down.** The match-end path shows `#results-screen`; the
   peer stays alive so **Back to Lobby** (`returnToLobby`) resets the round in place and
   bounces everyone to the SAME lobby for a rematch — no re-host/re-join. Only **Leave**
@@ -107,11 +128,27 @@ Red-bordered pill "🥸 DISGUISE LOCKED · `N.Ns`" with a depleting bar (`#disgu
 width = `remain/DISGUISE_LOCK_MS`), refreshed each `updateHUD` tick (60fps). The mobile
 **PROP** button mirrors this: while locked it shows "🔒 N.Ns" and is `disabled`.
 
-## Lobby (`UI.updateLobby`)
-Player rows (name + `(Host)` tag); the local row gets a Hider/Seeker **segmented
-toggle** (`.role-toggle` → `Network.setLocalRole`); others show a read-only role
-chip. Ready button reconciled from authoritative `me.isReady`. Inline warning +
-Start gating: needs ≥1 Hider, ≥1 Seeker, all ready. Level carousel above.
+## Lobby (`UI.updateLobby` + `Level` lobby scene)
+No DOM player-list any more — **players are the 3D character row** rendered by
+`Level.lobbyScene`. `UI.updateLobby` reconciles the corner controls from the
+authoritative roster: role `<select>` = local `me.role` (→ `Network.setLocalRole`), map
+`<select>` = `gameState.levelName` (host-editable → `Network.selectLevel`; populated by
+`UI.renderLevelSelector`), name pill = `me.name`, and the contextual CTA
+(`#btn-lobby-action`: host **START GAME** gated on ≥1 Hider + ≥1 Seeker + all ready;
+client **READY/UNREADY** from `me.isReady`). Warning/subtitle carry the same gating
+strings. It also reconciles the **refresh / JOIN / leave** trio from `isHost` + player
+`total` (`hostAlone = isHost && total <= 1`): host-alone → refresh shown+enabled, JOIN
+shown, door hidden; host+players → refresh shown but **disabled**, JOIN hidden, door
+shown; client → refresh hidden, JOIN hidden, door shown. Then it calls
+`Level.syncLobbyModels()` (guarded by `Level.lobbyActive`) to diff the roster into
+character meshes + labels.
+
+**Lobby 3D scene** (`js/level.js`, isolated from the in-game `scene`/`playerMeshes`):
+`initLobbyScene` (own camera/lights/ground) · `makeCharacterMesh` reused per player ·
+`makeLobbyLabel` (name + role sprite, gold ✓ when ready) · `_layoutLobby` (row spacing +
+camera framing) · `renderLobby(dt)` (idle mixer tick + draw, from `animate()` while
+`lobbyActive`) · `showLobby`/`hideLobby` (toggled by the screen transitions) ·
+`disposeLobbyModels` (from `cleanup`).
 
 ## Responsive / landscape (`css/style.css`)
 - `@media (orientation: portrait)` → show `#rotate-overlay` (z 9999) over everything.

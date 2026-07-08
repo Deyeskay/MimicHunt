@@ -783,6 +783,10 @@ const Level = {
         renderer.setSize(window.innerWidth, window.innerHeight);
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
+        if (this.lobbyCam) {
+            this.lobbyCam.aspect = window.innerWidth / window.innerHeight;
+            this.lobbyCam.updateProjectionMatrix();
+        }
         if (this._composer) {
             this._composer.setPixelRatio(renderer.getPixelRatio());
             this._composer.setSize(window.innerWidth, window.innerHeight);
@@ -1842,6 +1846,205 @@ const Level = {
         sprite.userData.color = color;
         sprite.userData.tex = tex;
         return sprite;
+    },
+
+    /* =================================================================
+       LOBBY 3D SCENE (PUBG-style character select)
+       A dedicated, lightweight scene kept fully separate from the in-game
+       `scene` + `playerMeshes` so nothing here can perturb match rendering.
+       One idle-animated character per player in gameState.players stands in
+       a row facing the camera, each with a name/role label sprite that shows
+       a gold ✓ when that player is ready. Driven from UI.updateLobby (roster)
+       and animate() (per-frame mixer tick via renderLobby).
+    ================================================================= */
+    lobbyActive: false,
+    lobbyScene: null,
+    lobbyCam: null,
+    lobbyMeshes: {},   // peerId -> { root, role, label, labelKey }
+
+    initLobbyScene: function() {
+        if (this.lobbyScene) return;
+        const s = new THREE.Scene();
+        s.background = new THREE.Color(0x141c2b);   // dark studio backdrop, controls float over it
+        s.add(new THREE.AmbientLight(0xffffff, 1.0));
+        s.add(new THREE.HemisphereLight(0xbfd8ff, 0x2a3550, 0.7));
+        const dir = new THREE.DirectionalLight(0xffffff, 1.15);
+        dir.position.set(5, 12, 9);
+        s.add(dir);
+        const rim = new THREE.DirectionalLight(0x88aaff, 0.55);
+        rim.position.set(-7, 4, 4);
+        s.add(rim);
+        // A dark ground disc grounds the characters without a full level.
+        const ground = new THREE.Mesh(
+            new THREE.CircleGeometry(40, 48),
+            new THREE.MeshStandardMaterial({ color: 0x1d2740, roughness: 1, metalness: 0 })
+        );
+        ground.rotation.x = -Math.PI / 2;
+        s.add(ground);
+        const cam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+        cam.position.set(0, 3, 9);
+        cam.lookAt(0, 1.4, 0);
+        this.lobbyScene = s;
+        this.lobbyCam = cam;
+        this.lobbyMeshes = {};
+    },
+
+    // Name + role label for a lobby character. Constant screen size (sizeAttenuation
+    // off), drawn on top. Name is white; a gold ✓ prefixes it when ready; the role
+    // sits below in its role colour.
+    makeLobbyLabel: function(name, role, ready) {
+        const W = 512, H = 168;
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, W, H);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+
+        const roleText = role === 'Seeker' ? 'HUNTER' : 'HIDER';
+        const roleColor = role === 'Seeker' ? '#ff5a5a' : '#46e06a';
+        const nm = name || roleText;
+
+        // --- name line (with optional gold tick, centred as a unit) ---
+        ctx.font = 'bold 54px "Fredoka", system-ui, sans-serif';
+        const tick = ready ? '✓' : '';
+        const gap = ready ? 20 : 0;
+        const tickW = ready ? ctx.measureText(tick).width : 0;
+        const nameW = ctx.measureText(nm).width;
+        const totalW = tickW + gap + nameW;
+        let x = W / 2 - totalW / 2;
+        const nameY = 56;
+        ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        if (ready) {
+            ctx.strokeText(tick, x, nameY);
+            ctx.fillStyle = '#ffd54a';
+            ctx.fillText(tick, x, nameY);
+            x += tickW + gap;
+        }
+        ctx.strokeText(nm, x, nameY);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(nm, x, nameY);
+
+        // --- role line ---
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 40px "Fredoka", system-ui, sans-serif';
+        ctx.lineWidth = 7; ctx.strokeStyle = 'rgba(0,0,0,0.9)';
+        ctx.strokeText(roleText, W / 2, 122);
+        ctx.fillStyle = roleColor;
+        ctx.fillText(roleText, W / 2, 122);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({
+            map: tex, transparent: true, depthTest: false, depthWrite: false,
+            fog: false, sizeAttenuation: false
+        });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(0.36, 0.118, 1);   // W:H ≈ 3.05:1
+        sprite.renderOrder = 1000;
+        sprite.userData.tex = tex;
+        return sprite;
+    },
+
+    _removeLobbyMesh: function(id) {
+        const e = this.lobbyMeshes[id];
+        if (!e) return;
+        if (e.label) {
+            e.root.remove(e.label);
+            if (e.label.userData.tex) e.label.userData.tex.dispose();
+            if (e.label.material) e.label.material.dispose();
+        }
+        if (this.lobbyScene) this.lobbyScene.remove(e.root);
+        delete this.lobbyMeshes[id];
+    },
+
+    // Diff gameState.players → add/remove/relabel lobby characters. Cheap: a mesh
+    // is only rebuilt when a player joins or changes role; the label only when
+    // name/role/ready/grace changes. Called from UI.updateLobby.
+    syncLobbyModels: function() {
+        if (!this.lobbyScene) this.initLobbyScene();
+        const players = (typeof gameState !== 'undefined' && gameState.players) || {};
+        const ids = Object.keys(players);
+
+        // Drop characters for players no longer present.
+        for (const id in this.lobbyMeshes) {
+            if (!players[id]) this._removeLobbyMesh(id);
+        }
+
+        ids.forEach(id => {
+            const p = players[id];
+            let entry = this.lobbyMeshes[id];
+            // (Re)build the model on first sight or a role change (different rig).
+            if (!entry || entry.role !== p.role) {
+                if (entry) this._removeLobbyMesh(id);
+                const fake = {
+                    role: p.role, color: p.color,
+                    x: 0, y: PropLevel.PLAYER_BASE_HEIGHT, z: 0, isCaught: false
+                };
+                const root = this.makeCharacterMesh(fake);
+                if (!root) return;
+                root.rotation.y = 0;   // model forward = +Z → faces the camera at +Z
+                this.lobbyScene.add(root);
+                entry = this.lobbyMeshes[id] = { root: root, role: p.role, label: null, labelKey: '' };
+            }
+            // Relabel only when something visible changed.
+            const graceMark = p._grace ? '🔌 ' : '';
+            const labelKey = graceMark + (p.name || '') + '|' + p.role + '|' + (p.isReady ? 1 : 0);
+            if (entry.labelKey !== labelKey) {
+                if (entry.label) {
+                    entry.root.remove(entry.label);
+                    if (entry.label.userData.tex) entry.label.userData.tex.dispose();
+                    if (entry.label.material) entry.label.material.dispose();
+                }
+                const label = this.makeLobbyLabel(graceMark + (p.name || ''), p.role, p.isReady);
+                label.position.set(0, 3.5, 0);
+                entry.root.add(label);
+                entry.label = label;
+                entry.labelKey = labelKey;
+            }
+        });
+
+        this._layoutLobby(ids);
+    },
+
+    // Space the characters evenly along X (centred) and frame the camera to fit.
+    _layoutLobby: function(ids) {
+        const n = ids.length || 1;
+        const spacing = 2.7;
+        const totalW = (n - 1) * spacing;
+        ids.forEach((id, i) => {
+            const e = this.lobbyMeshes[id];
+            if (e) e.root.position.set(-totalW / 2 + i * spacing, 0, 0);
+        });
+        if (this.lobbyCam) {
+            const dist = Math.max(7, totalW * 0.72 + 6.5);
+            this.lobbyCam.position.set(0, 3.0, dist);
+            this.lobbyCam.lookAt(0, 1.4, 0);
+        }
+    },
+
+    // Per-frame lobby render: advance idle mixers, gentle turntable, draw.
+    renderLobby: function(dt) {
+        if (!this.lobbyActive) return;
+        if (!this.lobbyScene) this.initLobbyScene();
+        for (const id in this.lobbyMeshes) {
+            const m = this.lobbyMeshes[id].root.userData.mixer;
+            if (m) m.update(dt || 0);
+        }
+        if (renderer) renderer.render(this.lobbyScene, this.lobbyCam);
+    },
+
+    showLobby: function() {
+        this.lobbyActive = true;
+        if (!this.lobbyScene) this.initLobbyScene();
+        this.syncLobbyModels();
+    },
+
+    hideLobby: function() { this.lobbyActive = false; },
+
+    disposeLobbyModels: function() {
+        for (const id in (this.lobbyMeshes || {})) this._removeLobbyMesh(id);
+        this.lobbyMeshes = {};
     },
 
     // Per-frame name tag above a player's head (through walls, constant screen size).
