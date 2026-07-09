@@ -917,6 +917,21 @@ const Level = {
         root.userData.model = model;
         root.userData.modelBaseY = model.position.y;
         root.userData.animT = 0;
+
+        // Head bone for the seeker head-look feature (turn head toward a moving
+        // hider). Rig-agnostic: match a bone named "head" (skip HeadTop_End tips),
+        // fall back to the neck. Null on rigs without one → look logic no-ops.
+        let headBone = null, neckBone = null;
+        model.traverse(o => {
+            if (!o.isBone && o.type !== 'Bone') return;
+            const n = (o.name || '').toLowerCase();
+            if (!headBone && n.indexOf('head') >= 0 && n.indexOf('end') < 0 && n.indexOf('top') < 0) headBone = o;
+            if (!neckBone && n.indexOf('neck') >= 0) neckBone = o;
+        });
+        root.userData.headBone = headBone || neckBone;
+        root.userData.headYaw = 0;          // current applied head yaw (rad, body-local)
+        root.userData.headLookExpiry = 0;   // Network.now() until which we keep looking
+        root.userData.headTargetId = null;  // player id currently tracked
         return root;
     },
 
@@ -1079,6 +1094,84 @@ const Level = {
         if (ud.upper.walk && upperT === 'walk') ud.upper.walk.setEffectiveTimeScale(back ? -1 : 1);
 
         ud.mixer.update(dt);
+    },
+
+    // Is this mesh moving enough to be "heard"? Uses the footstep speed (remotes)
+    // or the anim speed (local character) — same thresholds as walking.
+    _meshMoving: function(m) {
+        const ud = m.userData || {};
+        return (ud._footSpeed || 0) > FOOTSTEP_SPEED_ON || (ud.speed || 0) > FOOTSTEP_SPEED_ON;
+    },
+
+    // Seeker head-look: turn the seeker's head toward the NEAREST moving hider
+    // (footsteps heard) and hold for HEAD_LOOK_HOLD_MS, then ease back to center.
+    // Runs AFTER updateCharacterAnim's mixer.update so it overrides the animated
+    // head pose (we re-multiply the offset onto the fresh clip pose every frame —
+    // no accumulation). Head yaw is body-local and clamped to +/-HEAD_MAX_YAW, so
+    // as the body/camera rotates the head re-solves toward the target in realtime.
+    _headYawAxis: null,
+    _headOffQuat: null,
+    updateSeekerHeadLook: function(mesh, p, seekerId, dt) {
+        const ud = mesh.userData;
+        const bone = ud.headBone;
+        if (!bone) return;
+
+        const now = Network.now();
+
+        // Find the nearest MOVING hider (skip caught / self / disguised-invisible-
+        // to-nobody — footstep speed already excludes eliminated players).
+        if (!p.isCaught) {
+            let bestId = null, bestD = Infinity;
+            const sx = mesh.position.x, sz = mesh.position.z;
+            for (let hid in gameState.players) {
+                if (hid === seekerId) continue;
+                const hp = gameState.players[hid];
+                if (!hp || hp.role !== 'Hider' || hp.isCaught) continue;
+                if ((hp.invisUntil || 0) > now) continue;   // invisible hiders aren't tracked (as with footsteps)
+                const hm = playerMeshes[hid];
+                if (!hm || !this._meshMoving(hm)) continue;
+                const d = Math.hypot(hm.position.x - sx, hm.position.z - sz);
+                if (d < bestD) { bestD = d; bestId = hid; }
+            }
+            if (bestId) { ud.headTargetId = bestId; ud.headLookExpiry = now + HEAD_LOOK_HOLD_MS; }
+        }
+
+        // Desired body-local yaw: track the target while the look window is open,
+        // else 0 (default forward).
+        let desired = 0, resetting = true;
+        const tp = ud.headTargetId && gameState.players[ud.headTargetId];
+        const targetOk = tp && !tp.isCaught && (tp.invisUntil || 0) <= now;  // drop if target turned invisible mid-look
+        const tm = (!p.isCaught && now < ud.headLookExpiry && targetOk)
+            ? playerMeshes[ud.headTargetId] : null;
+        if (tm) {
+            const worldAngle = Math.atan2(tm.position.x - mesh.position.x,
+                                          tm.position.z - mesh.position.z);
+            let local = worldAngle - mesh.rotation.y;
+            local = Math.atan2(Math.sin(local), Math.cos(local));            // wrap to [-PI,PI]
+            desired = Math.max(-HEAD_MAX_YAW, Math.min(HEAD_MAX_YAW, local)); // neck limit
+            resetting = false;
+        }
+
+        // Frame-rate-independent ease toward desired (snappy onto target, gentle
+        // back to center).
+        const tau = resetting ? HEAD_RESET_TAU : HEAD_TRACK_TAU;
+        const k = 1 - Math.exp(-dt / tau);
+        // NO angle wrap here: both desired and headYaw live in the clamped band
+        // [-HEAD_MAX_YAW, +HEAD_MAX_YAW], so a plain diff eases through the FRONT
+        // (0). When a hider crosses directly behind, desired flips +130 <-> -130
+        // and the head swings the long way across the front to the other side
+        // (reversing), instead of shortest-path swinging through the back past the
+        // neck limit.
+        ud.headYaw += (desired - ud.headYaw) * k;
+
+        // Apply as an offset multiplied onto the current (clip) bone pose, about the
+        // bone's local up axis. Flip _headYawAxis if the head tilts instead of turns.
+        if (!this._headYawAxis) this._headYawAxis = new THREE.Vector3(0, 1, 0);
+        if (!this._headOffQuat) this._headOffQuat = new THREE.Quaternion();
+        if (Math.abs(ud.headYaw) > 1e-4) {
+            this._headOffQuat.setFromAxisAngle(this._headYawAxis, ud.headYaw);
+            bone.quaternion.multiply(this._headOffQuat);
+        }
     },
 
     // Crossfade within one layer (disjoint bone set → clean override).
@@ -2202,6 +2295,10 @@ const Level = {
 
             // Drive the character animation from its rendered movement.
             if (mesh.userData.mixer) this.updateCharacterAnim(mesh, p, dt);
+            // Seeker turns his head toward the nearest moving hider (after the
+            // mixer runs, so it overrides the animated head pose).
+            if (p.role === "Seeker" && mesh.userData.headBone)
+                this.updateSeekerHeadLook(mesh, p, id, dt);
             // Red reveal blink after a hit.
             this.applyRevealBlink(mesh, p);
             // Name tag above the head (seeker=green to all, hider=red to hiders).

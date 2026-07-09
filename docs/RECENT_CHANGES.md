@@ -3,6 +3,40 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-10
+
+- **Seeker head-look: turns his head toward the nearest MOVING hider.** Files:
+  `js/globals.js`, `js/level.js`. When a seeker "hears footsteps" (a hider is moving
+  near him), his character model now rotates its **head bone** to look at that hider,
+  holds for `HEAD_LOOK_HOLD_MS` (3s) after the last movement, then eases back to
+  center. Multiple movers → the **closest** hider wins (XZ distance from the seeker
+  mesh). Purely cosmetic/local — no packets; every client computes it from the same
+  rendered motion, so all viewers see the seeker's head track.
+  - **Head bone** is grabbed rig-agnostically in `makeCharacterMesh` (traverse for a
+    bone named `head`, skipping `HeadTop_End`-style tips; falls back to `neck`). Stored
+    as `ud.headBone` with look state `ud.headYaw` / `ud.headLookExpiry` / `ud.headTargetId`.
+  - **`Level.updateSeekerHeadLook(mesh, p, id, dt)`** runs in `render` right AFTER
+    `updateCharacterAnim` (i.e. after `mixer.update`), so it overrides the animated
+    "searching" head pose. It re-multiplies a yaw offset onto the fresh clip pose every
+    frame (no accumulation). Target yaw is **body-local** (`atan2(dx,dz) − mesh.rotation.y`,
+    wrapped) and **clamped to `±HEAD_MAX_YAW` (130°)** — beyond the neck limit the head
+    caps at 130° while the body/camera keep turning, and the head re-solves toward the
+    target in realtime as the body rotates. The ease uses a **plain diff (no angle
+    wrap)** between the clamped current/desired yaws, so when a hider crosses directly
+    **behind** the seeker the head reverses across the FRONT (through 0°) to the other
+    side rather than shortest-path swinging through the back past the neck limit.
+    Easing is frame-rate-independent
+    (`1−exp(−dt/τ)`): snappy onto a target (`HEAD_TRACK_TAU` 0.18s), gentle back to
+    center (`HEAD_RESET_TAU` 1.0s). "Moving" reuses the footstep speed threshold
+    (`_meshMoving`: `ud._footSpeed`/`ud.speed` > `FOOTSTEP_SPEED_ON`). **Invisible
+    hiders** (`invisUntil` active) are excluded — never tracked, and a target that
+    turns invisible mid-look is dropped (head eases back), mirroring the footstep
+    invis-suppression.
+  - **Axis caveat:** the offset rotates about the bone's local +Y (`_headYawAxis`). On
+    the Mixamo-style rig that yaws the head; if `hunter.glb`'s head bone is oriented
+    differently and the head **tilts** instead of turning, flip `_headYawAxis` to the
+    correct local axis. Needs an in-browser confirm (headless can't verify the bone axis).
+
 ## 2026-07-09
 
 - **PC: on-screen disguise prompt near a prop.** Files: `index.html`, `css/style.css`,

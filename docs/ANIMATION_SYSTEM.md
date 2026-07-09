@@ -58,6 +58,19 @@ via the `shot` event so remotes show the same upper-body shoot + facing.
 (`p.y - PLAYER_BASE_HEIGHT`) and rotated `p.rotY + PLAYER_YAW_OFFSET` (`=0`; model
 faces +Z). Disguised players use the prop mesh path (prop rotation in degrees).
 
+## Seeker head-look (turn head toward a moving hider)
+`Level.updateSeekerHeadLook(mesh, p, id, dt)` runs in `render` **after**
+`updateCharacterAnim` (so after `mixer.update`, else the clip pose wipes it). For a
+Seeker mesh it finds the **nearest moving hider** (`_meshMoving` = footstep/anim speed
+> `FOOTSTEP_SPEED_ON`), turns the **head bone** toward it, holds `HEAD_LOOK_HOLD_MS`
+(3s) after the last movement, then eases back. Head yaw is **body-local**
+(`atan2(dx,dz) − mesh.rotation.y`, wrapped) and clamped to **±`HEAD_MAX_YAW` (130°)**;
+because it re-solves each frame the head stays on target as the body/camera rotate.
+The offset is `bone.quaternion.multiply(yawOffset)` about the bone's local +Y
+(`_headYawAxis` — flip if the head tilts instead of turning on `hunter.glb`). Bone is
+captured in `makeCharacterMesh` as `ud.headBone` (rig-agnostic name match, `neck`
+fallback); state in `ud.headYaw`/`headLookExpiry`/`headTargetId`. Local, no packets.
+
 ## Foot ring / reveal / eliminated
 Each character has a per-instance colored **foot ring** (`ud.ring`, Seeker red /
 Hider green). `applyRevealBlink` blinks it red while `revealedUntil` is active;

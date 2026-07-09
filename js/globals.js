@@ -228,7 +228,7 @@ const BEAM_RADIUS      = 3;       // walk-through pickup radius (matches the vis
 const PICKUP_INVIS_MS  = 5000;    // hider becomes invisible this long the instant they pick up
 const POWER_INVIS_MS   = 10000;   // hider "Invisible" power duration
 const POWER_SCAN_MS    = 15000;   // seeker "Scan" (see hiders through walls) duration
-const POWER_SCAN_RANGE = 40;      // seeker "Scan" range (world units / "metres")
+const POWER_SCAN_RANGE = 50;      // seeker "Scan" range (world units / "metres")
 const POWER_JAM_MS     = 15000;   // seeker "Jammer" locks undisguised hiders out of disguising
 const POWER_KILL_MS    = 15000;   // seeker "Kill" (one-shot direct kill) window
 // Random power pools, by role. Hiders activate manually (E / power button); seekers
@@ -301,6 +301,12 @@ const FOOTSTEP_MIN_DIST   = 8;    // within this, full volume
 const FOOTSTEP_SPEED_ON   = 1.5;  // u/s to start stepping (matches anim walk threshold)
 const FOOTSTEP_SPEED_OFF  = 0.5;  // u/s hysteresis to stop stepping
 const FOOTSTEP_INTERVAL_MS = 330; // step cadence (same as the local player)
+
+// --- SEEKER HEAD-LOOK (seeker turns his head toward the nearest MOVING hider) ---
+const HEAD_LOOK_HOLD_MS = 3000;                 // keep looking this long after last heard footstep, then reset
+const HEAD_MAX_YAW      = 100 * Math.PI / 180;  // neck limit: head yaw clamps to +/-130 deg
+const HEAD_TRACK_TAU    = 0.18;                 // fast snap onto a target (smoothing time-constant, s)
+const HEAD_RESET_TAU    = 1.0;                  // gentle return to default (~3s to settle)
 
 let ammo = MAG_SIZE;           // local seeker's current magazine
 let reloading = false;
