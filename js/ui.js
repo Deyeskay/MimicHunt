@@ -655,6 +655,30 @@ const UI = {
             }
         }
 
+        // PC disguise prompt: when the on-screen mobile controls are hidden
+        // (desktop play), the mobile disguise button isn't visible, so give
+        // hiders a keyboard hint near a disguisable prop. Press F swaps/resets.
+        const hint = document.getElementById('disguise-hint');
+        if (hint) {
+            let show = false;
+            if (!isSeeker && !GAME_SETTINGS.showMobileControls) {
+                const canAct = !me.isCaught && gameState.phase !== 'LOBBY';
+                const locked = canAct && me.disguiseLockUntil && Network.now() < me.disguiseLockUntil;
+                const near = canAct && !locked ? Mechanics.findNearestDisguiseProp() : null;
+                if (near) {
+                    document.getElementById('disguise-hint-action').textContent =
+                        Mechanics.isDisguised() ? 'switch to' : 'disguise as';
+                    document.getElementById('disguise-hint-prop').textContent = near.model.toUpperCase();
+                    show = true;
+                } else if (canAct && !locked && Mechanics.isDisguised()) {
+                    document.getElementById('disguise-hint-action').textContent = 'reset';
+                    document.getElementById('disguise-hint-prop').textContent = 'disguise';
+                    show = true;
+                }
+            }
+            hint.style.display = show ? '' : 'none';
+        }
+
         // --- Airdrop power-up HUD (held power + active timed effects) ---
         this.updatePowerHUD(me, isSeeker);
 

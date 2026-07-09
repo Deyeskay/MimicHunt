@@ -5,6 +5,15 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-09
 
+- **PC: on-screen disguise prompt near a prop.** Files: `index.html`, `css/style.css`,
+  `js/ui.js`. On desktop the mobile disguise button is hidden, so there was no cue that
+  a hider could disguise. Added a `#disguise-hint` pill (bottom-center, above the HUD)
+  that reads e.g. **Press `F` to disguise as CHAIR**. Driven in `UI.updateHUD`, gated on
+  `!GAME_SETTINGS.showMobileControls` (i.e. PC): reuses `Mechanics.findNearestDisguiseProp()`
+  and shows "disguise as PROP" / "switch to PROP" (when already disguised) / "reset
+  disguise" (disguised but not beside a prop). Hidden for seekers, in lobby, when caught,
+  or while disguise is locked.
+
 - **UI: shrink the join-code input + dark-reskin the in-game Controls popup for
   consistency.** File: `css/style.css`. (1) The lobby "Join a room" code field
   (`.ljp-card input`) was oversized/chunky — `letter-spacing: 4px`, `font-size:

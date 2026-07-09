@@ -270,6 +270,10 @@
         <!-- Seeker ammo/score pill: bottom-center, mirrors the hider health bar. -->
         <div id="combat-hud" class="bottom-center-hud" style="border-color: var(--accent-blue); display:none;">🔫 <span id="ammo-display">4/4</span> · ⭐ <span id="score-display">0</span></div>
 
+        <!-- PC-only disguise prompt: shown to a hider near a disguisable prop when the
+             on-screen mobile controls are hidden (desktop). Driven by UI.updateHUD. -->
+        <div id="disguise-hint" style="display:none;">Press <kbd>F</kbd> to <span id="disguise-hint-action">disguise as</span> <span id="disguise-hint-prop">PROP</span></div>
+
         <!-- Event toasts (player left / eliminated / disconnected), stacked above the bottom HUD. -->
         <div id="toast-container"></div>
 
