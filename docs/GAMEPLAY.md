@@ -82,7 +82,8 @@ rather than a fixed list: gold count scales `≈huntLen/170` (1–8), spread acr
   silhouette — a dark body cutout + soft glowing rim — on their body/prop, plus an
   orange head dot, drawn through walls, 10s, beats invis; an undisguised hider's
   silhouette follows the **live animated pose**, not a frozen T-pose),
-  **Jammer** (undisguised hiders can't disguise 10s; reuses `disguiseLockUntil`), **Kill**
+  **Jammer** (every live hider can't disguise 15s **and** anyone already disguised is
+  popped out of their prop instantly; reuses `disguiseLockUntil`), **Kill**
   (one-shot direct kill 10s).
 - Combat: invisible hiders are untargetable; shield negates one hit (`shot.shielded`);
   kill sends HP to 0. Tunables in `js/globals.js` (`BEAM_*`, `POWER_*`, `PICKUP_INVIS_MS`).
@@ -119,10 +120,26 @@ the team total; the team wins at `KEYS_TO_WIN = 3` ("Keys Secured! Hiders Win!")
 - Both hider wins co-exist: keys delivered **or** the hunting timer expiring.
 
 ## Scoring
-- Seeker: **+100 per hit** (`score`), shown in the combat HUD (`⭐`). Hiders have no
-  score (survival is the goal). Per-match; reset at round start.
+- **In-game `score`** (combat HUD `⭐`): seeker **+100 per hit** (`HIT_SCORE`), per-match,
+  reset at round start. Raw damage tally — NOT the end-of-match XP.
+- **End-of-match XP** (`Network.buildResults(winner)`, results scoreboard): redesigned so
+  **winning is the biggest driver for both roles** and ceilings are symmetric (~1150–1460),
+  vs the old seeker-farm (a 12-hit kill used to bundle ~1400 XP). All constants in
+  `js/globals.js` (`XP_*`). `winner` ('Hiders'|'Seekers') is threaded from `finishMatch`.
+  - **Hider XP** = `winBonus` + `round(fracOfMatchSurvived × XP_SURVIVE_FULL=400)` +
+    `keysDelivered × XP_KEY_DELIVER=200` + (win **by keys** only) `XP_KEYWIN_BONUS=150`
+    team objective bonus. Survival scales by *fraction* of the hunt so 5–20 min matches
+    stay balanced; the keys bonus rewards the risky active objective over passive hiding
+    (timer win gives no such bonus). `keyWin` flag threaded from the keys-win `finishMatch`.
+  - **Seeker XP** = `winBonus` + kill XP (`XP_KILL=180` each, diminishing to ×`0.5` past
+    `XP_KILL_SOFTCAP=3`) + chip (`XP_CHIP_PER_HIT=3` per hit, capped `XP_CHIP_CAP=150`).
+    The chip also credits softening a hider a teammate finishes.
+  - **Win bonus** = `XP_WIN_BONUS=500`, flat, to every player on the winning side.
+  - **Grade** (`XP_GRADES`, off final XP): S+ ≥1200, S ≥950, A ≥700, B ≥450, else C.
+    Shown in the "Score" column — seekers see `<dmg> <grade>`, hiders just the grade.
 
 ## Tunables (all in `js/globals.js`)
 `HIDER_MAX_HP`, `MAG_SIZE`, `FIRE_INTERVAL_MS`, `RELOAD_MS`, `SHOT_RANGE`,
-`HIT_SCORE`, `REVEAL_MS`, `DISGUISE_LOCK_MS`, `SHOOT_ANIM_MS`; hit radius floor is in
+`HIT_SCORE`, `REVEAL_MS`, `DISGUISE_LOCK_MS`, `SHOOT_ANIM_MS`, `XP_*` (scoreboard XP +
+grades); hit radius floor is in
 `Network.processShot`; hide/hunt durations in `GAME_SETTINGS`.

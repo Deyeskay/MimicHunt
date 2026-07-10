@@ -220,7 +220,25 @@ const SHOT_RANGE = 60;         // max pulse travel / hit range (world units)
 const DISGUISE_VERTICAL_BAND = 3; // max |feetY - propBase| to disguise as a prop; keeps
                                // floors (~7.8 apart) from bleeding into each other so a
                                // hider can't disguise as a prop on the floor above/below.
-const HIT_SCORE = 100;         // points per hit
+const HIT_SCORE = 100;         // points per hit (raw damage tally; not XP — see XP block below)
+
+// --- XP / SCORING (results scoreboard; display-only, host-computed in buildResults) ---
+// Winning is the biggest driver for both roles; hits are a small "chip" (the means,
+// not the achievement); kills carry the weight but diminish past a soft cap so a lone
+// seeker clearing a big lobby can't farm unbounded XP. Ceilings are symmetric (~1150–1460).
+const XP_WIN_BONUS     = 500;  // flat, every player on the winning side
+const XP_SURVIVE_FULL  = 400;  // hider: max survival XP (× fraction of match survived)
+const XP_KEY_DELIVER   = 200;  // hider: per key personally delivered to an exit
+const XP_KEYWIN_BONUS  = 150;  // hider team: extra when the win is BY KEYS (not timer) —
+                               // rewards the risky, active objective over passive hiding
+const XP_KILL          = 180;  // seeker: per hider eliminated (the achievement)
+const XP_KILL_SOFTCAP  = 3;    // kills at full value; extras diminish
+const XP_KILL_DIMINISH = 0.5;  // multiplier on kill XP beyond the soft cap
+const XP_CHIP_PER_HIT  = 3;    // seeker: tiny per-hit progress (also = assist credit)
+const XP_CHIP_CAP      = 150;  // ceiling on total chip XP (stops hit-farming)
+const XP_GRADES = [            // performance grade off final XP, both roles, high→low: [minXP, label]
+    [1200, 'S+'], [950, 'S'], [700, 'A'], [450, 'B'], [0, 'C']
+];
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
 const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit
 const SHOOT_ANIM_MS = 1200;    // aim-stance window after a shot (upper-body shoot + face target + back-walk)

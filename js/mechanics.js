@@ -919,7 +919,7 @@ const Mechanics = {
             gameState.phase = 'ENDED';
             // finishMatch broadcasts gameOver to every client (so hiders also
             // see the end screen) and shows the host's modal.
-            Network.finishMatch("Game Over", "Seeker Wins! All hiders eliminated.");
+            Network.finishMatch("Game Over", "Seeker Wins! All hiders eliminated.", 'Seekers');
         }
     }
 };

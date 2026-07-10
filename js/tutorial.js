@@ -657,7 +657,7 @@ const Tutorial = {
                     T.spawnDummyAhead('hp', 8, { disguise: false });
                     Network.grantPower(myId, 'gold', 'jammer');
                     T.dialogue('📡 Power 2 — JAMMER',
-                        '<b>Jammer</b> locks every undisguised hider out of disguising for 15s — catch them in the open with no escape into a prop. Tap Next.');
+                        '<b>Jammer</b> rips every disguised hider out of their prop AND locks all hiders out of disguising for 15s — nobody escapes into cover. Tap Next.');
                 },
                 onExit() { T.despawnDummy(TUTORIAL_BOT_PREFIX + 'hp'); }
             },

@@ -65,7 +65,12 @@ const UI = {
                     : (r.survived ? '<span class="res-alive">Survived</span>'
                                   : '<span class="res-dead">Eliminated</span>');
                 const kills = isSeeker ? (r.kills || 0) : '—';
-                const score = isSeeker ? (r.score || 0) : '—';
+                // "Score" column = performance grade for everyone, plus damage dealt for
+                // seekers (hiders are unarmed, so just the grade).
+                const gLabel = r.grade || 'C';
+                const grade = '<span class="res-grade res-grade-' +
+                    gLabel.replace('+', 'plus') + '">' + gLabel + '</span>';
+                const score = isSeeker ? ((r.hits || 0) + ' dmg ' + grade) : grade;
                 const keys  = isSeeker ? '—' : (r.keys || 0);
                 const surv  = isSeeker ? '—' : fmt(r.survivalMs);
                 return '<tr class="' + (r.isYou ? 'res-you' : '') + '">' +

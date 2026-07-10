@@ -5,6 +5,36 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-10
 
+- **Rebalanced end-of-match XP + added performance grades.** The old scoreboard XP was
+  seeker-lopsided: seeker XP was `kills*200 + score` where `score` = +100/hit and a kill
+  needs 12 hits, so every kill silently bundled ~1400 XP — a 3-kill sweep (~4200) dwarfed a
+  hider's ~3300 survive-the-whole-match ceiling. Redesigned in `Network.buildResults` so
+  **winning is the biggest driver for both roles** with symmetric ceilings (~1150–1460):
+  - Hider XP = winBonus + `frac_of_match_survived × 400` + `keysDelivered × 200` + a
+    `150` team objective bonus when hiders win **by keys** (not timer) — rewards the risky
+    active play over passive hiding. Survival scales by fraction of the hunt so 5–20 min
+    matches stay balanced. `keyWin` flag threaded from the keys-win `finishMatch` caller.
+  - Seeker XP = winBonus + kill XP (`180` each, ×`0.5` past a soft cap of 3) + a small
+    per-hit chip (`3`/hit, capped `150`) that also credits softening a teammate's kill.
+  - Flat `XP_WIN_BONUS=500` to every player on the winning side. `winner`
+    ('Hiders'|'Seekers') threaded from `finishMatch` → `buildResults` (3 callers tagged).
+  - New `XP_*` + `XP_GRADES` constants in `js/globals.js`. No new per-player stat
+    (`hits = score/HIT_SCORE`).
+  - **Score column** now shows a letter grade (C/B/A/S/S+, off final XP) for everyone, plus
+    damage dealt for seekers (`<dmg> <grade>`); colored `.res-grade-*` chips in
+    `css/style.css`. Docs: GAMEPLAY scoring section.
+
+- **Jammer now pops already-disguised hiders out of their prop.** Previously the seeker
+  Jammer only locked *undisguised* hiders out of disguising (`disguiseType === 'player'`
+  filter); a hider already hidden in a prop was untouched for the whole 15s. Now
+  `grantPower`'s jammer branch (`js/network.js`) locks **every** live hider
+  (`disguiseLockUntil`) and force-breaks anyone currently disguised back to the player
+  model. Factored the shot handler's force-out into `Network._forceOutOfDisguise(tgt,id)`
+  (y-lift so short props don't sink + self-correction of `localPos`/`localDisguise` when
+  it's us) and reused it. New `powerGain.jamForced` field carries the popped-out ids so
+  clients mirror the break in `applyPowerGain`. Docs: GAMEPLAY, NETWORK_PROTOCOL, tutorial
+  Jammer explainer.
+
 - **Fix: host hider no longer sinks into the ground when its disguise is broken.**
   `resolveShot` (host-authoritative, `js/network.js`) raised the revealed target's
   stored `.y` but never corrected the **host's own** `localPos.y` / `localDisguise`.

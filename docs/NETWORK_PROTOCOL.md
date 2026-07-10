@@ -47,7 +47,7 @@ state + events. All in `js/network.js`.
 | `notice` | event toast | `{text,audience?,toastMs?}` | `UI.toast(text,{duration})`; `audience` (`all`/`hiders`/`seekers`) restricts who shows it, `toastMs` lengthens it. Host shows locally honoring its own role via `Network.notify(text,opts)` |
 | `beamSpawn` | host airdrop beam appears | `{beamId,kind,x,z,armMs}` | `Level.spawnBeam` (arms `armMs`, then active) + `Sound.beam` |
 | `beamGone` | beam collected/expired | `{beamId,collectorId?}` | `Level.removeBeam` (flash if collected) |
-| `powerGain` | a player picked up a power | `{playerId,role,heldPower?,invisMs?,power?,scanMs?,killMs?,jamIds?,jamMs?}` | `applyPowerGain` → ms→local deadlines; hider holds `heldPower`, seeker power applied instantly |
+| `powerGain` | a player picked up a power | `{playerId,role,heldPower?,invisMs?,power?,scanMs?,killMs?,jamIds?,jamMs?,jamForced?}` | `applyPowerGain` → ms→local deadlines; hider holds `heldPower`, seeker power applied instantly. `jamIds`=hiders locked out; `jamForced`=subset popped out of a live disguise |
 | `powerUse` | hider activated held power | `{playerId,power,healTo?,invisMs?,shield?}` | `applyPowerUse` |
 | `keyGain` | hider collected/recovered a key | `{playerId,carried}` | `applyKeyGain` (set carriedKeys) |
 | `keyDeposit` | hider deposited keys at a door | `{playerId,carried,submitted}` | `applyKeyDeposit` (team count) |

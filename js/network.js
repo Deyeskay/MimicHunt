@@ -576,7 +576,7 @@ const Network = {
                     ' (' + gameState.submittedKeys + '/' + KEYS_TO_WIN + ')');
         if (gameState.submittedKeys >= KEYS_TO_WIN && gameState.phase === 'HUNTING') {
             gameState.phase = 'ENDED';
-            this.finishMatch("Keys Secured!", "Hiders Win! " + KEYS_TO_WIN + " keys delivered.");
+            this.finishMatch("Keys Secured!", "Hiders Win! " + KEYS_TO_WIN + " keys delivered.", 'Hiders', true);
         }
     },
 
@@ -668,6 +668,23 @@ const Network = {
         else this.grantPower(playerId, beam.kind, beam.forceSeekerPower);
     },
 
+    // Force a hider out of a prop disguise back to the player model, lifting y so the
+    // revealed feet stay on the ground (short props sink otherwise — see shot handler).
+    // Mirrors the shot force-out; used by the jammer. Corrects our own local state when
+    // the forced hider is us.
+    _forceOutOfDisguise(tgt, tgtId) {
+        const oldBase = tgt.propRadius || (tgt.disguiseSize / 2);
+        tgt.y = (tgt.y || 0) - oldBase + PropLevel.PLAYER_BASE_HEIGHT;
+        tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
+        tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null; tgt.disguiseTexture = null;
+        tgt.color = 0x2ed573;
+        if (tgtId === myId) {
+            localPos.y = tgt.y;
+            localDisguise = { type: 'player', size: 2, color: 0x2ed573,
+                propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null };
+        }
+    },
+
     // Roll + apply the random power for the collector's role. Hiders also get an
     // automatic 5s invisibility and HOLD one power to activate later (E / button);
     // seekers get their power applied instantly.
@@ -694,15 +711,18 @@ const Network = {
                 pkt.killMs = POWER_KILL_MS;
             } else { // jammer
                 p.jamUntil = now + POWER_JAM_MS;   // the seeker's own "jammer active" timer (HUD)
-                const ids = [];
+                const ids = [], forced = [];
                 for (const id in gameState.players) {
                     const h = gameState.players[id];
-                    if (h.role === 'Hider' && !h.isCaught && h.disguiseType === 'player') {
+                    if (h.role === 'Hider' && !h.isCaught) {
+                        // Every live hider is locked out of disguising; anyone already
+                        // disguised is also popped out of their prop right now.
                         h.disguiseLockUntil = now + POWER_JAM_MS;
                         ids.push(id);
+                        if (h.disguiseType !== 'player') { this._forceOutOfDisguise(h, id); forced.push(id); }
                     }
                 }
-                pkt.jamIds = ids; pkt.jamMs = POWER_JAM_MS;
+                pkt.jamIds = ids; pkt.jamMs = POWER_JAM_MS; pkt.jamForced = forced;
             }
             this.broadcast(pkt);
             this.applyPowerGain(playerId, 'Seeker', pkt, true);
@@ -739,6 +759,10 @@ const Network = {
                     data.jamIds.forEach(id => {
                         const h = gameState.players[id];
                         if (h) h.disguiseLockUntil = now + (data.jamMs || POWER_JAM_MS);
+                    });
+                    (data.jamForced || []).forEach(id => {
+                        const h = gameState.players[id];
+                        if (h) this._forceOutOfDisguise(h, id);
                     });
                 }
             }
@@ -1433,7 +1457,7 @@ const Network = {
                     }
                 } else if (gameState.phase === 'HUNTING') {
                     gameState.phase = 'ENDED';
-                    this.finishMatch('Time\'s Up!', 'Hiders Win! Time expired.');
+                    this.finishMatch('Time\'s Up!', 'Hiders Win! Time expired.', 'Hiders');
                 }
             }
         }, 1000);
@@ -2394,39 +2418,57 @@ const Network = {
     /*=================================================================
       Finish match – host side
     =================================================================*/
-    finishMatch(title, message) {
+    finishMatch(title, message, winner, keyWin) {
         // Build the per-player results and ship them with the gameOver packet so
         // every client renders the same scoreboard the host computed (survival
-        // time / XP are host-clock derived). The peer is kept ALIVE (no cleanup)
-        // so "Back to Lobby" can bounce everyone into the same room for a rematch.
-        const rows = this.buildResults();
+        // time / XP are host-clock derived). `winner` ('Hiders'|'Seekers') drives
+        // the win bonus; it isn't broadcast — rows arrive fully computed. The peer
+        // is kept ALIVE (no cleanup) so "Back to Lobby" can bounce everyone into
+        // the same room for a rematch.
+        const rows = this.buildResults(winner, keyWin);
         this.broadcast({ type: 'gameOver', title, message, results: rows });
         UI.showResults(title, message, rows);
     },
 
     // Compute the end-of-match scoreboard from the authoritative roster.
-    buildResults() {
+    // `winner` ('Hiders'|'Seekers'|undefined) grants the win bonus to that side.
+    // `keyWin` true when hiders won BY DELIVERING KEYS (not by timer) → team objective bonus.
+    buildResults(winner, keyWin) {
         const endT = this.now();
         const huntStart = gameState.huntStartT || 0;
+        const dur = ROUND_DURATION() * 1000;   // match length (ms); respects the 5–20 min slider
         return Object.keys(gameState.players).map(id => {
             const p = gameState.players[id];
             let survivalMs = 0, survived = false, xp = 0;
+            const hits = Math.round((p.score || 0) / HIT_SCORE);   // damage dealt (no new stat)
+            const won = (winner === 'Hiders'  && p.role === 'Hider') ||
+                        (winner === 'Seekers' && p.role === 'Seeker');
+            const winBonus = won ? XP_WIN_BONUS : 0;
             if (p.role === 'Hider') {
                 const endStamp = p.isCaught ? (p.caughtAtT || endT) : endT;
                 survivalMs = huntStart ? Math.max(0, endStamp - huntStart) : 0;
                 survived = !p.isCaught;
-                const secs = survivalMs / 1000;
-                // XP scales with survival time, plus a survival bonus and key rewards.
-                xp = Math.round(secs * 10) + (survived ? 300 : 0) + (p.keysDelivered || 0) * 150;
+                // Winning dominates; survival scales by FRACTION of match; keys reward active play.
+                const frac = dur ? Math.min(1, survivalMs / dur) : 0;
+                xp = winBonus
+                   + (won && keyWin ? XP_KEYWIN_BONUS : 0)   // team reward for the risky keys win
+                   + Math.round(frac * XP_SURVIVE_FULL)
+                   + (p.keysDelivered || 0) * XP_KEY_DELIVER;
             } else {
-                // Seeker XP: eliminations + accumulated hit score.
-                xp = (p.kills || 0) * 200 + (p.score || 0);
+                // Seeker: kill is the achievement (diminishes past soft cap); hits are a
+                // small capped chip that also credits softening a hider a teammate finishes.
+                const kills = p.kills || 0;
+                const killXP = Math.min(kills, XP_KILL_SOFTCAP) * XP_KILL
+                    + Math.max(0, kills - XP_KILL_SOFTCAP) * Math.round(XP_KILL * XP_KILL_DIMINISH);
+                const chipXP = Math.min(XP_CHIP_CAP, hits * XP_CHIP_PER_HIT);
+                xp = winBonus + killXP + chipXP;
             }
+            const grade = (XP_GRADES.find(g => xp >= g[0]) || ['', 'C'])[1];
             return {
                 id, name: p.name || 'Player', role: p.role,
                 isYou: id === myId,
                 isCaught: !!p.isCaught, survived,
-                kills: p.kills || 0, score: p.score || 0,
+                kills: p.kills || 0, score: p.score || 0, hits, grade,
                 keys: p.keysDelivered || 0, survivalMs, xp
             };
         });

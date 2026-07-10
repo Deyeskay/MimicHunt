@@ -1274,6 +1274,16 @@ body.layout-editing .le-selected {
 .res-alive { color: #2ed573; font-weight: 700; }
 .res-dead  { color: #ff6b6b; font-weight: 700; }
 .res-xp    { color: #4aa3ff; font-weight: 800; }
+.res-grade {
+    display: inline-block; min-width: 1.7em; padding: 1px 6px; border-radius: 6px;
+    font-weight: 800; font-size: 0.82rem; text-align: center;
+    background: rgba(255, 255, 255, 0.06);
+}
+.res-grade-Splus { color: #ffd54a; background: rgba(255, 213, 74, 0.14); }  /* gold  */
+.res-grade-S     { color: #b980ff; background: rgba(185, 128, 255, 0.14); } /* purple*/
+.res-grade-A     { color: #2ed573; background: rgba(46, 213, 115, 0.14); }  /* green */
+.res-grade-B     { color: #4aa3ff; background: rgba(74, 163, 255, 0.14); }  /* blue  */
+.res-grade-C     { color: #9aa0a6; }                                        /* gray  */
 .results-hint {
     margin: 12px 0 4px;
     text-align: center;
