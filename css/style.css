@@ -1414,6 +1414,37 @@ body.layout-editing .le-selected {
 .lobby-drop select:disabled { color: #cdd4de; cursor: default; opacity: .85; }
 .lobby-drop select option { color: #111; }   /* native dropdown list uses OS colors */
 
+/* --- Home / Training mode switch (segmented tabs, top of the left column) --- */
+.lobby-mode-switch {
+    pointer-events: auto; display: flex; gap: 4px;
+    background: rgba(16,20,30,0.72); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 12px; padding: 4px; backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+.lobby-mode-btn {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
+    cursor: pointer; font-family: inherit; font-weight: 700; font-size: 0.9rem;
+    letter-spacing: .4px; color: #cdd4de; background: transparent;
+    border: none; border-radius: 9px; padding: 8px 6px; text-transform: uppercase;
+    transition: background .12s, color .12s;
+}
+.lobby-mode-btn .lms-ic { font-size: 1.05rem; line-height: 1; }
+.lobby-mode-btn:hover { color: #fff; }
+.lobby-mode-btn.is-active {
+    color: #10240f; background: linear-gradient(180deg, #ffd54a, #f0a91e);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+/* Training mode: hide the home-only chrome (map/role dropdowns, START GAME, and
+   the bottom room/join/leave/status clusters), show the training CTA. !important
+   beats the inline display that UI.updateLobby writes on those elements. */
+.lobby-pubg.training #btn-lobby-action,
+.lobby-pubg.training .lobby-home-only,
+.lobby-pubg.training .lobby-bl,
+.lobby-pubg.training .lobby-br,
+.lobby-pubg.training .lobby-bc { display: none !important; }
+.lobby-pubg.training .lobby-train-only { display: block !important; }
+
 /* --- Icon buttons (gear / invite / leave) --- */
 .lobby-icon-btn {
     pointer-events: auto; cursor: pointer; width: 46px; height: 46px; padding: 0;

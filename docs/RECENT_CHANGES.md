@@ -5,6 +5,18 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-10
 
+- **Lobby: Home / Training mode switch (view toggle only).** Files: `index.html`,
+  `css/style.css`, `js/app.js`. Added a segmented **🏠 Home / 🎯 Training** switch at the
+  top of the left column (`.lobby-mode-switch` in `.lobby-tl`). **Home** (default) = the
+  normal multiplayer lobby. **Training** adds `.training` to `#lobby-screen`, which (CSS)
+  hides the multiplayer chrome — map/role dropdowns (`.lobby-home-only`), START GAME
+  (`#btn-lobby-action`), and the bottom room/join/refresh/leave/status clusters
+  (`.lobby-bl`/`.lobby-br`/`.lobby-bc`, via `!important` to beat the inline `display` that
+  `UI.updateLobby` writes) — and shows only a **START TRAINING** CTA
+  (`#btn-lobby-train`, `.lobby-train-only`). `initModeSwitch` (`js/app.js`) toggles the
+  class + active-tab styling. The training flow itself is **not yet implemented** — the
+  START TRAINING button just pops a "coming soon" modal for now.
+
 - **Seeker head-look: turns his head toward the nearest MOVING hider.** Files:
   `js/globals.js`, `js/level.js`. When a seeker "hears footsteps" (a hider is moving
   near him), his character model now rotates its **head bone** to look at that hider,

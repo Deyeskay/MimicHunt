@@ -581,6 +581,29 @@ document.getElementById('btn-lobby-action').addEventListener('click', () => {
     }
 });
 
+// Home / Training mode switch. Toggling to Training adds `.training` to
+// #lobby-screen, which (CSS) hides the multiplayer chrome (map/role/START GAME +
+// room/join/leave/status) and reveals only START TRAINING. Pure view toggle —
+// the training flow itself is wired up later. Default = Home.
+(function initModeSwitch() {
+    const lobby = document.getElementById('lobby-screen');
+    const homeBtn = document.getElementById('btn-mode-home');
+    const trainBtn = document.getElementById('btn-mode-training');
+    if (!lobby || !homeBtn || !trainBtn) return;
+    function setMode(training) {
+        lobby.classList.toggle('training', training);
+        homeBtn.classList.toggle('is-active', !training);
+        trainBtn.classList.toggle('is-active', training);
+    }
+    homeBtn.addEventListener('click', () => setMode(false));
+    trainBtn.addEventListener('click', () => setMode(true));
+})();
+
+document.getElementById('btn-lobby-train').addEventListener('click', () => {
+    // Training flow TBD — placeholder until it's defined.
+    if (typeof UI !== 'undefined' && UI.showModal) UI.showModal('Training', 'Training mode coming soon.');
+});
+
 // --- RENDER LOOP ---
 // --- FPS meter ---
 // Averages frame count over ~0.5s windows so the number is readable (not jittering

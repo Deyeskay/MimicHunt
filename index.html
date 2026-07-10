@@ -466,14 +466,24 @@
          click-through (pointer-events:none); only .interactive controls catch input. -->
     <div id="lobby-screen" class="lobby-pubg" style="display: none;">
 
-        <!-- Top-left: primary CTA + map/role dropdowns -->
+        <!-- Top-left: mode switch + primary CTA + map/role dropdowns -->
         <div class="lobby-tl">
+            <!-- Home / Training segmented switch. Home = normal multiplayer lobby;
+                 Training hides the map/role/room/join chrome and shows only the
+                 START TRAINING CTA. Toggled by initModeSwitch (js/app.js) via the
+                 `.training` class on #lobby-screen. Default = Home. -->
+            <div class="lobby-mode-switch interactive">
+                <button id="btn-mode-home" class="lobby-mode-btn is-active" title="Home"><span class="lms-ic">🏠</span> Home</button>
+                <button id="btn-mode-training" class="lobby-mode-btn" title="Training"><span class="lms-ic">🎯</span> Training</button>
+            </div>
             <button id="btn-lobby-action" class="lobby-start-btn interactive success">START GAME</button>
-            <label class="lobby-drop interactive">
+            <!-- Training-mode CTA (shown only while the Training tab is active). -->
+            <button id="btn-lobby-train" class="lobby-start-btn interactive success lobby-train-only" style="display:none;">START TRAINING</button>
+            <label class="lobby-drop interactive lobby-home-only">
                 <span class="lobby-drop-ic">🗺️</span>
                 <select id="lobby-map-select"></select>
             </label>
-            <label class="lobby-drop interactive">
+            <label class="lobby-drop interactive lobby-home-only">
                 <span class="lobby-drop-ic">🎭</span>
                 <select id="lobby-role-select">
                     <option value="Hider">🙈 Hider</option>
