@@ -5,6 +5,22 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-10
 
+- **Fix: host hider no longer sinks into the ground when its disguise is broken.**
+  `resolveShot` (host-authoritative, `js/network.js`) raised the revealed target's
+  stored `.y` but never corrected the **host's own** `localPos.y` / `localDisguise`.
+  The host doesn't receive its own broadcast, so the client `case 'shot'` correction
+  never ran for it — `applyLocalTransform` kept overwriting `p.y` from the stale
+  prop-based `localPos.y` and the character model rendered sunk (for short props).
+  Added the `targetId === myId` self-correction inside the `forcedOut` block,
+  mirroring the client handler.
+
+- **Results screen auto-returns to lobby after 10s.** `UI.showResults` starts a 10s
+  countdown on first appearance; the "Back to Lobby" button shows `Back to Lobby (Ns)`.
+  Host-authoritative: at 0 only the host calls `Network.returnToLobby()` (broadcasts →
+  everyone bounces in sync); clients only display the count. Manual Back to Lobby / Leave
+  cancel it via `UI.hideResults`. New: `UI._startResultsCountdown` / `_clearResultsCountdown`
+  in `js/ui.js`.
+
 - **Interactive TRAINING / tutorial mode (new `js/tutorial.js`).** The stubbed START
   TRAINING button now launches a full PUBG/Fortnite-style onboarding run. Files:
   `js/tutorial.js` (new, the `Tutorial` engine), `index.html` (`#tutorial-layer` DOM +

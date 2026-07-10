@@ -92,10 +92,44 @@ const UI = {
             const wasHidden = screen.style.display !== 'flex';
             screen.style.display = 'flex';
             if (wasHidden && typeof Sound !== 'undefined' && Sound.playAlarm) Sound.playAlarm('chime');
+            // Auto-return to lobby after a 10s countdown. Only the HOST fires the
+            // action (returnToLobby broadcasts, bouncing everyone in sync); clients
+            // just watch the same countdown. Manual "Back to Lobby"/"Leave" cancel it
+            // via hideResults. Start only on first appearance so re-renders don't reset it.
+            if (wasHidden) this._startResultsCountdown(10);
         }
     },
 
+    // 10s auto-return countdown shown on the results screen. Host-authoritative:
+    // at 0 the host calls Network.returnToLobby(); clients only display the number.
+    _resultsTimer: null,
+    _startResultsCountdown: function(seconds) {
+        this._clearResultsCountdown();
+        let left = seconds;
+        const btn = document.getElementById('results-lobby-btn');
+        const render = () => {
+            if (btn) btn.innerText = 'Back to Lobby (' + left + 's)';
+        };
+        render();
+        this._resultsTimer = setInterval(() => {
+            left--;
+            if (left <= 0) {
+                this._clearResultsCountdown();
+                if (btn) btn.innerText = 'Back to Lobby';
+                if (isHost && typeof Network !== 'undefined') Network.returnToLobby();
+                return;
+            }
+            render();
+        }, 1000);
+    },
+    _clearResultsCountdown: function() {
+        if (this._resultsTimer) { clearInterval(this._resultsTimer); this._resultsTimer = null; }
+        const btn = document.getElementById('results-lobby-btn');
+        if (btn) btn.innerText = 'Back to Lobby';
+    },
+
     hideResults: function() {
+        this._clearResultsCountdown();
         const el = document.getElementById('results-screen');
         if (el) el.style.display = 'none';
     },

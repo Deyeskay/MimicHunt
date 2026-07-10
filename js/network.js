@@ -379,6 +379,15 @@ const Network = {
                     tgt.disguiseType = 'player'; tgt.disguiseSize = 2;
                     tgt.propScale = 1; tgt.propHeight = 2; tgt.propRadius = 1; tgt.propRotation = null; tgt.disguiseTexture = null;
                     tgt.color = 0x2ed573;
+                    if (targetId === myId) {
+                        // Host was the revealed hider: correct our own local state too.
+                        // We never receive our own broadcast, so mirror the client
+                        // 'shot' handler — otherwise applyLocalTransform keeps writing
+                        // the stale prop-based localPos.y and the model sinks.
+                        localPos.y = tgt.y;
+                        localDisguise = { type: 'player', size: 2, color: 0x2ed573,
+                            propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null };
+                    }
                 }
                 health = tgt.health;
                 if (tgt.health <= 0) {
@@ -1432,6 +1441,9 @@ const Network = {
         // Physics / simulation loop — stays at 60 FPS
         gameLoopInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+            // Training: a DO-IT step is waiting on OK → freeze the sim (no movement,
+            // no ticks) until the player acknowledges.
+            if (typeof Tutorial !== 'undefined' && Tutorial.paused) return;
 
             // Host movement (Seeker) — predicted locally every frame
             Mechanics.handleLocalMovement();
