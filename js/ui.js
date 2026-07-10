@@ -236,6 +236,9 @@ const UI = {
     // exit-unlock countdown + the key/escape goals.
     updateObjective: function() {
         if (typeof gameState === 'undefined' || !gameState) { this.clearObjective(); return; }
+        // During training the Tutorial engine owns the objective pill (it sets the
+        // current step's goal text via UI.objective) — don't overwrite it here.
+        if (gameState.training) return;
         const phase = gameState.phase;
         if (phase === 'LOBBY' || phase === 'ENDED' || !phase) { this.clearObjective(); return; }
 

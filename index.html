@@ -329,6 +329,33 @@
         </div>
     </div>
 
+    <!-- ============================ TUTORIAL / TRAINING ============================
+         Interactive onboarding overlay (js/tutorial.js). Sits above the HUD + menus
+         (z-index 150) but below the results screen. `pointer-events:none` by default
+         so gameplay underneath stays interactive; only the dialogue box catches input.
+         - #tut-dim: full-screen darkener with a spotlight hole cut by #tut-ring.
+         - #tut-ring: transparent box positioned over the highlighted element; its huge
+           box-shadow dims everything else (updated each frame in Tutorial.update).
+         - #tut-arrow: bouncing pointer aimed at the spotlight target.
+         - #tut-dialogue: the coach dialogue box (title + body + Next / Skip). -->
+    <div id="tutorial-layer" style="display:none;">
+        <div id="tut-dim"></div>
+        <div id="tut-ring" style="display:none;"></div>
+        <div id="tut-arrow" style="display:none;">▶</div>
+        <div id="tut-dialogue" class="interactive" style="display:none;">
+            <div id="tut-dlg-head">
+                <span id="tut-dlg-avatar">🦝</span>
+                <span id="tut-dlg-title">Training</span>
+                <span id="tut-dlg-step"></span>
+            </div>
+            <div id="tut-dlg-body">Welcome!</div>
+            <div id="tut-dlg-actions">
+                <button id="tut-skip" class="tut-btn tut-btn-ghost">Skip Tutorial</button>
+                <button id="tut-next" class="tut-btn tut-btn-primary">Next ▶</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden at boot — app.js reveals it once loadModels finishes (see the
          loading-screen above). -->
     <div id="menu-screen" class="menu-screen" style="display:none;">
@@ -569,6 +596,7 @@
     <script src="js/level.js?v=24"></script>
     <script src="js/mechanics.js?v=24"></script>
     <script src="js/network.js?v=24"></script>
+    <script src="js/tutorial.js?v=24"></script>
     <script src="js/app.js?v=24"></script>
 </body>
 </html>

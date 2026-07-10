@@ -52,6 +52,13 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
   during HIDING/HUNTING by `UI.updateSpectate()` (from `updateHUD`); ‹ / › cycle the
   live player being watched (`Network.cycleSpectate(±1)`), name in `#spectate-name`.
 - `#gameCanvas` — the Three.js canvas (z-index 1, behind the UI layer).
+- `#tutorial-layer` — the interactive **training/tutorial** overlay (z-index 150, above the
+  HUD/menu/layout-editor, below the results screen). `pointer-events:none` except the coach
+  dialogue box. Holds `#tut-dim` (screen darkener), `#tut-ring` (spotlight cutout via a huge
+  `box-shadow`; `.soft` = glow only, no dim), `#tut-arrow`, and `#tut-dialogue` (title / step
+  counter / body / Next / Skip). Driven by the `Tutorial` engine — see
+  [TUTORIAL_SYSTEM.md](TUTORIAL_SYSTEM.md). Launched from the lobby **START TRAINING** button
+  or the first-run auto-prompt.
 
 ## Flow
 ```

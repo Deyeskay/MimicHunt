@@ -901,6 +901,9 @@ const Mechanics = {
     // Network.processShot after a lethal hit. (The old proximity catch is gone —
     // seekers now eliminate hiders by shooting; see Network.processShot.)
     checkWinConditions: function() {
+        // Training (solo tutorial) never ends on a win — eliminating a practice
+        // dummy must not fire the "Seeker Wins" end screen. Tutorial drives flow.
+        if (gameState.training) return;
         const players = Object.values(gameState.players);
         const hidersLeft = players.filter(p => p.role === 'Hider' && !p.isCaught).length;
         if (hidersLeft === 0 && players.filter(p => p.role === 'Hider').length > 0) {

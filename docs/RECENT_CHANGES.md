@@ -5,6 +5,53 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-10
 
+- **Interactive TRAINING / tutorial mode (new `js/tutorial.js`).** The stubbed START
+  TRAINING button now launches a full PUBG/Fortnite-style onboarding run. Files:
+  `js/tutorial.js` (new, the `Tutorial` engine), `index.html` (`#tutorial-layer` DOM +
+  script tag after `network.js`), `css/style.css` (coachmark/dialogue/arrow/soft-spotlight
+  styles, z-index 150), `js/app.js` (START TRAINING handler + first-timer auto-prompt +
+  `Tutorial.update(dt)` in `animate`), `js/globals.js` (`gameState.training` flag +
+  `TUTORIAL_BOT_PREFIX`), `js/network.js` (timer loop gate), `js/mechanics.js`
+  (`checkWinConditions` gate), `js/ui.js` (`updateObjective` gate). See the new
+  [TUTORIAL_SYSTEM.md](TUTORIAL_SYSTEM.md) for the full design.
+  - **Solo, host-only.** The player is already the auto-hosted host in the lobby, so
+    `Tutorial.start()` sets `gameState.training=true`, forces `levelName='Rainbow Woods'`,
+    reuses `Network.startGameBroadcast()` to load the map + spawn, then promotes the phase
+    to HUNTING (controls live, no seeker blind). No PeerJS peers involved.
+  - **`gameState.training` gates the host auto-pacing** so the tutorial owns the flow: the
+    timer loop (no HIDING→HUNTING flip / no time-up win), `Mechanics.checkWinConditions`
+    (killing a practice dummy can't end the match), and `UI.updateObjective` (the tutorial
+    owns the objective pill). `tickBeams` is untouched — its walk-in **pickup** detection is
+    reused for the invis-beam objective; auto airdrops can't fire because the tutorial never
+    sets `_beamSched`.
+  - **19-step flow, both roles.** Intro → **sensitivity** (guides ☰ → Controls →
+    `#ctl-sensitivity`) → **Edit Layout** (opens `LayoutEditor`) → beams explainer →
+    **Hunter track** (shoot a hider · shoot a *disguised* hider → hit **breaks the
+    disguise** · the 3 hunter powers Scan/Jammer/Kill) → role-switch → **Hider track**
+    (disguise · reset · **5s invisibility from a gold beam** · **disguise-lock on a hit** ·
+    the 3 hider powers Heal/Invis/Shield) → finish → back to lobby.
+  - **Coachmark engine.** A step = `{ objective, advance:'button'|'auto', onEnter, check,
+    onExit, spot }`. `spot()` returns a live CSS selector re-evaluated every frame (via
+    `Tutorial.update` from `animate()`), so guidance follows the player through opening
+    menus/panels. `_reposition()` draws the spotlight ring (huge `box-shadow` cutout) +
+    bouncing arrow over the target; `soft:true` highlights a control **without** the
+    full-screen dim (for in-world aim/move steps). Visibility is tested via **computed**
+    display (`_shown`), not inline `.style.display`, so CSS-hidden panels read correctly.
+  - **Static dummy targets.** `spawnDummy()` injects a non-AI hider record into
+    `gameState.players` (the render loop auto-builds its mesh; combat/scan treat it as a
+    real hider); the position round-trips through the snapshot buffer so setting `x/y/z` is
+    enough. Effects that must land ON the player (invis, disguise-lock, held powers) are
+    forced on cue via existing host calls (`grantPower`, `handleActivate`,
+    `applyDisguiseFromProp`, `dropBeamAt`→`tickBeams`). All bots are removed on teardown
+    before `returnToLobby()`.
+  - **Trigger:** the Training-tab **START TRAINING** button (`js/app.js`) **and** a
+    first-run auto-prompt (`Tutorial.maybeAutoPrompt`, gated on a `hnh_tutorial_done`
+    localStorage flag set on finish/skip). Verified end-to-end in-browser (single window):
+    all 19 steps advance, real shoot/disguise/beam/power paths fire, role switches
+    Hunter→Hider (rig rebuilds), bots clean up, and it returns to the lobby with the
+    done-flag set. Normal multiplayer matches are unaffected (the gates are no-ops when
+    `training` is false).
+
 - **Lobby: Home / Training mode switch (view toggle only).** Files: `index.html`,
   `css/style.css`, `js/app.js`. Added a segmented **🏠 Home / 🎯 Training** switch at the
   top of the left column (`.lobby-mode-switch` in `.lobby-tl`). **Home** (default) = the

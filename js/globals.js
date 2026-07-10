@@ -64,7 +64,16 @@ const HIDING_DURATION = () => GAME_SETTINGS.hidingTime;
 const ROUND_DURATION = () => GAME_SETTINGS.huntingTime;
 
 // --- GAME STATE ---
-let gameState = { phase: 'LOBBY', timer: 0, players: {} };
+// `training` is set true by the Tutorial engine (js/tutorial.js) for a solo,
+// host-only training match. While true the host loops skip their automatic
+// pacing (timer HIDING→HUNTING flip, airdrop schedule, win checks) so the
+// tutorial fully owns the flow. Always false in a normal multiplayer match.
+let gameState = { phase: 'LOBBY', timer: 0, players: {}, training: false };
+
+// Id prefix for injected non-networked tutorial dummy players (targets). The
+// render loop builds a mesh for any gameState.players entry; combat/scan/etc.
+// treat them as real hiders. Tutorial removes them on teardown.
+const TUTORIAL_BOT_PREFIX = '__tut_bot_';
 let peer = null;
 let connections = [];
 let connToHost = null;

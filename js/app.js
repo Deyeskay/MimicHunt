@@ -600,8 +600,9 @@ document.getElementById('btn-lobby-action').addEventListener('click', () => {
 })();
 
 document.getElementById('btn-lobby-train').addEventListener('click', () => {
-    // Training flow TBD — placeholder until it's defined.
-    if (typeof UI !== 'undefined' && UI.showModal) UI.showModal('Training', 'Training mode coming soon.');
+    // Launch the interactive training/tutorial (js/tutorial.js) — a solo,
+    // host-only run through Rainbow Woods.
+    if (typeof Tutorial !== 'undefined') Tutorial.start();
 });
 
 // --- RENDER LOOP ---
@@ -657,6 +658,8 @@ function animate(now) {
     } else if (gameState.phase !== 'LOBBY' && document.getElementById('gameCanvas').style.display === 'block') {
         Level.render();
     }
+    // Pump the training/tutorial engine (coachmark tracking + objective polling).
+    if (typeof Tutorial !== 'undefined' && Tutorial.active) Tutorial.update(dt);
 }
 
 // --- INITIALIZE APPLICATION ---
@@ -899,6 +902,8 @@ loadLevelScripts().then(() =>
                 Network.initClient(deepLinkCode);
             } else {
                 Network.autoHostLobby();
+                // First-time players: offer the interactive training run.
+                if (typeof Tutorial !== 'undefined') Tutorial.maybeAutoPrompt();
             }
         });
     }, (loaded, total) => LoadingScreen.setProgress(loaded, total));

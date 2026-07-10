@@ -21,6 +21,7 @@ authoritative-host star topology, no backend.
 | [LEVEL_SYSTEM.md](LEVEL_SYSTEM.md) | Registry, level files, dynamic load, spawns. |
 | [PROP_SYSTEM.md](PROP_SYSTEM.md) | Prefabs, compound colliders, disguise, ray occlusion, climbing. |
 | [UI_FLOW.md](UI_FLOW.md) | Screen flow, HUD, responsive/landscape CSS, the editor. |
+| [TUTORIAL_SYSTEM.md](TUTORIAL_SYSTEM.md) | Interactive training mode: the `Tutorial` step engine, coachmark overlay, dummy targets, `gameState.training` gates. |
 | [PERFORMANCE_NOTES.md](PERFORMANCE_NOTES.md) | Frame budget, interpolation, GC, known costs. |
 | [DECISIONS.md](DECISIONS.md) | Major design decisions and the *why*. |
 | [TODO.md](TODO.md) | Known bugs, limitations, prioritized next work. |

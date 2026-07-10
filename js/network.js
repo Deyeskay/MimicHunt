@@ -1390,6 +1390,9 @@ const Network = {
         // Timer loop (seconds)
         timerInterval = setInterval(() => {
             if (gameState.phase === 'LOBBY' || gameState.phase === 'ENDED') return;
+            // Training (solo tutorial): the Tutorial engine owns pacing — no
+            // automatic HIDING→HUNTING flip, no airdrop schedule, no time-up win.
+            if (gameState.training) return;
             gameState.timer--;
             if (gameState.timer <= 0) {
                 if (gameState.phase === 'HIDING') {
