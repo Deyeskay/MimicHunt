@@ -5,6 +5,12 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-10
 
+- **Split results "Score" column into separate "Dmg" + "Grade" columns.** The single
+  "Score" cell packed seeker damage and the letter grade together (`<dmg> <grade>`),
+  which read as one confusing value. Now two columns: **Dmg** (damage dealt, seekers
+  only; hiders `—`) and **Grade** (letter grade off final XP, everyone). `index.html`
+  header + `UI.showResults` row build ([js/ui.js](../js/ui.js)); no XP-math change.
+
 - **Rebalanced end-of-match XP + added performance grades.** The old scoreboard XP was
   seeker-lopsided: seeker XP was `kills*200 + score` where `score` = +100/hit and a kill
   needs 12 hits, so every kill silently bundled ~1400 XP — a 3-kill sweep (~4200) dwarfed a

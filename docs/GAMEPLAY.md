@@ -136,7 +136,8 @@ the team total; the team wins at `KEYS_TO_WIN = 3` ("Keys Secured! Hiders Win!")
     The chip also credits softening a hider a teammate finishes.
   - **Win bonus** = `XP_WIN_BONUS=500`, flat, to every player on the winning side.
   - **Grade** (`XP_GRADES`, off final XP): S+ ≥1200, S ≥950, A ≥700, B ≥450, else C.
-    Shown in the "Score" column — seekers see `<dmg> <grade>`, hiders just the grade.
+    Shown in its own "Grade" column for everyone. A separate "Dmg" column shows damage
+    dealt for seekers (hiders are unarmed → `—`).
 
 ## Tunables (all in `js/globals.js`)
 `HIDER_MAX_HP`, `MAG_SIZE`, `FIRE_INTERVAL_MS`, `RELOAD_MS`, `SHOT_RANGE`,

@@ -44,7 +44,7 @@ Screens are absolutely-positioned overlays toggled by `UI.transitionTo*`
   `#modal-cancel-btn` + `.modal-actions`) — used by the Exit Match confirm.
 - `#results-screen` — **End-Game results scoreboard** (fixed, z-300, above everything).
   `UI.showResults(title,message,rows)` fills `#results-body` (per-player table: Player ·
-  Role · Result · Kills · Score · Keys · Survived · XP, sorted by XP; the local row is
+  Role · Result · Kills · Dmg · Grade · Keys · Survived · XP, sorted by XP; the local row is
   highlighted). **Back to Lobby** (`#results-lobby-btn` → `Network.returnToLobby()`)
   rematches into the SAME room; **Leave** (`#results-leave-btn` → `Network.leaveMatch()`)
   tears down. `UI.hideResults()` clears it (also called from every `transitionTo*`).
