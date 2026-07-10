@@ -63,6 +63,17 @@ each round of asset changes is in parentheses where relevant.
     too) — it hides the dialogue so the player can act with a clear view (guided by the
     top-left objective pill); the step stays active and its `check()` keeps polling, so
     completing the action re-opens the panel and advances. `button` steps still show **Next**.
+    **In-world DO-IT steps freeze the scene until OK** — `Tutorial.paused` makes the render loop
+    skip `Level.render()` (3D frozen), the host physics loop early-return (no movement/ticks),
+    and `Mechanics.frozen()` no-op look/fire/disguise/power, so nothing drifts; tapping OK clears
+    it and the player acts. Menu steps (**sensitivity**/**layout**, flagged `noFreeze`) and
+    info/mode steps stay live (they complete via DOM panels). A transition flash keeps rendering
+    (`_flashing`) so the relocation it hides is drawn before the freeze lands on the new frame.
+    **A completion delay keeps the scene LIVE for `_completeDelay` (1.8s, per-step
+    `completeDelayMs`) after an in-world objective is met** — so a shot's bullet travel + reveal
+    blink, or a power's countdown bar (the invis steps use 2.8s), play out before the *next*
+    step's freeze lands; `update()` holds on `_completing` during that window (timer cleared on
+    step change / teardown).
     The **sensitivity** step doesn't advance on the slider change alone: once a slider moves,
     the spotlight jumps from the slider to the **Controls panel's own DONE button**
     (`#btn-controls-close`) and the coach box tucks away (it overlaps the panel's bottom); the

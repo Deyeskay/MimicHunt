@@ -32,7 +32,7 @@ const Mechanics = {
         });
 
         document.addEventListener('mousemove', (e) => {
-            if (document.pointerLockElement === canvas) {
+            if (document.pointerLockElement === canvas && !this.frozen()) {
                 cameraYaw -= e.movementX * GAME_SETTINGS.mouseSensitivity;
                 cameraPitch += (GAME_SETTINGS.invertY ? -1 : 1) * e.movementY * GAME_SETTINGS.mouseSensitivity;
                 cameraPitch = Math.max(CAMERA_MAX_LOOK_DOWN, Math.min(CAMERA_MAX_LOOK_UP, cameraPitch));
@@ -101,7 +101,7 @@ const Mechanics = {
                 e.preventDefault();
             }, { passive: false });
             document.addEventListener('touchmove', (e) => {
-                if (shootTouchId === null) return;
+                if (shootTouchId === null || this.frozen()) return;
                 const t = this.findTouch(e.touches, shootTouchId);
                 if (!t) return;
                 cameraYaw -= (t.clientX - shootLastX) * shootDragSens();
@@ -127,7 +127,7 @@ const Mechanics = {
         // touch id so it coexists with the left joystick. No visible UI. ---
         const lookSens = () => GAME_SETTINGS.mouseSensitivity * 1.5;
         document.addEventListener('touchstart', (e) => {
-            if (isEditingLayout) return;   // no camera-look while editing layout
+            if (isEditingLayout || this.frozen()) return;   // no camera-look while editing layout / paused
             if (gameState.phase === 'LOBBY') return;
             if (lookTouchId !== null) return;
             const ts = e.changedTouches;
@@ -290,7 +290,14 @@ const Mechanics = {
 
     // Seeker fires an energy pulse toward the crosshair. Client-side ammo +
     // fire-rate + reload gating; the host validates the hit (Network.processShot).
+    // True while the tutorial has the scene frozen (a DO-IT step waiting on OK).
+    // Input (look/fire/disguise/power) no-ops so nothing drifts during the pause.
+    frozen: function() {
+        return typeof Tutorial !== 'undefined' && Tutorial.paused;
+    },
+
     fireShot: function() {
+        if (this.frozen()) return;
         const me = gameState.players[myId];
         if (!me || me.role !== 'Seeker' || me.isCaught) return;
         if (gameState.phase !== 'HUNTING') return;
@@ -618,6 +625,7 @@ const Mechanics = {
     // power to activate manually — seekers' powers apply instantly on pickup. The
     // host validates + applies authoritatively; clients ask the host.
     activatePower: function() {
+        if (this.frozen()) return;
         const pData = gameState.players[myId];
         if (!pData || pData.role !== 'Hider' || pData.isCaught || !pData.heldPower) return;
         if (isHost) Network.handleActivate(myId);
@@ -625,6 +633,7 @@ const Mechanics = {
     },
 
     handleDisguiseSwap: function() {
+        if (this.frozen()) return;
         let pData = gameState.players[myId];
         if (!pData || pData.role !== 'Hider' || pData.isCaught) return;
 

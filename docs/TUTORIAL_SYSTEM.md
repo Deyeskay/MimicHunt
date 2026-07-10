@@ -132,6 +132,22 @@ step, which teleports the player beside a prop; the placement lives here rather 
 11 so the role-switch step stays a plain PC button step showing "Next (F)"), and step 15
 (disguise-lock reposition).
 
+## Scene pause on DO-IT steps
+
+An in-world `auto` step freezes the scene while its dialogue is up and unacknowledged
+(`Tutorial.paused`): `animate()` skips `Level.render()` (3D frozen — but keeps rendering
+while `_flashing` so a transition's relocation still draws), the host physics loop
+early-returns (no movement/ticks), and `Mechanics.frozen()` no-ops look/fire/disguise/power.
+Tapping **OK** (or F on PC) clears `paused` and the player acts; `update()` also skips
+`check()` while paused so self-driving steps (disguise-lock) hold too. When the objective is
+met, the scene stays **live** for a short **completion delay** (`_completeDelay` 1.8s, per-step
+`completeDelayMs` — invis steps use 2.8s) before advancing, so the action's visual feedback
+(bullet travel + reveal blink, a power's countdown bar) finishes before the *next* step's
+freeze lands (`update()` holds on `_completing`; the timer is cleared on step change/teardown). Menu-driven steps
+(**sensitivity**/**layout**) set `noFreeze` so they stay live — they complete via DOM panels
+(the Controls DONE / the layout editor), which must keep working. Info (`button`) and mode
+steps never pause.
+
 ## Static dummy targets
 
 `spawnDummy(key, opts)` injects a full, non-AI **hider record** into `gameState.players`

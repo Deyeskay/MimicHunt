@@ -40,6 +40,13 @@ const Tutorial = {
     _hitApplied: false,
     _hitAt: 0,
     _stepReady: false,
+    // True while a DO-IT (auto/"OK") step's dialogue is up and unacknowledged — the
+    // scene freezes (render + host sim + look/fire) until the player taps OK.
+    paused: false,
+    _flashing: false,   // a transition flash is playing (keep rendering through it)
+    _completing: false, // objective met — scene stays LIVE for _completeDelay before advancing
+    _completeTimer: null,
+    _completeDelay: 1800,   // ms of live scene after a hit/effect so its visual plays out
 
     /*----------------------------------------------------------------
       Entry / lifecycle
@@ -101,6 +108,9 @@ const Tutorial = {
     _teardown(completed, skipReturn) {
         if (!this.active) return;
         this.active = false;
+        this.paused = false;
+        this._completing = false;
+        if (this._completeTimer) { clearTimeout(this._completeTimer); this._completeTimer = null; }
         this.despawnAllBots();
         // Hide overlay chrome + the transition flash.
         if (this._els) {
@@ -133,6 +143,8 @@ const Tutorial = {
         // Block update()'s check()/spot() until this step's onEnter has run (its
         // scene setup may be deferred to the peak of a transition flash).
         this._stepReady = false;
+        this._completing = false;
+        if (this._completeTimer) { clearTimeout(this._completeTimer); this._completeTimer = null; }
 
         // The bulk of entering a step (objective + onEnter + button chrome). When the
         // step relocates the player / switches role, run this at the opaque peak of a
@@ -140,6 +152,10 @@ const Tutorial = {
         const run = () => {
             this._sawLayout = false;
             this._hitApplied = false;
+            // In-world DO-IT steps freeze the scene until the player taps OK. Menu-driven
+            // steps (sensitivity/layout, flagged noFreeze) and info (button)/mode steps
+            // stay live — they complete via DOM panels, which must keep working.
+            this.paused = (step.advance === 'auto' && !step.noFreeze);
             if (typeof UI !== 'undefined') {
                 if (step.objective) UI.objective('🎓 ' + step.objective);
                 else UI.clearObjective();
@@ -183,9 +199,29 @@ const Tutorial = {
             this._applySpotlight(sel, !!step.soft);
         }
         this._reposition();
-        // Auto-advance steps poll their objective check.
+        // Frozen until the player taps OK — don't poll the objective (self-driving
+        // steps like the disguise-lock also hold until then).
+        if (this.paused) return;
+        // Already met — riding out the completion delay (scene stays live so the
+        // hit/effect visual finishes) before advancing.
+        if (this._completing) return;
+        // Auto-advance steps poll their objective check. When met, hold the LIVE scene
+        // for a beat (bullet travel, reveal blink, power countdown) then advance — so the
+        // next step's freeze doesn't cut off the current action's feedback.
         if (step.advance === 'auto' && step.check && step.check.call(this)) {
-            this.nextStep();
+            const delay = step.noFreeze ? 0
+                : (step.completeDelayMs != null ? step.completeDelayMs : this._completeDelay);
+            if (delay > 0) {
+                this._completing = true;
+                const i = this.stepIndex;
+                this._completeTimer = setTimeout(() => {
+                    this._completeTimer = null;
+                    this._completing = false;
+                    if (this.active && this.stepIndex === i) this.nextStep();
+                }, delay);
+            } else {
+                this.nextStep();
+            }
         }
     },
 
@@ -211,6 +247,10 @@ const Tutorial = {
     playTransition(mid) {
         const el = this._els.trans;
         if (!el) { if (mid) mid(); return; }
+        // Keep the 3D rendering through the whole flash even if the step it reveals is a
+        // paused DO-IT step — otherwise the relocation done at the peak never gets drawn
+        // and the scene freezes on the pre-teleport frame.
+        this._flashing = true;
         el.style.display = 'block';
         el.style.transition = 'none';
         el.style.opacity = '0';
@@ -224,7 +264,7 @@ const Tutorial = {
             el.style.transition = 'opacity 520ms ease, transform 520ms ease';
             el.style.opacity = '0';
             el.style.transform = 'scale(1.06)';
-            setTimeout(() => { el.style.display = 'none'; }, 560);
+            setTimeout(() => { el.style.display = 'none'; this._flashing = false; }, 560);
         }, 400);
     },
     _wire() {
@@ -234,9 +274,9 @@ const Tutorial = {
             const step = this.steps[this.stepIndex];
             if (!step) return;
             if (step.advance === 'button' && !step.mode) this.nextStep();
-            // "OK" on a DO-IT step just tucks the panel away — the step stays active and
-            // its check() keeps polling; completing it re-opens the panel + advances.
-            else if (step.advance === 'auto') this._els.dlg.style.display = 'none';
+            // "OK" on a DO-IT step tucks the panel away AND resumes the frozen scene so
+            // the player can act; the step stays active + polling and re-opens on complete.
+            else if (step.advance === 'auto') { this.paused = false; this._els.dlg.style.display = 'none'; }
         });
         this._els.skip.addEventListener('click', () => this.skip());
         this._els.modePc.addEventListener('click', () => this._chooseMode(false));
@@ -252,7 +292,7 @@ const Tutorial = {
             const step = this.steps[this.stepIndex];
             if (!step) return;
             if (step.advance === 'button' && !step.mode && !step.noKey) this.nextStep();
-            else if (step.advance === 'auto') this._els.dlg.style.display = 'none';   // F = OK (tuck panel)
+            else if (step.advance === 'auto') { this.paused = false; this._els.dlg.style.display = 'none'; }   // F = OK
         });
     },
 
@@ -493,7 +533,7 @@ const Tutorial = {
 
             // 1 — Sensitivity
             {
-                advance: 'auto', objective: 'Adjust your sensitivity',
+                advance: 'auto', objective: 'Adjust your sensitivity', noFreeze: true,
                 spot() {
                     if (T._shown('controls-panel')) {
                         const changed = T._sensChanged(this);
@@ -520,7 +560,7 @@ const Tutorial = {
 
             // 2 — Edit Layout
             {
-                advance: 'auto', objective: 'Edit your control layout',
+                advance: 'auto', objective: 'Edit your control layout', noFreeze: true,
                 spot() {
                     if (typeof isEditingLayout !== 'undefined' && isEditingLayout)
                         return '#btn-layout-save';
@@ -680,7 +720,7 @@ const Tutorial = {
 
             // 13 — Hider obj3: invisibility from a gold beam
             {
-                advance: 'auto', objective: 'Grab the gold beam',
+                advance: 'auto', objective: 'Grab the gold beam', completeDelayMs: 2800,
                 onEnter() {
                     T.noSpotlight();
                     const f = T.forward();
@@ -746,7 +786,7 @@ const Tutorial = {
 
             // 16 — Hider power: INVIS
             {
-                advance: 'auto', objective: 'Hider power: Invisibility',
+                advance: 'auto', objective: 'Hider power: Invisibility', completeDelayMs: 2800,
                 soft: true, spot() { return T._powerSel(); },
                 onEnter() {
                     const me = gameState.players[myId];

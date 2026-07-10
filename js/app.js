@@ -656,7 +656,11 @@ function animate(now) {
     if (Level.lobbyActive) {
         Level.renderLobby(dt);
     } else if (gameState.phase !== 'LOBBY' && document.getElementById('gameCanvas').style.display === 'block') {
-        Level.render();
+        // While a tutorial DO-IT step is waiting on OK, freeze the 3D (skip render) so
+        // the scene pauses until the player acknowledges — but keep rendering during a
+        // transition flash so the relocation it hides actually gets drawn.
+        const tutFreeze = typeof Tutorial !== 'undefined' && Tutorial.paused && !Tutorial._flashing;
+        if (!tutFreeze) Level.render();
     }
     // Pump the training/tutorial engine (coachmark tracking + objective polling).
     if (typeof Tutorial !== 'undefined' && Tutorial.active) Tutorial.update(dt);
