@@ -2296,6 +2296,10 @@ const Network = {
 
         isLeavingRoom = true;
 
+        // If a training run is active (e.g. ☰ → Exit Game mid-tutorial), tear its
+        // overlay + dummy bots down first so nothing leaks into the fresh lobby.
+        if (typeof Tutorial !== 'undefined' && Tutorial.active) Tutorial.abort();
+
         // Stop loops
         if (gameLoopInterval) { clearInterval(gameLoopInterval); gameLoopInterval = null; }
         if (networkInterval) { clearInterval(networkInterval); networkInterval = null; }

@@ -24,7 +24,9 @@ each round of asset changes is in parentheses where relevant.
     owns the objective pill). `tickBeams` is untouched — its walk-in **pickup** detection is
     reused for the invis-beam objective; auto airdrops can't fire because the tutorial never
     sets `_beamSched`.
-  - **19-step flow, both roles.** Intro → **sensitivity** (guides ☰ → Controls →
+  - **20-step flow, both roles.** **Choose control mode (🖥 PC / 📱 Mobile)** — sets
+    `GAME_SETTINGS.showMobileControls` (persisted, mirrors the Settings toggle) → intro →
+    **sensitivity** (guides ☰ → Controls →
     `#ctl-sensitivity`) → **Edit Layout** (opens `LayoutEditor`) → beams explainer →
     **Hunter track** (shoot a hider · shoot a *disguised* hider → hit **breaks the
     disguise** · the 3 hunter powers Scan/Jammer/Kill) → role-switch → **Hider track**
@@ -37,6 +39,32 @@ each round of asset changes is in parentheses where relevant.
     bouncing arrow over the target; `soft:true` highlights a control **without** the
     full-screen dim (for in-world aim/move steps). Visibility is tested via **computed**
     display (`_shown`), not inline `.style.display`, so CSS-hidden panels read correctly.
+    **The only dark overlay is the HARD-spotlight ring's box-shadow** (the two menu-guiding
+    steps — sensitivity + layout); every other step (dialogue-only + soft-spotlight) keeps
+    the play view fully bright (`#tut-dim` stays at opacity 0). The dialogue sits at
+    `bottom:112px` so the bottom-center HUD (health/ammo pill + active-effect) stays visible.
+    **DO-IT (`auto`) steps show an "OK" button** (on PC **"OK (F)"**, and the F key tucks it
+    too) — it hides the dialogue so the player can act with a clear view (guided by the
+    top-left objective pill); the step stays active and its `check()` keeps polling, so
+    completing the action re-opens the panel and advances. `button` steps still show **Next**.
+    The **sensitivity** step doesn't advance on the slider change alone: once a slider moves,
+    the spotlight jumps from the slider to the **Controls panel's own DONE button**
+    (`#btn-controls-close`) and the coach box tucks away (it overlaps the panel's bottom); the
+    step advances when the panel is closed via that DONE (`check` = sensitivity changed AND
+    `#controls-panel` no longer shown).
+    The dialogue pins **Skip** far-left with Next/OK/mode buttons grouped right; on **PC** the
+    Next button reads **"Next (F)"** and the **F** key also advances `button` steps (skipped
+    on the mode step + on mobile; never clashes with the F disguise key — disguise steps are
+    `auto`, and no `button` step leaves the player beside a prop).
+  - **Magical-flash transition on relocations.** Steps that teleport the player / switch role
+    (the Hunter→Hider **"You are the Hider"** step and the disguise-lock reposition) are
+    flagged `transition:true`; `Tutorial.playTransition()` blooms a full-screen white→blue
+    radial flash (`#tut-transition`, CSS), runs the relocation + step setup **at the opaque
+    peak**, then dissolves out — so the camera never visibly snaps. A `_stepReady` gate holds
+    `update()`'s `check()`/`spot()` until the deferred `onEnter` has run. The role-switch
+    step and the disguise step both flash; the "stand beside a prop" teleport runs under the
+    **disguise** step's flash (so the role-switch step stays a normal PC button step that
+    shows "Next (F)" and F-advance can't accidentally trigger a disguise).
   - **Static dummy targets.** `spawnDummy()` injects a non-AI hider record into
     `gameState.players` (the render loop auto-builds its mesh; combat/scan treat it as a
     real hider); the position round-trips through the snapshot buffer so setting `x/y/z` is
@@ -51,6 +79,10 @@ each round of asset changes is in parentheses where relevant.
     Hunter→Hider (rig rebuilds), bots clean up, and it returns to the lobby with the
     done-flag set. Normal multiplayer matches are unaffected (the gates are no-ops when
     `training` is false).
+  - **Clean teardown on mid-run exit.** `Network.cleanup()` now calls `Tutorial.abort()`
+    first, so ☰ → Exit Game (or any teardown) during a training run removes the overlay +
+    dummy bots and clears `gameState.training` instead of leaking them into the fresh lobby.
+    `abort()` skips the tutorial's own `returnToLobby` (cleanup already handles the transition).
 
 - **Lobby: Home / Training mode switch (view toggle only).** Files: `index.html`,
   `css/style.css`, `js/app.js`. Added a segmented **🏠 Home / 🎯 Training** switch at the

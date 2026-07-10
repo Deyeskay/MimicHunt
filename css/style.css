@@ -1807,10 +1807,12 @@ body.layout-editing .le-selected {
     font-family: "Fredoka", "Baloo 2", system-ui, sans-serif;
 }
 
-/* Plain full-screen dimmer for dialogue-only steps (no spotlight target). */
+/* Full-screen dimmer element — kept for structure but off by default; the only dark
+   overlay in the tutorial is the HARD spotlight ring's box-shadow (sensitivity/layout
+   steps). JS keeps this at opacity 0. */
 #tut-dim {
     position: fixed; inset: 0; background: rgba(4, 8, 14, 0.55);
-    pointer-events: none; transition: opacity 0.25s ease;
+    pointer-events: none; opacity: 0; transition: opacity 0.25s ease;
 }
 
 /* Spotlight ring: positioned over the highlighted element each frame. Its huge
@@ -1848,7 +1850,9 @@ body.layout-editing .le-selected {
 
 /* Coach dialogue box (bottom-center). The only interactive tutorial element. */
 #tut-dialogue {
-    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    /* Sits ABOVE the bottom-center HUD cluster (health/ammo pill ~26px, active-effect
+       ~72px) so the HUD stays visible under it. */
+    position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%);
     width: min(520px, 92vw); pointer-events: auto;
     background: linear-gradient(160deg, rgba(22, 30, 42, 0.97), rgba(12, 18, 27, 0.97));
     border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 16px;
@@ -1885,7 +1889,9 @@ body.layout-editing .le-selected {
     border-radius: 5px; padding: 1px 6px; font-family: inherit; font-size: 0.85em;
     font-weight: 700;
 }
-#tut-dlg-actions { display: flex; justify-content: flex-end; gap: 10px; }
+/* Skip pinned far LEFT; Next (+ any mode-choice buttons) grouped on the RIGHT. */
+#tut-dlg-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+#tut-actions-right { display: flex; gap: 10px; align-items: center; }
 .tut-btn {
     font-family: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
     border-radius: 10px; padding: 9px 16px; border: 1px solid transparent;
@@ -1907,7 +1913,7 @@ body.layout-editing .le-selected {
 
 /* On short landscape phones, pin the dialogue tighter so it clears the HUD. */
 @media (max-height: 520px) {
-    #tut-dialogue { bottom: 10px; padding: 10px 12px 9px; width: min(460px, 88vw); }
+    #tut-dialogue { bottom: 88px; padding: 10px 12px 9px; width: min(460px, 88vw); }
     #tut-dlg-body { font-size: 0.85rem; margin-bottom: 9px; }
     #tut-dlg-avatar { width: 30px; height: 30px; flex-basis: 30px; font-size: 1.2rem; }
 }
@@ -1918,4 +1924,25 @@ body.layout-editing .le-selected {
     box-shadow: 0 0 16px 3px rgba(46, 213, 115, 0.9),
                 inset 0 0 12px rgba(46, 213, 115, 0.5) !important;
     animation: none;
+}
+
+/* Full-screen "magical flash" transition — masks player relocations / the role
+   switch so the camera never visibly snaps. Driven by Tutorial.playTransition():
+   fade in (bloom to white), run the relocation hidden at the peak, fade back out.
+   z-index 50 within #tutorial-layer so it covers the dialogue + HUD too. */
+#tut-transition {
+    position: fixed; inset: 0; pointer-events: none; display: none; z-index: 50;
+    will-change: opacity, transform;
+    background:
+        radial-gradient(120% 120% at 50% 42%,
+            #ffffff 0%, #eef6ff 18%, #c7e2ff 40%, #6aa0d8 68%, #16233a 100%);
+}
+/* Soft sparkle/bloom layer on top of the gradient for the "magical" feel. */
+#tut-transition::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+        radial-gradient(circle at 50% 45%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0) 42%),
+        radial-gradient(circle at 30% 70%, rgba(180,220,255,0.5) 0%, rgba(180,220,255,0) 30%),
+        radial-gradient(circle at 72% 30%, rgba(210,235,255,0.5) 0%, rgba(210,235,255,0) 28%);
+    mix-blend-mode: screen;
 }

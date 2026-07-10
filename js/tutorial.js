@@ -39,6 +39,7 @@ const Tutorial = {
     _sawLayout: false,
     _hitApplied: false,
     _hitAt: 0,
+    _stepReady: false,
 
     /*----------------------------------------------------------------
       Entry / lifecycle
@@ -92,26 +93,34 @@ const Tutorial = {
 
     finish() { this._teardown(true); },
     skip()   { this._teardown(false); },
+    // Called when the match is torn down out from under us (e.g. ☰ → Exit Game →
+    // Network.leaveMatch → cleanup). Clears tutorial state but skips its own
+    // returnToLobby — the teardown path already handles the screen transition.
+    abort()  { this._teardown(false, true); },
 
-    _teardown(completed) {
+    _teardown(completed, skipReturn) {
         if (!this.active) return;
         this.active = false;
         this.despawnAllBots();
-        // Hide overlay chrome.
+        // Hide overlay chrome + the transition flash.
         if (this._els) {
             this._els.layer.style.display = 'none';
             this._els.ring.style.display = 'none';
             this._els.arrow.style.display = 'none';
             this._els.dlg.style.display = 'none';
+            if (this._els.trans) this._els.trans.style.display = 'none';
+            this._els.dim.style.opacity = '0';
         }
         this._spotSel = null;
+        this._stepReady = false;
         if (typeof UI !== 'undefined') UI.clearObjective();
         try { localStorage.setItem('hnh_tutorial_done', '1'); } catch (e) {}
 
-        // Reset the round in place and drop back to the lobby (bots already gone,
-        // so returnToLobby won't turn a dummy into a lobby model).
         gameState.training = false;
-        if (typeof Network !== 'undefined' && Network.returnToLobby) Network.returnToLobby();
+        // Reset the round in place and drop back to the lobby (bots already gone, so
+        // returnToLobby won't turn a dummy into a lobby model). Skipped when the caller
+        // (cleanup/leaveMatch) is already tearing the match down itself.
+        if (!skipReturn && typeof Network !== 'undefined' && Network.returnToLobby) Network.returnToLobby();
     },
 
     /*----------------------------------------------------------------
@@ -121,20 +130,39 @@ const Tutorial = {
         this.stepIndex = i;
         const step = this.steps[i];
         if (!step) { this.finish(); return; }
-        // Per-step scratch flags reset.
-        this._sawLayout = false;
-        this._hitApplied = false;
-        // Objective pill (tutorial owns it — UI.updateObjective is gated off in training).
-        if (typeof UI !== 'undefined') {
-            if (step.objective) UI.objective('🎓 ' + step.objective);
-            else UI.clearObjective();
-        }
-        this._els.next.textContent = 'Next ▶';   // finish step overrides in its onEnter
-        if (step.onEnter) step.onEnter.call(this);
-        // Next button visibility: shown only for 'button' steps.
-        this._els.next.style.display = (step.advance === 'button') ? '' : 'none';
-        this._els.dlg.classList.toggle('tut-await', step.advance === 'auto');
-        this._els.step.textContent = (i + 1) + ' / ' + this.steps.length;
+        // Block update()'s check()/spot() until this step's onEnter has run (its
+        // scene setup may be deferred to the peak of a transition flash).
+        this._stepReady = false;
+
+        // The bulk of entering a step (objective + onEnter + button chrome). When the
+        // step relocates the player / switches role, run this at the opaque peak of a
+        // magical-flash transition so the camera snap is hidden.
+        const run = () => {
+            this._sawLayout = false;
+            this._hitApplied = false;
+            if (typeof UI !== 'undefined') {
+                if (step.objective) UI.objective('🎓 ' + step.objective);
+                else UI.clearObjective();
+            }
+            const canKey = step.advance === 'button' && !step.mode && !step.noKey;
+            const isAuto = step.advance === 'auto';
+            // Button steps → "Next" (with "(F)" on PC); DO-IT (auto) steps → "OK" (closes
+            // the panel so the player can act using the top-left objective; the panel
+            // returns automatically when the step's check() passes).
+            this._els.next.textContent = isAuto ? this._nextLabel('OK') : (canKey ? this._nextLabel('Next ▶') : 'Next ▶');
+            if (step.onEnter) step.onEnter.call(this);
+            const isMode = !!step.mode;
+            this._els.modePc.style.display = isMode ? '' : 'none';
+            this._els.modeMobile.style.display = isMode ? '' : 'none';
+            // Show the action button for every step except the mode-choice step.
+            this._els.next.style.display = isMode ? 'none' : '';
+            this._els.dlg.classList.toggle('tut-await', isAuto);
+            this._els.step.textContent = (i + 1) + ' / ' + this.steps.length;
+            this._stepReady = true;
+        };
+
+        if (step.transition) this.playTransition(run);
+        else run();
     },
 
     nextStep() {
@@ -146,7 +174,7 @@ const Tutorial = {
 
     // Pumped every frame from animate() while active.
     update(dt) {
-        if (!this.active) return;
+        if (!this.active || !this._stepReady) return;
         const step = this.steps[this.stepIndex];
         if (!step) return;
         // Live spotlight target (follows the player through menus).
@@ -171,17 +199,77 @@ const Tutorial = {
             layer: g('tutorial-layer'), dim: g('tut-dim'), ring: g('tut-ring'),
             arrow: g('tut-arrow'), dlg: g('tut-dialogue'), title: g('tut-dlg-title'),
             body: g('tut-dlg-body'), step: g('tut-dlg-step'),
-            next: g('tut-next'), skip: g('tut-skip')
+            next: g('tut-next'), skip: g('tut-skip'),
+            modePc: g('tut-mode-pc'), modeMobile: g('tut-mode-mobile'),
+            trans: g('tut-transition')
         };
+    },
+
+    // Full-screen "magical flash" that hides a player relocation / role switch so
+    // the camera never visibly snaps: bloom to white, run `mid` (the teleport +
+    // step setup) at the opaque peak, then dissolve back out.
+    playTransition(mid) {
+        const el = this._els.trans;
+        if (!el) { if (mid) mid(); return; }
+        el.style.display = 'block';
+        el.style.transition = 'none';
+        el.style.opacity = '0';
+        el.style.transform = 'scale(1.15)';
+        void el.offsetWidth;   // force reflow so the next transition animates
+        el.style.transition = 'opacity 380ms ease, transform 380ms ease';
+        el.style.opacity = '1';
+        el.style.transform = 'scale(1)';
+        setTimeout(() => {
+            try { if (mid) mid(); } catch (e) {}
+            el.style.transition = 'opacity 520ms ease, transform 520ms ease';
+            el.style.opacity = '0';
+            el.style.transform = 'scale(1.06)';
+            setTimeout(() => { el.style.display = 'none'; }, 560);
+        }, 400);
     },
     _wire() {
         if (this._wired) return;
         this._wired = true;
         this._els.next.addEventListener('click', () => {
             const step = this.steps[this.stepIndex];
-            if (step && step.advance === 'button') this.nextStep();
+            if (!step) return;
+            if (step.advance === 'button' && !step.mode) this.nextStep();
+            // "OK" on a DO-IT step just tucks the panel away — the step stays active and
+            // its check() keeps polling; completing it re-opens the panel + advances.
+            else if (step.advance === 'auto') this._els.dlg.style.display = 'none';
         });
         this._els.skip.addEventListener('click', () => this.skip());
+        this._els.modePc.addEventListener('click', () => this._chooseMode(false));
+        this._els.modeMobile.addEventListener('click', () => this._chooseMode(true));
+        // PC: advance a 'button' step with the F key too (the button reads "Next (F)").
+        // Skipped for the mode-choice step (needs an explicit pick) and on mobile. Doesn't
+        // clash with the F disguise key — disguise steps are 'auto' (Next hidden), and
+        // 'button' steps never leave the player standing beside a disguisable prop.
+        document.addEventListener('keydown', (e) => {
+            if (!this.active || e.repeat) return;
+            if (GAME_SETTINGS.showMobileControls) return;   // PC only
+            if (e.key !== 'f' && e.key !== 'F') return;
+            const step = this.steps[this.stepIndex];
+            if (!step) return;
+            if (step.advance === 'button' && !step.mode && !step.noKey) this.nextStep();
+            else if (step.advance === 'auto') this._els.dlg.style.display = 'none';   // F = OK (tuck panel)
+        });
+    },
+
+    // Apply the chosen control mode (PC = on-screen controls off, Mobile = on) and
+    // advance. Mirrors the Settings "Show Mobile Controls" toggle so it persists.
+    _chooseMode(mobile) {
+        GAME_SETTINGS.showMobileControls = !!mobile;
+        const chk = document.getElementById('setting-mobile-ui');
+        if (chk) chk.checked = !!mobile;
+        if (typeof refreshMobileControls === 'function') refreshMobileControls();
+        try { localStorage.setItem('hidehunt_settings', JSON.stringify(GAME_SETTINGS)); } catch (e) {}
+        this.nextStep();
+    },
+
+    // Next-button label: on PC append the "(F)" key hint, on mobile just the base.
+    _nextLabel(base) {
+        return base + (GAME_SETTINGS.showMobileControls ? '' : '  (F)');
     },
 
     // Set the dialogue box content. body accepts HTML (kbd/bold).
@@ -220,8 +308,10 @@ const Tutorial = {
             els.ring.style.height = h + 'px';
             els.ring.classList.toggle('soft', this._spotSoft);
             els.ring.style.display = 'block';
-            // Soft spotlight keeps the play view bright; hard one dims via the ring.
-            els.dim.style.opacity = this._spotSoft ? '1' : '0';
+            // #tut-dim stays off everywhere. The only dark overlay is the HARD spotlight's
+            // ring box-shadow (the menu-guiding sensitivity + layout steps); soft spotlights
+            // and dialogue-only steps keep the play view fully bright.
+            els.dim.style.opacity = '0';
             // Arrow: to the LEFT pointing right, unless the target hugs the left edge.
             const onLeftEdge = rect.left < 96;
             els.arrow.style.display = 'block';
@@ -235,10 +325,11 @@ const Tutorial = {
                 els.arrow.style.top = (rect.top + rect.height / 2 - 16) + 'px';
             }
         } else {
-            // No target → plain full-screen dim, no ring/arrow.
+            // No spotlight target → no ring/arrow and no dim (dialogue floats over the
+            // live game). Only the hard-spotlight steps darken the screen (via the ring).
             els.ring.style.display = 'none';
             els.arrow.style.display = 'none';
-            els.dim.style.opacity = this._spotSel ? '1' : '1';
+            els.dim.style.opacity = '0';
         }
     },
 
@@ -380,7 +471,17 @@ const Tutorial = {
         const T = this;
         const K = s => '<kbd>' + s + '</kbd>';
         return [
-            // 0 — Intro
+            // 0 — Choose control mode (PC / Mobile)
+            {
+                advance: 'button', mode: true, objective: 'Choose your control mode',
+                onEnter() {
+                    T.noSpotlight();
+                    T.dialogue('🎮 How do you play?',
+                        'Pick your controls. <b>🖥 PC</b> uses mouse + keyboard (on-screen buttons off); <b>📱 Mobile</b> shows the touch joystick and action buttons. You can change this later in Settings.');
+                }
+            },
+
+            // 1 — Intro
             {
                 advance: 'button', objective: 'Welcome to training',
                 onEnter() {
@@ -394,7 +495,16 @@ const Tutorial = {
             {
                 advance: 'auto', objective: 'Adjust your sensitivity',
                 spot() {
-                    if (T._shown('controls-panel')) return '#ctl-sensitivity';
+                    if (T._shown('controls-panel')) {
+                        const changed = T._sensChanged(this);
+                        // Once we point at the panel's DONE, tuck the coach box away (it
+                        // overlaps the popup's bottom). Only ever HIDE here — never force it
+                        // back open, or an OK/F tuck would immediately re-show it.
+                        if (changed) T._els.dlg.style.display = 'none';
+                        // After the slider moves, point at the panel's own DONE button so the
+                        // player closes it; before that, point at the sensitivity slider.
+                        return changed ? '#btn-controls-close' : '#ctl-sensitivity';
+                    }
                     if (T._shown('game-menu')) return '#btn-controls';
                     return '#btn-leave';
                 },
@@ -402,12 +512,10 @@ const Tutorial = {
                     this._savedCamSens = GAME_SETTINGS.mouseSensitivity;
                     this._savedShootSens = GAME_SETTINGS.shootDragSensitivity;
                     T.dialogue('🎚 Aim feel',
-                        'Open the menu (the <b>☰</b> button), choose <b>Controls</b>, then drag the <b>Camera</b> or <b>Shoot Sensitivity</b> slider to a value you like. Change one to continue.');
+                        'Open the menu (the <b>☰</b> button), choose <b>Controls</b>, then drag the <b>Camera</b> or <b>Shoot Sensitivity</b> slider to a value you like. Then tap the panel\'s <b>DONE</b> to close it.');
                 },
-                check() {
-                    return Math.abs(GAME_SETTINGS.mouseSensitivity - this._savedCamSens) > 1e-9 ||
-                           Math.abs(GAME_SETTINGS.shootDragSensitivity - this._savedShootSens) > 1e-9;
-                }
+                // Done when a slider changed AND the Controls panel was closed (DONE tapped).
+                check() { return T._sensChanged(this) && !T._shown('controls-panel'); }
             },
 
             // 2 — Edit Layout
@@ -532,13 +640,12 @@ const Tutorial = {
             // 10 — Switch to HIDER
             {
                 advance: 'button', objective: 'Now play as the HIDER',
+                transition: true,   // magical flash hides the role-switch mesh rebuild
                 onEnter() {
                     T.noSpotlight();
                     T.switchToHider();
-                    const prop = T.findDisguisableProp();
-                    if (prop) T.placePlayerNearProp(prop, prop.radius + 1.2);
                     T.dialogue('🌳 You are the Hider',
-                        'Hiders blend in as level props and survive the hunt. I\'ve moved you next to a prop you can copy. Tap Next.');
+                        'Hiders blend in as level props and survive the hunt. Next I\'ll drop you beside a prop to copy. Tap Next.');
                 }
             },
 
@@ -546,6 +653,7 @@ const Tutorial = {
             {
                 advance: 'auto', objective: 'Disguise as the prop',
                 soft: true,
+                transition: true,   // teleports the player next to a prop — flash hides the snap
                 spot() {
                     if (T._shown('disguise-hint')) return '#disguise-hint';
                     return '#btn-action-disguise';
@@ -554,7 +662,7 @@ const Tutorial = {
                     const prop = T.findDisguisableProp();
                     if (prop) T.placePlayerNearProp(prop, prop.radius + 1.2);
                     T.dialogue('🥸 Blend in',
-                        'Stand beside a prop and press ' + K('F') + ' (or the disguise button) to <b>become</b> it. Do it now.');
+                        'You\'re standing next to a prop. Press ' + K('F') + ' (or the disguise button) to <b>become</b> it. Do it now.');
                 },
                 check() { return Mechanics.isDisguised(); }
             },
@@ -593,6 +701,7 @@ const Tutorial = {
             // 14 — Hider obj4: disguise locked when hit
             {
                 advance: 'auto', objective: 'Feel a disguise lock',
+                transition: true,   // repositions next to a prop + re-disguises — flash hides the snap
                 onEnter() {
                     T.noSpotlight();
                     const prop = T.findDisguisableProp();
@@ -673,7 +782,7 @@ const Tutorial = {
                     T.noSpotlight();
                     T.dialogue('🎉 Training complete!',
                         'You\'ve learned settings, both roles, all powers, disguises and beams. Tap <b>Finish</b> to head back to the lobby and play for real. Good hunting!');
-                    T._els.next.textContent = 'Finish';
+                    T._els.next.textContent = T._nextLabel('Finish');
                 }
             }
         ];
@@ -685,6 +794,13 @@ const Tutorial = {
     _shown(id) {
         const el = document.getElementById(id);
         return !!(el && getComputedStyle(el).display !== 'none');
+    },
+
+    // True once the sensitivity step's camera/shoot sensitivity differs from the
+    // baseline captured in its onEnter (`step` carries `_savedCamSens`/`_savedShootSens`).
+    _sensChanged(step) {
+        return Math.abs(GAME_SETTINGS.mouseSensitivity - step._savedCamSens) > 1e-9 ||
+               Math.abs(GAME_SETTINGS.shootDragSensitivity - step._savedShootSens) > 1e-9;
     },
 
     // Whichever "held power" affordance is visible (mobile button vs PC pill).

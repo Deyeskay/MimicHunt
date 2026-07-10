@@ -340,6 +340,7 @@
          - #tut-dialogue: the coach dialogue box (title + body + Next / Skip). -->
     <div id="tutorial-layer" style="display:none;">
         <div id="tut-dim"></div>
+        <div id="tut-transition"></div>
         <div id="tut-ring" style="display:none;"></div>
         <div id="tut-arrow" style="display:none;">▶</div>
         <div id="tut-dialogue" class="interactive" style="display:none;">
@@ -351,7 +352,11 @@
             <div id="tut-dlg-body">Welcome!</div>
             <div id="tut-dlg-actions">
                 <button id="tut-skip" class="tut-btn tut-btn-ghost">Skip Tutorial</button>
-                <button id="tut-next" class="tut-btn tut-btn-primary">Next ▶</button>
+                <div id="tut-actions-right">
+                    <button id="tut-mode-pc" class="tut-btn tut-btn-primary" style="display:none;">🖥 PC</button>
+                    <button id="tut-mode-mobile" class="tut-btn tut-btn-primary" style="display:none;">📱 Mobile</button>
+                    <button id="tut-next" class="tut-btn tut-btn-primary">Next ▶</button>
+                </div>
             </div>
         </div>
     </div>

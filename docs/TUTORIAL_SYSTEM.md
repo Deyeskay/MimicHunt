@@ -58,32 +58,47 @@ flag is only ever set true by `Tutorial` (and reset to false in `_teardown` befo
 steps calls `check()` → `nextStep()` when true. `nextStep()` runs `onExit`, then either
 `enterStep(i+1)` or `finish()`.
 
-### The 19 steps
+### The 20 steps
 
-0. Intro (button)
-1. **Sensitivity** — `spot()` walks ☰ (`#btn-leave`) → Controls (`#btn-controls`) →
-   `#ctl-sensitivity`; `check` = camera/shoot sensitivity changed from the captured baseline.
-2. **Edit Layout** — `spot()` walks ☰ → `#btn-edit-layout` → `#btn-layout-save`; `check` =
+0. **Choose control mode** (`mode:true`) — 🖥 PC / 📱 Mobile buttons set
+   `GAME_SETTINGS.showMobileControls` (persisted, mirrors the Settings toggle) then advance.
+   Next is hidden here; the choice buttons drive the step.
+1. Intro (button)
+2. **Sensitivity** — `spot()` walks ☰ (`#btn-leave`) → Controls (`#btn-controls`) →
+   `#ctl-sensitivity`, and once a slider moves it jumps to the Controls panel's own **DONE**
+   button (`#btn-controls-close`) while tucking the coach box (it overlaps the panel's
+   bottom). `check` = camera/shoot sensitivity changed from the captured baseline **and** the
+   Controls panel is closed — i.e. the player changed a slider and tapped the panel's DONE.
+3. **Edit Layout** — `spot()` walks ☰ → `#btn-edit-layout` → `#btn-layout-save`; `check` =
    the layout editor was opened then closed (`isEditingLayout` edge). Uses the existing
    `LayoutEditor` ([layout.js](../js/layout.js)).
-3. Beams explainer (button) — gold = power, purple = key (hider-only).
-4. Hunter intro (button).
-5. **Shoot a hider** — dummy ahead; `check` = its `health < HIDER_MAX_HP`.
-6. **Shoot a disguised hider** — disguised dummy; the native `processShot` `forcedOut`
+4. Beams explainer (button) — gold = power, purple = key (hider-only).
+5. Hunter intro (button).
+6. **Shoot a hider** — dummy ahead; `check` = its `health < HIDER_MAX_HP`.
+7. **Shoot a disguised hider** — disguised dummy; the native `processShot` `forcedOut`
    branch breaks the disguise; `check` = its `disguiseType === 'player'`.
-7–9. **Hunter powers** — `Network.grantPower(myId,'gold', 'scan'|'jammer'|'kill')`. Kill is
+8–10. **Hunter powers** — `Network.grantPower(myId,'gold', 'scan'|'jammer'|'kill')`. Kill is
    interactive (`check` = dummy `isCaught`); scan/jammer are observe-then-Next.
-10. **Role switch → Hider** — `switchToHider()` (set role/color, reset combat + disguise,
+11. **Role switch → Hider** — `switchToHider()` (set role/color, reset combat + disguise,
     delete the local mesh so the render loop rebuilds it with the hider rig).
-11. **Disguise** — placed next to a prop; `check` = `Mechanics.isDisguised()`.
-12. **Reset** — `check` = `!Mechanics.isDisguised()`.
-13. **Invisibility from a gold beam** — `dropBeamAt('gold', …)` under the player; the real
+12. **Disguise** — placed next to a prop; `check` = `Mechanics.isDisguised()`.
+13. **Reset** — `check` = `!Mechanics.isDisguised()`.
+14. **Invisibility from a gold beam** — `dropBeamAt('gold', …)` under the player; the real
     `tickBeams` pickup grants 5s auto-invis (`PICKUP_INVIS_MS`); `check` = `invisUntil` active.
-14. **Disguise-lock on a hit** — disguises the player, then after a short beat forces the hit
+15. **Disguise-lock on a hit** — disguises the player, then after a short beat forces the hit
     (`revealedUntil` + `disguiseLockUntil` + break); `check` = the lock window has elapsed.
-15–17. **Hider powers** — set `heldPower` and let the player press E/`Network.handleActivate`:
+16–18. **Hider powers** — set `heldPower` and let the player press E/`Network.handleActivate`:
     Heal (full HP), Invis (10s), Shield (armed).
-18. Finish (button) → `Tutorial.finish()`.
+19. Finish (button) → `Tutorial.finish()`.
+
+**Dialogue chrome:** Skip is pinned far-left; the action button (and the mode-choice
+buttons) group on the right. `button` steps show **Next**; DO-IT (`auto`) steps show **OK**
+(on PC **"OK (F)"**), which just hides the dialogue so the player can act with a clear view
+(the step stays active and its `check()` keeps polling — completing it re-opens the panel and
+advances). On **PC** the Next button reads **"Next (F)"** and the **F** key advances `button`
+steps (and tucks the panel on `auto` steps) — skipped on the mode step and on mobile, and it never clashes with the F
+disguise key (disguise steps are `auto` with Next hidden, and no `button` step leaves the
+player standing beside a disguisable prop).
 
 ## Coachmark rendering
 
@@ -93,13 +108,29 @@ is `pointer-events:none`; only `#tut-dialogue` is interactive. Pieces:
 - `#tut-dim` — plain full-screen darkener for dialogue-only steps.
 - `#tut-ring` — transparent box positioned over the spotlight target; a huge `box-shadow`
   cuts the spotlight hole (dims everything else). `.soft` variant drops the dim (just a glow)
-  for in-world steps where the player needs a clear view.
+  for in-world steps where the player needs a clear view. **This ring box-shadow is the only
+  dark overlay in the tutorial** — it appears solely on the two hard-spotlight steps
+  (sensitivity + layout). `#tut-dim` is kept for structure but held at opacity 0.
 - `#tut-arrow` — bouncing pointer, left of the target (flips to the right on left-edge targets).
-- `#tut-dialogue` — the coach box (avatar, title, `N / total`, body HTML, Next / Skip).
+- `#tut-dialogue` — the coach box (avatar, title, `N / total`, body HTML, Next / Skip). Pinned
+  at `bottom:112px` so it clears the bottom-center HUD (health/ammo pill + active-effect).
 
 `_reposition()` (called each frame) reads the target's `getBoundingClientRect()` and moves
 the ring + arrow. Visibility is tested with **computed** display (`_shown(id)`), not inline
 `.style.display`, because panels hidden by a CSS class have an empty inline value.
+
+### Magical-flash transition
+
+Steps that teleport the player or switch role would make the camera snap. Those steps are
+flagged `transition: true`; `enterStep` then runs the whole step body (objective + `onEnter`
++ button chrome) through `playTransition(run)`: a full-screen `#tut-transition` overlay
+blooms to a white→blue radial flash (380ms), `run()` executes **at the opaque peak** (so the
+relocation is hidden), then it dissolves out (520ms). A `_stepReady` flag holds `update()`'s
+`check()`/`spot()` until `run()` has finished, so an `auto` step can't complete on a
+half-built scene. Used by step 11 (Hunter→Hider switch — mesh rebuild), step 12 (the disguise
+step, which teleports the player beside a prop; the placement lives here rather than on step
+11 so the role-switch step stays a plain PC button step showing "Next (F)"), and step 15
+(disguise-lock reposition).
 
 ## Static dummy targets
 
@@ -124,6 +155,11 @@ XZ instead of a random spawn). All dummies are removed in `_teardown` **before**
 - **First-run auto-prompt** — after `autoHostLobby`, `Tutorial.maybeAutoPrompt()` offers the
   run via `UI.showConfirm`, unless the `hnh_tutorial_done` localStorage flag is set (written
   on finish **or** skip).
+
+**Teardown:** `finish()`/`skip()` remove the bots + overlay, set the done-flag, clear
+`gameState.training`, and `returnToLobby()`. If the match is torn down from elsewhere mid-run
+(☰ → Exit Game → `leaveMatch` → `cleanup`), `Network.cleanup()` calls `Tutorial.abort()`
+first — same cleanup minus the `returnToLobby` (cleanup handles that transition itself).
 
 ## Testing
 
