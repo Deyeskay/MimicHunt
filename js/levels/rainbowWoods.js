@@ -3180,7 +3180,7 @@ registerLevel("Rainbow Woods", [
         "texture": "crate.png"
     },
     {
-        "id": "cube_173",
+        "id": "cube_178",
         "model": "cube",
         "x": 21.1,
         "y": 8.47,
