@@ -5,6 +5,22 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-11
 
+- **Fix: revealed hider no longer sticks inside a wall.** While disguised, the collider
+  radius is the prop's slim ground radius (`myColliderRadius`, e.g. a tree trunk ~0.3),
+  so a hider could stand with its center right up against a wall. On a hit the forced
+  reveal snaps the collider back to the full player radius (1) but previously ran no
+  overlap resolution, leaving the player center penetrating the wall — axis-separated
+  `blockedAt` then blocked all escape and they were stuck. Both self-reveal paths in
+  `processShot` (host) and the client `'shot'` handler (`js/network.js`) now call
+  `Mechanics.resolveOverlap()` right after resetting `localDisguise`, spiralling the
+  player out to the nearest free spot. No-op when not overlapping.
+
+- **Lobby join sound.** New `Sound.join()` cue in `js/globals.js` — a friendly rising
+  two-tone "ding-dong" (G5 → C6, triangle waves). Played host-side in `acceptConnection`
+  (`js/network.js`) right after a **brand-new** joiner's player record is created, so the
+  host is notified audibly when someone enters the room. Not fired for reconnecting
+  survivors (they take the earlier migration/rejoin branch).
+
 - **Hard player cap: `MAX_PLAYERS = 12`.** New const in `js/globals.js`. Enforced
   host-side in `acceptConnection` (`js/network.js`): a **brand-new** joiner is rejected
   once `Object.keys(gameState.players).length >= MAX_PLAYERS`. Grace-held (disconnected,

@@ -387,6 +387,10 @@ const Network = {
                         localPos.y = tgt.y;
                         localDisguise = { type: 'player', size: 2, color: 0x2ed573,
                             propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null };
+                        // Reveal grows the collider (slim trunk → radius 1). If we were
+                        // hugging a wall as a thin prop, the player center is now inside
+                        // it — push out to the nearest free spot so we don't stick.
+                        Mechanics.resolveOverlap();
                     }
                 }
                 health = tgt.health;
@@ -1153,6 +1157,7 @@ const Network = {
             connections.push(conn);
             const joinName = (conn.metadata && conn.metadata.name) || '';
             gameState.players[conn.peer] = this.createPlayer('Hider', this._usedSpawns || [], joinName);
+            if (typeof Sound !== 'undefined' && Sound.join) Sound.join();  // notify host: player joined
             UI.updateLobby();
             conn.send({ type: 'lobbySync', players: gameState.players, levelName: gameState.levelName });
             this.broadcast({ type: 'lobbySync', players: gameState.players, levelName: gameState.levelName });
@@ -1711,6 +1716,10 @@ const Network = {
                                 localPos.y = tgt.y;
                                 localDisguise = { type: 'player', size: 2, color: 0x2ed573,
                                     propScale: 1, propHeight: 2, propRadius: 1, propRotation: null, propTexture: null };
+                                // Reveal grows the collider (slim trunk → radius 1). If we
+                                // were hugging a wall as a thin prop, the player center is
+                                // now inside it — push out so we don't stick in the wall.
+                                Mechanics.resolveOverlap();
                             }
                         }
                     }

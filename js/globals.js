@@ -828,6 +828,26 @@ const Sound = {
             osc.start(t + dt);
             osc.stop(t + dt + 0.57);
         });
+    },
+    // Lobby join notification — a friendly rising two-tone "ding-dong" (G5 → C6) on
+    // triangle waves, played to the host when a new player enters the room. Warm and
+    // welcoming, distinct from the chiptune coin (pickup) and the sci-fi UI blip.
+    join() {
+        const ctx = this.ensure();
+        if (!ctx) return;
+        const t = ctx.currentTime;
+        [[0, 783.99], [0.12, 1046.50]].forEach(([dt, f]) => {   // G5 · C6
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(f, t + dt);
+            gain.gain.setValueAtTime(0.0001, t + dt);
+            gain.gain.exponentialRampToValueAtTime(0.12, t + dt + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + dt + 0.3);
+            osc.connect(gain).connect(ctx.destination);
+            osc.start(t + dt);
+            osc.stop(t + dt + 0.32);
+        });
     }
 };
 
