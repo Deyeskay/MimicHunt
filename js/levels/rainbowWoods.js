@@ -396,10 +396,10 @@ registerLevel("Rainbow Woods", [
     {
         "id": "spawn_22",
         "model": "spawn",
-        "x": -26.86,
-        "y": 1,
+        "x": -18.46,
+        "y": 8.87,
         "z": 21.52,
-        "bottomY": 0,
+        "bottomY": 7.87,
         "scale": {
             "x": 1,
             "y": 1,
@@ -3180,7 +3180,7 @@ registerLevel("Rainbow Woods", [
         "texture": "crate.png"
     },
     {
-        "id": "cube_178",
+        "id": "cube_179",
         "model": "cube",
         "x": 21.1,
         "y": 8.47,
@@ -3273,5 +3273,24 @@ registerLevel("Rainbow Woods", [
             "z": 0
         },
         "spawnPoint": true
+    },
+    {
+        "id": "spawn_178",
+        "model": "spawn",
+        "x": -8.06,
+        "y": 1,
+        "z": 21.47,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "hiderSpawn": true
     }
 ]);
