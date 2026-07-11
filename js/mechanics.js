@@ -545,7 +545,9 @@ const Mechanics = {
             if (tnow - (this._lastStepAt || 0) > 330) {
                 this._lastStepAt = tnow;
                 this._stepFoot = !this._stepFoot;
-                Sound.step(this._stepFoot);
+                // Own steps use the friendly tier (you're your own teammate) so your
+                // gait isn't louder than an approaching enemy's. No distance/pan.
+                Sound.step(this._stepFoot, { volume: FOOTSTEP_VOL_FRIENDLY });
             }
         } else {
             this._lastStepAt = 0;

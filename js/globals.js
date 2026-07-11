@@ -104,6 +104,9 @@ let currentRoomCode = null;    // the room code shown in the lobby (for the shar
 let rejoinExpected = {};       // successor: { peerId: timeoutHandle } of survivors we await
 let codePeer = null;           // successor's second Peer (code alias) accepting brand-new joiners
 
+// --- LOBBY CAPACITY ---
+const MAX_PLAYERS = 12;        // hard cap on total players in a room (host + joiners); grace-held slots still count
+
 // --- RECONNECT GRACE (PUBG-style 60s hold for a dropped non-host player) ---
 const GRACE_MS = 60000;        // host holds a dropped player's slot this long before finalizing
 let graceTimers = {};          // host: { peerId: timeoutHandle } of players in the grace window
@@ -240,7 +243,7 @@ const XP_GRADES = [            // performance grade off final XP, both roles, hi
     [1200, 'S+'], [950, 'S'], [700, 'A'], [450, 'B'], [0, 'C']
 ];
 const REVEAL_MS = 2000;        // hider blinks red this long after a hit
-const DISGUISE_LOCK_MS = 5000; // hider can't re-disguise this long after a hit
+const DISGUISE_LOCK_MS = 2500; // hider can't re-disguise this long after a hit
 const SHOOT_ANIM_MS = 1200;    // aim-stance window after a shot (upper-body shoot + face target + back-walk)
 
 // --- AIRDROP BEAMS & POWER-UPS (PUBG-style sky drops) ---
@@ -328,6 +331,11 @@ const FOOTSTEP_MIN_DIST   = 8;    // within this, full volume
 const FOOTSTEP_SPEED_ON   = 1.5;  // u/s to start stepping (matches anim walk threshold)
 const FOOTSTEP_SPEED_OFF  = 0.5;  // u/s hysteresis to stop stepping
 const FOOTSTEP_INTERVAL_MS = 330; // step cadence (same as the local player)
+// Role-based footstep loudness. Enemy = baseline (unchanged); friendly (your own
+// steps + same-role teammates) are quieter so you're not deafened by your own gait
+// and can pick out enemies by ear. Multiplies the (already distance-attenuated) volume.
+const FOOTSTEP_VOL_ENEMY    = 1.0;   // different role — full, current loudness
+const FOOTSTEP_VOL_FRIENDLY = 0.55;  // own + same-role teammate — quieter
 
 // --- SEEKER HEAD-LOOK (seeker turns his head toward the nearest MOVING hider) ---
 const HEAD_LOOK_HOLD_MS = 3000;                 // keep looking this long after last heard footstep, then reset

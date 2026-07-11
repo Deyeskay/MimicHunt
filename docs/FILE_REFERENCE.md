@@ -46,7 +46,10 @@ All cross-file globals. Key items:
   `jump()`, `land()`, `click()` (UI button). Helpers: `_noiseBurst(dur, {…, out})`,
   `_spatialOut(pan)` (StereoPannerNode for positional sounds).
   Remote footsteps are emitted by `Level.tickRemoteFootstep` (`js/level.js`), tuned by
-  `FOOTSTEP_*` consts (`js/globals.js`).
+  `FOOTSTEP_*` consts (`js/globals.js`). Footsteps also scale by **role**: friendly
+  (your own + same-role teammates) play at `FOOTSTEP_VOL_FRIENDLY` (0.55), enemies at
+  `FOOTSTEP_VOL_ENEMY` (1.0) — so you're not deafened by your own gait and can pick out
+  enemies by ear. Own steps (`js/mechanics.js`) use the friendly tier.
 - Three refs: `scene`, `camera`, `renderer`, `playerMeshes{}`, `mapProps3D[]`,
   `modelLibrary{}`.
 

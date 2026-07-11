@@ -1008,6 +1008,10 @@ const Level = {
         vol = Math.max(0, Math.min(1, vol));
         vol = Math.sqrt(vol);   // gentle perceptual falloff — keeps mid-range audible
 
+        // Same-role players (your team) are quieter than enemies. Missing self record → enemy.
+        const _me = gameState.players[myId];
+        vol *= (_me && p.role === _me.role) ? FOOTSTEP_VOL_FRIENDLY : FOOTSTEP_VOL_ENEMY;
+
         // Stereo pan = how far to the listener's right the source sits. Right vector
         // matches the movement convention (D key = cos(yaw), -sin(yaw)). ×0.9 so a
         // step is never fully one-eared.

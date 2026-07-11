@@ -5,6 +5,32 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-11
 
+- **Hard player cap: `MAX_PLAYERS = 12`.** New const in `js/globals.js`. Enforced
+  host-side in `acceptConnection` (`js/network.js`): a **brand-new** joiner is rejected
+  once `Object.keys(gameState.players).length >= MAX_PLAYERS`. Grace-held (disconnected,
+  still-in-window) players count toward the total — they hold their slot. Reconnecting
+  survivors are **not** capped (they re-map an existing record). Applies at all three
+  connection entry points (host, migration successor, code-alias peer) since they share
+  `acceptConnection`. On rejection the host sends a new `{type:'roomFull', max}` message
+  then closes; the client shows a "Room Full" modal and drops back to its own fresh
+  lobby (suppresses the 4s "Room not found" timeout via `_joinRejected`, and sets
+  `isLeavingRoom` to skip the reconnect-grace path on the imminent close).
+
+- **Post-hit disguise lock halved: `DISGUISE_LOCK_MS` 5000 → 2500ms.** A revealed
+  hider can now re-disguise 2.5s after being hit (was 5s). Only the hit lock changed;
+  the seeker Jammer power lock (`POWER_JAM_MS = 15000`) is a separate constant and is
+  unchanged. UI countdown bar auto-scales (reads the same constant).
+
+- **Footsteps now scale by role — friendly (own + teammates) quieter than enemies.**
+  Previously the local player heard their **own** steps at full volume (loud/intrusive),
+  and a teammate vs an enemy at the same distance were equally loud. Two new consts in
+  `js/globals.js`: `FOOTSTEP_VOL_ENEMY` (1.0, unchanged baseline) + `FOOTSTEP_VOL_FRIENDLY`
+  (0.55). Own steps (`js/mechanics.js` `Sound.step`) now pass `volume:FOOTSTEP_VOL_FRIENDLY`;
+  remote steps (`js/level.js` `tickRemoteFootstep`) multiply their distance-attenuated `vol`
+  by the friendly factor when `p.role === gameState.players[myId].role`, else enemy. Missing
+  self record → enemy (safe fallback, never louder than before). Distance/pan/invis/caught
+  silencing all unchanged. Symmetric for both roles. Tune the two consts + hard-refresh.
+
 - **New props: `mushroom` + `bushflower` (Bush Flower).** Two GLBs added
   (`assets/models/mushroom.glb`, `assets/models/Bush_Flower.glb`). Wired the standard
   3-place way for a new GLB prop:

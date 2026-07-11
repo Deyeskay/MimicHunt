@@ -55,6 +55,7 @@ state + events. All in `js/network.js`.
 | `keyDropGone` | dropped-key bundle recovered | `{keyId}` | `Level.removeDroppedKey` |
 | `doorsSchedule` | when exit doors open (sent at HUNTING start) | `{activateInMs}` | client sets `gameState.doorsActivateAt = now()+activateInMs` (null ⇒ doors never open). Gates door render (`Level.updateDoors`) + deposits (`tickKeys`) |
 | `ping` | 1 Hz all phases | `{}` | resets client watchdog (`_lastHostMsgTime`) |
+| `roomFull` | brand-new joiner rejected (roster ≥ `MAX_PLAYERS`=12) | `{max}` | "Room Full" modal → own fresh lobby. Sets `_joinRejected` (suppress 4s "Room not found" timeout) + `isLeavingRoom` (skip regrace on the host's follow-up close). Grace-held slots count; reconnecting survivors are exempt |
 | `gameOver` | win/timeout | `{title,message,results[]}` | `sessionEnding=true`, `phase='ENDED'`; `UI.showResults` (results scoreboard). **Peer is NOT destroyed** — kept alive for Back-to-Lobby rematch. `results[]` = per-player `{id,name,role,isYou,isCaught,survived,kills,score,keys,survivalMs,xp}` from host `buildResults()` |
 | `returnLobby` | host bounced everyone to the same lobby (rematch) | `{players,levelName}` | `sessionEnding=false`, apply roster, `phase='LOBBY'`, `UI.transitionToLobby` (no re-host/re-join) |
 | `hidersWin` | 0-seeker migration result | `{title,message}` | informational modal |

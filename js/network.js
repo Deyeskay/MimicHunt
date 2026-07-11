@@ -977,6 +977,7 @@ const Network = {
         const sub = document.getElementById('lobby-subtitle');
         if (sub) sub.textContent = 'Connecting to room ' + input + '…';
 
+        this._joinRejected = false;   // cleared each fresh join; set if the host says 'roomFull'
         peer = new Peer();
         peer.on('open', id => {
             myId = id;
@@ -991,7 +992,9 @@ const Network = {
             });
 
             // Timeout if host never answers → bounce back to a fresh auto-hosted lobby.
+            // (A 'roomFull' rejection already showed its own modal — don't double up.)
             setTimeout(() => {
+                if (this._joinRejected) return;
                 if (!connToHost || !connToHost.open) {
                     UI.showModal('Error', 'Room not found.', () => this.cleanup());
                 }
@@ -1135,6 +1138,16 @@ const Network = {
             // Brand-new joiner — only allowed in the lobby.
             if (gameState.phase !== 'LOBBY') {
                 conn.close();
+                return;
+            }
+            // Hard cap: reject once the room is full. Grace-held players still
+            // hold their slot, so they count toward the total. Tell the joiner
+            // (so it shows a "room full" modal instead of hanging on the 4s
+            // "Room not found" timeout), then drop the conn after a short beat
+            // so the message flushes before the channel closes.
+            if (Object.keys(gameState.players).length >= MAX_PLAYERS) {
+                try { conn.send({ type: 'roomFull', max: MAX_PLAYERS }); } catch (e) {}
+                setTimeout(() => { try { conn.close(); } catch (e) {} }, 250);
                 return;
             }
             connections.push(conn);
@@ -1526,6 +1539,20 @@ const Network = {
             case 'ping':
                 // Heartbeat only — liveness already recorded above.
                 break;
+
+            case 'roomFull': {
+                // Host rejected us: the lobby is already at MAX_PLAYERS. Tear
+                // down WITHOUT arming the reconnect-grace path (we never really
+                // joined), suppress the pending 4s "Room not found" timeout, and
+                // drop back to our own fresh lobby when the modal is dismissed.
+                this._joinRejected = true;
+                isLeavingRoom = true;   // hard-stop handleHostLoss/regrace on the imminent close
+                if (connToHost) { try { connToHost.close(); } catch (e) {} connToHost = null; }
+                UI.showModal('Room Full',
+                    'That room is full (max ' + (data.max || MAX_PLAYERS) + ' players).',
+                    () => { isLeavingRoom = false; this.cleanup(); });
+                break;
+            }
 
             case 'lobbySync':
                 gameState.players = data.players;
