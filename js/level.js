@@ -692,7 +692,10 @@ const Level = {
             { key: "chair",      path: "assets/models/chair.glb" },
             { key: "bucket",     path: "assets/models/bucket.glb" },
             { key: "books",      path: "assets/models/books.glb" },
-            { key: "pillar",     path: "assets/models/pillar.glb" }
+            { key: "pillar",     path: "assets/models/pillar.glb" },
+            // Nature props (Rainbow Woods +). Grounded on load like the rest.
+            { key: "mushroom",   path: "assets/models/mushroom.glb" },
+            { key: "bushflower", path: "assets/models/Bush_Flower.glb" }
         ];
 
         const total = files.length + 2;   // + the two animated characters (player + hunter)

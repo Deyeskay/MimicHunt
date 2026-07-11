@@ -377,6 +377,18 @@ const PrefabLibrary = {
         "hideSpot": false,
         "canDisguise": false,
         "colliderShape": "box"
+    },
+    "mushroom": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
+    },
+    "bushflower": {
+        "collision": true,
+        "climbable": true,
+        "hideSpot": true,
+        "canDisguise": true
     }
 };
 

@@ -3,6 +3,23 @@
 Append new entries at the TOP. Dates are absolute (project tz). Cache `?v=` after
 each round of asset changes is in parentheses where relevant.
 
+## 2026-07-11
+
+- **New props: `mushroom` + `bushflower` (Bush Flower).** Two GLBs added
+  (`assets/models/mushroom.glb`, `assets/models/Bush_Flower.glb`). Wired the standard
+  3-place way for a new GLB prop:
+  1. `js/prefabs.js` — `PrefabLibrary` defaults. `mushroom`: `collision:true,
+     climbable:false, hideSpot:true, canDisguise:true` (a solid hide-as prop like
+     pot/amphora). `bushflower`: `collision:true, climbable:true, hideSpot:true,
+     canDisguise:true` (like `bush`). No compound `colliders` template — both fall back
+     to the auto bounding-box cylinder; tune per-type in the editor's collider panel if
+     needed.
+  2. `js/level.js` — `loadModels` files list (game). Keys `mushroom` / `bushflower`,
+     grounded on load via `groundModel` like every other GLB.
+  3. `editor.html` — `EDITOR_MODELS` (loads the GLB for previews) + `PROP_PALETTE`
+     (adds **Mushroom** + **Bush Flower** palette buttons). Key `bushflower` → file
+     `Bush_Flower.glb` (case preserved — GitHub Pages paths are case-sensitive).
+
 ## 2026-07-10
 
 - **Split results "Score" column into separate "Dmg" + "Grade" columns.** The single

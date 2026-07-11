@@ -5,7 +5,7 @@ registerLevel("Rainbow Woods", [
         "x": 3.88,
         "y": 0.04,
         "z": 7.24,
-        "bottomY": -0.04,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.82,
             "y": 1.82,
@@ -20,10 +20,10 @@ registerLevel("Rainbow Woods", [
     {
         "id": "tree_2",
         "model": "tree",
-        "x": -8.72,
+        "x": -8.59,
         "y": 0.04,
-        "z": 11.75,
-        "bottomY": -0.04,
+        "z": 9.73,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -41,7 +41,7 @@ registerLevel("Rainbow Woods", [
         "x": -7.69,
         "y": -0.01,
         "z": 25.96,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.86,
             "y": 2.86,
@@ -60,7 +60,7 @@ registerLevel("Rainbow Woods", [
         "x": -10.47,
         "y": -0.01,
         "z": 11.65,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -79,7 +79,7 @@ registerLevel("Rainbow Woods", [
         "x": -41.69,
         "y": -0.01,
         "z": -3.63,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -98,7 +98,7 @@ registerLevel("Rainbow Woods", [
         "x": -9.48,
         "y": -0.01,
         "z": 22.98,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -117,7 +117,7 @@ registerLevel("Rainbow Woods", [
         "x": -25.68,
         "y": 0.04,
         "z": 17.94,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -136,7 +136,7 @@ registerLevel("Rainbow Woods", [
         "x": -15.67,
         "y": 0.04,
         "z": 5.81,
-        "bottomY": -0.01,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.49,
             "y": 1.49,
@@ -155,7 +155,7 @@ registerLevel("Rainbow Woods", [
         "x": -18.28,
         "y": 0.04,
         "z": 16.18,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.78,
             "y": 1.78,
@@ -174,7 +174,7 @@ registerLevel("Rainbow Woods", [
         "x": -26.73,
         "y": 0.04,
         "z": 21.87,
-        "bottomY": -0.03,
+        "bottomY": 0.04,
         "scale": {
             "x": 2.03,
             "y": 2.03,
@@ -193,7 +193,7 @@ registerLevel("Rainbow Woods", [
         "x": -40.58,
         "y": 0.04,
         "z": -3.27,
-        "bottomY": -0.04,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -211,7 +211,7 @@ registerLevel("Rainbow Woods", [
         "x": 22.38,
         "y": -0.01,
         "z": 19.94,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.76,
             "y": 2.76,
@@ -230,7 +230,7 @@ registerLevel("Rainbow Woods", [
         "x": 26.4,
         "y": 0.08,
         "z": 2.66,
-        "bottomY": 0,
+        "bottomY": 0.08,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -248,7 +248,7 @@ registerLevel("Rainbow Woods", [
         "x": 38.81,
         "y": 0.08,
         "z": 22.47,
-        "bottomY": 0,
+        "bottomY": 0.08,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -266,7 +266,7 @@ registerLevel("Rainbow Woods", [
         "x": 21.32,
         "y": 0.04,
         "z": 40.85,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.68,
             "y": 1.68,
@@ -285,7 +285,7 @@ registerLevel("Rainbow Woods", [
         "x": -4.44,
         "y": 0.04,
         "z": 32.25,
-        "bottomY": -0.01,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.46,
             "y": 1.46,
@@ -304,7 +304,7 @@ registerLevel("Rainbow Woods", [
         "x": -8.47,
         "y": -0.01,
         "z": 13.65,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -323,7 +323,7 @@ registerLevel("Rainbow Woods", [
         "x": 26.13,
         "y": -0.01,
         "z": 4.2,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -342,7 +342,7 @@ registerLevel("Rainbow Woods", [
         "x": -19.9,
         "y": -0.01,
         "z": 15.34,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -361,7 +361,7 @@ registerLevel("Rainbow Woods", [
         "x": -15.18,
         "y": -0.01,
         "z": 4,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -380,7 +380,7 @@ registerLevel("Rainbow Woods", [
         "x": 2.69,
         "y": -0.01,
         "z": 6.1,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1103,7 +1103,7 @@ registerLevel("Rainbow Woods", [
         "x": -16.87,
         "y": 0.04,
         "z": 41.8,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.61,
             "y": 1.61,
@@ -1140,7 +1140,7 @@ registerLevel("Rainbow Woods", [
         "x": 0.63,
         "y": -0.01,
         "z": 30.99,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1159,7 +1159,7 @@ registerLevel("Rainbow Woods", [
         "x": -10.95,
         "y": -0.01,
         "z": 41.19,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1178,7 +1178,7 @@ registerLevel("Rainbow Woods", [
         "x": -16.51,
         "y": -0.01,
         "z": 39.41,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1197,7 +1197,7 @@ registerLevel("Rainbow Woods", [
         "x": -8.27,
         "y": 0.04,
         "z": 0.74,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.77,
             "y": 1.77,
@@ -1216,7 +1216,7 @@ registerLevel("Rainbow Woods", [
         "x": -5.36,
         "y": 0.04,
         "z": -1.15,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1235,7 +1235,7 @@ registerLevel("Rainbow Woods", [
         "x": 11.86,
         "y": 0.04,
         "z": -2.85,
-        "bottomY": -0.04,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -1253,7 +1253,7 @@ registerLevel("Rainbow Woods", [
         "x": 0.76,
         "y": 0.04,
         "z": 22.6,
-        "bottomY": -0.04,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.82,
             "y": 1.82,
@@ -1271,7 +1271,7 @@ registerLevel("Rainbow Woods", [
         "x": 34.16,
         "y": -0.01,
         "z": 39.86,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.97,
             "y": 2.97,
@@ -1290,7 +1290,7 @@ registerLevel("Rainbow Woods", [
         "x": 38.48,
         "y": 0.04,
         "z": 24.64,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1309,7 +1309,7 @@ registerLevel("Rainbow Woods", [
         "x": 41.06,
         "y": 0.04,
         "z": 24.41,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1328,7 +1328,7 @@ registerLevel("Rainbow Woods", [
         "x": 41.66,
         "y": 0.04,
         "z": 8.11,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1347,7 +1347,7 @@ registerLevel("Rainbow Woods", [
         "x": 36.21,
         "y": 0.04,
         "z": 2.91,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1366,7 +1366,7 @@ registerLevel("Rainbow Woods", [
         "x": 32.18,
         "y": 0.04,
         "z": 10.01,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1385,7 +1385,7 @@ registerLevel("Rainbow Woods", [
         "x": 31.72,
         "y": 0.04,
         "z": -3.06,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1404,7 +1404,7 @@ registerLevel("Rainbow Woods", [
         "x": 16.6,
         "y": 0.04,
         "z": 25.04,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1423,7 +1423,7 @@ registerLevel("Rainbow Woods", [
         "x": 7.32,
         "y": 0.08,
         "z": 43.68,
-        "bottomY": 0,
+        "bottomY": 0.08,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -1441,7 +1441,7 @@ registerLevel("Rainbow Woods", [
         "x": 22.84,
         "y": 0.04,
         "z": 42.62,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1460,7 +1460,7 @@ registerLevel("Rainbow Woods", [
         "x": 10.87,
         "y": 0.04,
         "z": 37.43,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.68,
             "y": 1.68,
@@ -1479,7 +1479,7 @@ registerLevel("Rainbow Woods", [
         "x": 2.63,
         "y": -0.01,
         "z": 32.99,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1498,7 +1498,7 @@ registerLevel("Rainbow Woods", [
         "x": 11.12,
         "y": 0.04,
         "z": 9.69,
-        "bottomY": -0.01,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.36,
             "y": 1.36,
@@ -1517,7 +1517,7 @@ registerLevel("Rainbow Woods", [
         "x": 11.8,
         "y": 0.04,
         "z": 11.26,
-        "bottomY": 0.01,
+        "bottomY": 0.04,
         "scale": {
             "x": 0.94,
             "y": 0.94,
@@ -1536,7 +1536,7 @@ registerLevel("Rainbow Woods", [
         "x": 24.06,
         "y": 0.04,
         "z": 9.62,
-        "bottomY": 0.01,
+        "bottomY": 0.04,
         "scale": {
             "x": 0.94,
             "y": 0.94,
@@ -1555,7 +1555,7 @@ registerLevel("Rainbow Woods", [
         "x": 12.2,
         "y": -0.01,
         "z": 8.47,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1574,7 +1574,7 @@ registerLevel("Rainbow Woods", [
         "x": 23.04,
         "y": -0.01,
         "z": 10.94,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1593,7 +1593,7 @@ registerLevel("Rainbow Woods", [
         "x": 25.9,
         "y": -0.01,
         "z": 13.17,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1612,7 +1612,7 @@ registerLevel("Rainbow Woods", [
         "x": 17.16,
         "y": -0.01,
         "z": 23.11,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1631,7 +1631,7 @@ registerLevel("Rainbow Woods", [
         "x": 0.84,
         "y": -0.01,
         "z": 38.28,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1650,7 +1650,7 @@ registerLevel("Rainbow Woods", [
         "x": 6.21,
         "y": -0.01,
         "z": 44.55,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1669,7 +1669,7 @@ registerLevel("Rainbow Woods", [
         "x": 4.18,
         "y": -0.01,
         "z": 14.53,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1688,7 +1688,7 @@ registerLevel("Rainbow Woods", [
         "x": -42.57,
         "y": 0.04,
         "z": 23.72,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.78,
             "y": 1.78,
@@ -1707,7 +1707,7 @@ registerLevel("Rainbow Woods", [
         "x": -54.32,
         "y": 0.04,
         "z": 41.26,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.78,
             "y": 1.78,
@@ -1726,7 +1726,7 @@ registerLevel("Rainbow Woods", [
         "x": -32.55,
         "y": 0.04,
         "z": 42.58,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.78,
             "y": 1.78,
@@ -1745,7 +1745,7 @@ registerLevel("Rainbow Woods", [
         "x": -55.34,
         "y": -0.01,
         "z": 39.09,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1764,7 +1764,7 @@ registerLevel("Rainbow Woods", [
         "x": -42.63,
         "y": -0.01,
         "z": 21.09,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1783,7 +1783,7 @@ registerLevel("Rainbow Woods", [
         "x": -38.35,
         "y": -0.01,
         "z": -2.95,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1802,7 +1802,7 @@ registerLevel("Rainbow Woods", [
         "x": -48.76,
         "y": -0.01,
         "z": 4.43,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.61,
             "y": 2.61,
@@ -1821,7 +1821,7 @@ registerLevel("Rainbow Woods", [
         "x": -39.29,
         "y": -0.01,
         "z": 7.83,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.61,
             "y": 2.61,
@@ -1840,7 +1840,7 @@ registerLevel("Rainbow Woods", [
         "x": -25.74,
         "y": -0.01,
         "z": 0.58,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.61,
             "y": 2.61,
@@ -1859,7 +1859,7 @@ registerLevel("Rainbow Woods", [
         "x": -23.63,
         "y": -0.01,
         "z": -0.71,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.17,
             "y": 1.17,
@@ -1878,7 +1878,7 @@ registerLevel("Rainbow Woods", [
         "x": -26.12,
         "y": 0.04,
         "z": 34.88,
-        "bottomY": -0.02,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.78,
             "y": 1.78,
@@ -1897,7 +1897,7 @@ registerLevel("Rainbow Woods", [
         "x": -27.11,
         "y": -0.01,
         "z": 36.7,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1916,7 +1916,7 @@ registerLevel("Rainbow Woods", [
         "x": -41.97,
         "y": -0.01,
         "z": 40.35,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 3.06,
             "y": 3.06,
@@ -1935,7 +1935,7 @@ registerLevel("Rainbow Woods", [
         "x": -55.07,
         "y": -0.01,
         "z": 31.81,
-        "bottomY": 0.01,
+        "bottomY": -0.01,
         "scale": {
             "x": 3.06,
             "y": 3.06,
@@ -1954,7 +1954,7 @@ registerLevel("Rainbow Woods", [
         "x": -48.09,
         "y": 0.04,
         "z": 32.48,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1973,7 +1973,7 @@ registerLevel("Rainbow Woods", [
         "x": -47.39,
         "y": 0.04,
         "z": 23.82,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -1992,7 +1992,7 @@ registerLevel("Rainbow Woods", [
         "x": -52.77,
         "y": 0.04,
         "z": 14.18,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2011,7 +2011,7 @@ registerLevel("Rainbow Woods", [
         "x": -53.03,
         "y": -0.01,
         "z": 12.51,
-        "bottomY": 0,
+        "bottomY": -0.01,
         "scale": {
             "x": 2.21,
             "y": 2.21,
@@ -2030,7 +2030,7 @@ registerLevel("Rainbow Woods", [
         "x": -52.27,
         "y": 0.04,
         "z": -3.91,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2049,7 +2049,7 @@ registerLevel("Rainbow Woods", [
         "x": -55.92,
         "y": 0.04,
         "z": 3.97,
-        "bottomY": 0,
+        "bottomY": 0.04,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2068,7 +2068,7 @@ registerLevel("Rainbow Woods", [
         "x": -42.83,
         "y": 0.04,
         "z": 25.8,
-        "bottomY": -0.04,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.82,
             "y": 1.82,
@@ -2086,7 +2086,7 @@ registerLevel("Rainbow Woods", [
         "x": -36.43,
         "y": 0.04,
         "z": 38.15,
-        "bottomY": -0.04,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.81,
             "y": 1.81,
@@ -2133,7 +2133,7 @@ registerLevel("Rainbow Woods", [
             "y": 0,
             "z": 0
         },
-        "texture": "rock_wall (1).png"
+        "texture": "crate.png"
     },
     {
         "id": "wall_124",
@@ -2267,7 +2267,7 @@ registerLevel("Rainbow Woods", [
         "x": -18.07,
         "y": 7.89,
         "z": 18.39,
-        "bottomY": 7.9,
+        "bottomY": 7.89,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2286,7 +2286,7 @@ registerLevel("Rainbow Woods", [
         "x": -2.52,
         "y": 7.89,
         "z": 29.03,
-        "bottomY": 7.9,
+        "bottomY": 7.89,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2305,7 +2305,7 @@ registerLevel("Rainbow Woods", [
         "x": 1.34,
         "y": 16.89,
         "z": 24.5,
-        "bottomY": 16.9,
+        "bottomY": 16.89,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2381,7 +2381,7 @@ registerLevel("Rainbow Woods", [
         "x": 11.76,
         "y": 0.04,
         "z": 26.44,
-        "bottomY": -0.01,
+        "bottomY": 0.04,
         "scale": {
             "x": 1.36,
             "y": 1.36,
@@ -2500,6 +2500,681 @@ registerLevel("Rainbow Woods", [
         "rotation": {
             "x": 0,
             "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "mushroom_136",
+        "model": "mushroom",
+        "x": 8.15,
+        "y": 0,
+        "z": 23.06,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_137",
+        "model": "mushroom",
+        "x": 15.03,
+        "y": 0,
+        "z": 5.76,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_138",
+        "model": "mushroom",
+        "x": -7.91,
+        "y": 0,
+        "z": 40.72,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_139",
+        "model": "mushroom",
+        "x": -10.8,
+        "y": 0,
+        "z": -3.58,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_140",
+        "model": "mushroom",
+        "x": -44.61,
+        "y": 0,
+        "z": 37.36,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_142",
+        "model": "mushroom",
+        "x": -21.36,
+        "y": 0,
+        "z": 28.74,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_143",
+        "model": "mushroom",
+        "x": 6.2,
+        "y": 0,
+        "z": 3.76,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_144",
+        "model": "mushroom",
+        "x": 32.35,
+        "y": 0,
+        "z": 16.82,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_145",
+        "model": "mushroom",
+        "x": 41.82,
+        "y": 0,
+        "z": 32.12,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_146",
+        "model": "mushroom",
+        "x": 16.21,
+        "y": 0,
+        "z": 32.34,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_147",
+        "model": "cube",
+        "x": 1.3,
+        "y": 13.2,
+        "z": 18.52,
+        "bottomY": 12.35,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_148",
+        "model": "cube",
+        "x": 0.9,
+        "y": 1.18,
+        "z": 1.49,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 30.1,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_149",
+        "model": "cube",
+        "x": 14.67,
+        "y": 1.18,
+        "z": 22.8,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_150",
+        "model": "cube",
+        "x": 13.74,
+        "y": 1.18,
+        "z": 20.57,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 46.3,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_151",
+        "model": "cube",
+        "x": 36.62,
+        "y": 1.18,
+        "z": 31.13,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 30.1,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_152",
+        "model": "cube",
+        "x": -19.21,
+        "y": 1.18,
+        "z": -3.38,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0.5,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_153",
+        "model": "cube",
+        "x": -12.54,
+        "y": 1.18,
+        "z": 37.86,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": -180,
+            "y": 1.2,
+            "z": -180
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "cube_154",
+        "model": "cube",
+        "x": -39.23,
+        "y": 1.18,
+        "z": 5.35,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 30.1,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "bushflower_155",
+        "model": "bushflower",
+        "x": -43.89,
+        "y": 0,
+        "z": 11.65,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_156",
+        "model": "bushflower",
+        "x": -40.22,
+        "y": 0,
+        "z": 13.77,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_157",
+        "model": "bushflower",
+        "x": -35.56,
+        "y": 0,
+        "z": 26.87,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_158",
+        "model": "bushflower",
+        "x": -21.44,
+        "y": 0,
+        "z": 30.49,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_159",
+        "model": "bushflower",
+        "x": -24.18,
+        "y": 0,
+        "z": 44.29,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_160",
+        "model": "bushflower",
+        "x": -12.34,
+        "y": 0,
+        "z": -3.38,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_161",
+        "model": "bushflower",
+        "x": 4.41,
+        "y": 0,
+        "z": 44.36,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_162",
+        "model": "bushflower",
+        "x": 14.94,
+        "y": 0,
+        "z": 18.78,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_163",
+        "model": "bushflower",
+        "x": 36.06,
+        "y": 0,
+        "z": 18.82,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_164",
+        "model": "bushflower",
+        "x": 24.2,
+        "y": 0,
+        "z": -3.35,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_165",
+        "model": "bushflower",
+        "x": 35.22,
+        "y": 0,
+        "z": 33.41,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_166",
+        "model": "bushflower",
+        "x": 21.8,
+        "y": 0,
+        "z": 32.36,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_167",
+        "model": "bushflower",
+        "x": 23.8,
+        "y": 0,
+        "z": 34.36,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_168",
+        "model": "bushflower",
+        "x": -9.58,
+        "y": 0,
+        "z": 16.54,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_169",
+        "model": "bushflower",
+        "x": -33.02,
+        "y": 0,
+        "z": 19.9,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "bushflower_170",
+        "model": "bushflower",
+        "x": -55.89,
+        "y": 0,
+        "z": 20.13,
+        "bottomY": 0,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_171",
+        "model": "mushroom",
+        "x": -51.44,
+        "y": 0,
+        "z": 25.59,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "mushroom_172",
+        "model": "mushroom",
+        "x": -28.66,
+        "y": 0,
+        "z": 33.72,
+        "bottomY": 0,
+        "scale": {
+            "x": 0.53,
+            "y": 0.53,
+            "z": 0.53
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        }
+    },
+    {
+        "id": "cube_173",
+        "model": "cube",
+        "x": -28.85,
+        "y": 1.18,
+        "z": 11.71,
+        "bottomY": 0.33,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": -0.3,
             "z": 0
         },
         "texture": "crate.png"
