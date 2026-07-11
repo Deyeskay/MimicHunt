@@ -650,14 +650,17 @@ const Network = {
     // A candidate ground position for a beam: reuse the level's spawn points
     // (seeker/hider/generic) when present, else a random open spot near origin.
     pickBeamPos() {
+        // Beams drop ONLY on generic spawn markers (`spawnPoint`). Seeker/hider role
+        // spawns are player start points and are off-limits for airdrops. If a level
+        // has no generic markers, fall through to the random-ring fallback.
         let pts = [];
-        if (typeof PropLevel !== 'undefined' && PropLevel.getSpawnPositions && mapProps3D) {
-            const s = PropLevel.getSpawnPositions(mapProps3D);
-            pts = (s.seeker || []).concat(s.hider || []);
+        if (typeof PropLevel !== 'undefined' && mapProps3D) {
+            pts = mapProps3D.filter(p => p.spawnPoint && !p.seekerSpawn && !p.hiderSpawn);
         }
         if (pts.length) {
             const p = pts[Math.floor(Math.random() * pts.length)];
-            return { x: p.x, z: p.z };
+            const c = PropLevel.getPropCenter(p);
+            return { x: c.x, z: c.z };
         }
         const a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 14;
         return { x: Math.cos(a) * r, z: Math.sin(a) * r };

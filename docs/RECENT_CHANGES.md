@@ -5,6 +5,12 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-11
 
+- **Beams drop only on generic spawn markers.** `pickBeamPos` (`js/network.js`) used to
+  draw from the combined seeker+hider spawn lists, so gold/purple airdrops could land on
+  a role's player-start spawn. It now filters `mapProps3D` for **generic** markers only
+  (`spawnPoint && !seekerSpawn && !hiderSpawn`); seeker/hider spawns are excluded. With no
+  generic markers present it falls through to the existing random-ring fallback.
+
 - **Fix (editor): duplicate ids after load.** The level editor's ids share ONE
   cross-type counter (`objectId` → `cube_173`, `wall_175`, `spawn_177`). On load, two
   paths (`loadLevel`, `drainPendingProps`) restored the counter from
