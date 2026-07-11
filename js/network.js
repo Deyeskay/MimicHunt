@@ -75,6 +75,36 @@ const Network = {
         };
     },
 
+    // Local-clock (performance.now()) deadline fields on a player record. Their
+    // value is meaningful ONLY on the peer that stamped it — read against another
+    // peer's clock they become garbage (hundreds of seconds off, because two
+    // browsers' performance.now() origins differ by their page-load gap). So a
+    // wholesale roster copy (lobbySync / rejoinAck) must NEVER adopt them verbatim,
+    // or a bystander event mid-hunt (someone leaves, a reconnect) paints a phantom
+    // "invisible / disguise-locked forever" on whoever held one when it arrived.
+    CLOCK_FIELDS: ['invisUntil', 'disguiseLockUntil', 'revealedUntil',
+                   'shootingUntil', 'jumpAt', 'scanUntil', 'killUntil', 'jamUntil'],
+
+    // Adopt an authoritative roster (lobbySync / rejoinAck) WITHOUT importing the
+    // sender's clock-relative deadlines. Every non-clock field comes from the
+    // incoming record; each clock field is kept from OUR own prior record (we
+    // stamped it on our clock, so it's still valid) or reset to 0 for a player we
+    // have never tracked. Replaces gameState.players (same drop-absent semantics as
+    // the old wholesale assignment).
+    ingestRoster(incoming) {
+        if (!incoming) { gameState.players = incoming; return; }
+        const prev = gameState.players || {};
+        for (const id in incoming) {
+            const rec = incoming[id];
+            const old = prev[id];
+            for (let i = 0; i < this.CLOCK_FIELDS.length; i++) {
+                const f = this.CLOCK_FIELDS[i];
+                rec[f] = old ? (old[f] || 0) : 0;
+            }
+        }
+        gameState.players = incoming;
+    },
+
     /*=================================================================
       Broadcast helpers
     =================================================================*/
@@ -1563,7 +1593,7 @@ const Network = {
             }
 
             case 'lobbySync':
-                gameState.players = data.players;
+                this.ingestRoster(data.players);
                 if (data.levelName) gameState.levelName = data.levelName;
                 if (data.roomCode) {
                     pendingRoomCode = data.roomCode;
@@ -1596,7 +1626,7 @@ const Network = {
 
             case 'rejoinAck': {
                 // Authoritative resync after reconnecting to a new host.
-                gameState.players = data.players;
+                this.ingestRoster(data.players);
                 gameState.phase = data.phase;
                 gameState.timer = data.timer;
                 this._snapshotBuffer = [];

@@ -5,6 +5,22 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-11
 
+- **Fix: phantom "invisible / disguise-locked forever" after a mid-hunt roster sync.**
+  A client's per-player effect deadlines (`invisUntil`, `disguiseLockUntil`,
+  `revealedUntil`, `shootingUntil`, `jumpAt`, `scanUntil`, `killUntil`, `jamUntil`)
+  are stamped in local `performance.now()` — meaningful only on the peer that set
+  them. Two client handlers wholesale-replaced the roster with the sender's copy
+  (`gameState.players = data.players` in `lobbySync` and `rejoinAck`), importing the
+  host's absolute deadlines. Since two browsers' `performance.now()` origins differ
+  by their page-load gap, an expired host-clock deadline (e.g. `565000`) read against
+  a younger client clock (`9000`) became ~556s in the *future* → a hider that briefly
+  went invisible (5s beam pickup) then had a bystander leave / reconnect fire a
+  `lobbySync`/`rejoinAck` mid-hunt got painted invisible + disguise-locked for ~9 min.
+  New `Network.ingestRoster()` (js/network.js) adopts every non-clock field from the
+  incoming record but keeps each clock field from our OWN prior record (or 0 for a
+  never-seen player); both handlers now call it instead of the raw assignment.
+  `gameStart` is unaffected (all deadlines are 0 at match start).
+
 - **Beams drop only on generic spawn markers.** `pickBeamPos` (`js/network.js`) used to
   draw from the combined seeker+hider spawn lists, so gold/purple airdrops could land on
   a role's player-start spawn. It now filters `mapProps3D` for **generic** markers only

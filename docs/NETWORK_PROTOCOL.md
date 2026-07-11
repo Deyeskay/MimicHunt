@@ -38,7 +38,7 @@ state + events. All in `js/network.js`.
 | type | when | payload | client effect |
 |---|---|---|---|
 | `snapshot` | 20 Hz in-game | `{t,phase,timer,players:{id:{x,y,z,rotY}}}` | `pushSnapshot` (interpolation buffer); update phase/timer/HUD. **`y` is FEET (ground-relative)** — render rebuilds centre via `s.y + getDisguiseBaseHeight(p)` (see below). **Eliminated (`isCaught`) players are omitted** — consumers hold their last-known record |
-| `lobbySync` | roster/role/ready/level change | `{players, levelName?, roomCode?}` | replace roster; update lobby + level carousel |
+| `lobbySync` | roster/role/ready/level change | `{players, levelName?, roomCode?}` | `ingestRoster(players)` (adopt roster, drop absent, but KEEP local clock deadlines — see below); update lobby + level carousel |
 | `gameStart` | match begins | `{gameState}` | adopt full gameState; `Level.loadLevel`; seed local prediction; transition to game |
 | `disguise` | a player (incl. host) disguised | `{id,disguiseType,disguiseSize,propScale,propHeight,propRadius,propRotation,color}` | update that player's disguise fields |
 | `shot` | a seeker fired (hit or miss) | see below | update health/score/reveal/lock/elim; spawn bolt+impact; sounds; hit-marker |
@@ -59,7 +59,7 @@ state + events. All in `js/network.js`.
 | `gameOver` | win/timeout | `{title,message,results[]}` | `sessionEnding=true`, `phase='ENDED'`; `UI.showResults` (results scoreboard). **Peer is NOT destroyed** — kept alive for Back-to-Lobby rematch. `results[]` = per-player `{id,name,role,isYou,isCaught,survived,kills,score,keys,survivalMs,xp}` from host `buildResults()` |
 | `returnLobby` | host bounced everyone to the same lobby (rematch) | `{players,levelName}` | `sessionEnding=false`, apply roster, `phase='LOBBY'`, `UI.transitionToLobby` (no re-host/re-join) |
 | `hidersWin` | 0-seeker migration result | `{title,message}` | informational modal |
-| `rejoinAck` | reply to `rejoin` | `{players,phase,timer,hostId,roomCode}` | authoritative resync after migration |
+| `rejoinAck` | reply to `rejoin` | `{players,phase,timer,hostId,roomCode}` | authoritative resync after migration; roster via `ingestRoster` (keeps local clock deadlines) |
 | `roomClosing` | host voluntary exit | `{}` | `sessionEnding=true`; modal → cleanup |
 | `player` | (internal id echo) | — | (see code) |
 
@@ -98,6 +98,21 @@ handler, `buildSnapshot`; render rebuild in `level.js` `updatePlayerMeshTransfor
 Full snapshots (`lobbySync`, `gameStart`, `rejoinAck`) still carry centre `y` (they are
 self-consistent disguise+transform bundles). `PropLevel.getDisguiseBaseHeight(p)` is the
 single source of truth for the offset.
+
+### Clock-relative deadlines never cross peers verbatim
+Per-player effect deadlines are stamped in local `performance.now()`, whose origin is
+each browser's page load — so an absolute deadline is meaningless on any other peer's
+clock. The `CLOCK_FIELDS` set (`invisUntil`, `disguiseLockUntil`, `revealedUntil`,
+`shootingUntil`, `jumpAt`, `scanUntil`, `killUntil`, `jamUntil`) is therefore always
+reconstructed locally from a **duration** (`now + data.xxxMs`) in the discrete-event
+handlers (`powerGain`, `powerUse`, `shot`, jammer). A wholesale roster copy would bypass
+that, so `lobbySync`/`rejoinAck` route through `Network.ingestRoster(incoming)`, which
+takes every non-clock field from the incoming record but keeps each clock field from our
+OWN prior record (0 for a never-seen player). Without this, a mid-hunt `lobbySync` (a
+bystander leaving) or a reconnect `rejoinAck` imported the host's absolute deadlines and,
+against a younger client clock, painted a phantom multi-minute "invisible / disguise-locked
+forever" (an expired host deadline like `565000` read as `565000 − clientNow` in the
+future). `gameStart` is safe because a match starts with all deadlines reset to 0.
 
 ## Authority model
 - **Movement**: client-predicted locally; host stores client transforms verbatim
