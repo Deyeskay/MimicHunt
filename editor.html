@@ -822,6 +822,20 @@ let transformPivot = null;          // gizmo attaches here (group); see position
 let placedObjects = [];
 let objectId = 1;
 
+// Restore the id counter above the highest numeric suffix currently placed.
+// Ids share ONE cross-type counter (cube_173, wall_175, spawn_177 all draw from
+// objectId), so the counter must clear the max suffix, not the object count:
+// deletions leave suffix gaps, so placedObjects.length can fall BELOW an existing
+// id and the next place/duplicate would reissue a taken number → duplicate ids.
+function syncObjectIdToPlaced() {
+    let maxId = 0;
+    placedObjects.forEach(o => {
+        const m = /_(\d+)$/.exec((o.userData && o.userData.data && o.userData.data.name) || '');
+        if (m) maxId = Math.max(maxId, +m[1]);
+    });
+    objectId = Math.max(objectId, maxId + 1);
+}
+
 // --- Hierarchy search/filter ---
 let hierarchyFilter = '';       // current search text (lowercased on use)
 let visibleHierarchy = [];      // placedObjects currently shown (filtered, in order)
@@ -2857,7 +2871,7 @@ function drainPendingProps(name)
     if(!ready.length) return;
     pendingProps = pendingProps.filter(p => p.model !== name);
     ready.forEach(buildEditorObject);
-    objectId = Math.max(objectId, placedObjects.length + 1);
+    syncObjectIdToPlaced();
     refreshHierarchy();
 
     if(pendingProps.length)
@@ -4144,7 +4158,7 @@ function applyLevelData(raw)
     });
 
     // Keep auto-generated names from colliding with loaded ones.
-    objectId = Math.max(objectId, placedObjects.length + 1);
+    syncObjectIdToPlaced();
     refreshHierarchy();
 
     if(unknown.length)

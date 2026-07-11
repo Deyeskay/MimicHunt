@@ -5,6 +5,15 @@ each round of asset changes is in parentheses where relevant.
 
 ## 2026-07-11
 
+- **Fix (editor): duplicate ids after load.** The level editor's ids share ONE
+  cross-type counter (`objectId` → `cube_173`, `wall_175`, `spawn_177`). On load, two
+  paths (`loadLevel`, `drainPendingProps`) restored the counter from
+  `placedObjects.length + 1` — the object *count*, not the max id suffix. Any prior
+  deletion leaves a suffix gap, so count can fall below an existing id and the next
+  place/duplicate reissues a taken number (this shipped a duplicate `cube_173` into
+  `rainbowWoods.js`). New `syncObjectIdToPlaced()` scans the real max numeric suffix
+  (matching what `applySnapshot` already did) and both paths call it.
+
 - **Fix: revealed hider no longer sticks inside a wall.** While disguised, the collider
   radius is the prop's slim ground radius (`myColliderRadius`, e.g. a tree trunk ~0.3),
   so a hider could stand with its center right up against a wall. On a hit the forced
