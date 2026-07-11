@@ -114,9 +114,9 @@ registerLevel("Rainbow Woods", [
     {
         "id": "bush_7",
         "model": "bush",
-        "x": -25.68,
+        "x": -26.27,
         "y": 0.04,
-        "z": 17.94,
+        "z": 16.71,
         "bottomY": 0.04,
         "scale": {
             "x": 1,
@@ -171,9 +171,9 @@ registerLevel("Rainbow Woods", [
     {
         "id": "bush_10",
         "model": "bush",
-        "x": -26.73,
+        "x": -25.72,
         "y": 0.04,
-        "z": 21.87,
+        "z": 14.11,
         "bottomY": 0.04,
         "scale": {
             "x": 2.03,
@@ -190,9 +190,9 @@ registerLevel("Rainbow Woods", [
     {
         "id": "tree_11",
         "model": "tree",
-        "x": -40.58,
+        "x": -38.68,
         "y": 0.04,
-        "z": -3.27,
+        "z": 7.99,
         "bottomY": 0.04,
         "scale": {
             "x": 1.81,
@@ -201,7 +201,7 @@ registerLevel("Rainbow Woods", [
         },
         "rotation": {
             "x": -180,
-            "y": 86.8,
+            "y": 30.8,
             "z": -180
         }
     },
@@ -396,9 +396,9 @@ registerLevel("Rainbow Woods", [
     {
         "id": "spawn_22",
         "model": "spawn",
-        "x": -14.46,
+        "x": -26.86,
         "y": 1,
-        "z": 13.79,
+        "z": 21.52,
         "bottomY": 0,
         "scale": {
             "x": 1,
@@ -415,10 +415,10 @@ registerLevel("Rainbow Woods", [
     {
         "id": "spawn_23",
         "model": "spawn",
-        "x": -3.41,
-        "y": 1,
-        "z": 8.62,
-        "bottomY": 0,
+        "x": 8.81,
+        "y": 5.73,
+        "z": 27.02,
+        "bottomY": 4.73,
         "scale": {
             "x": 1,
             "y": 1,
@@ -691,7 +691,7 @@ registerLevel("Rainbow Woods", [
         "z": 13.93,
         "bottomY": -0.2,
         "scale": {
-            "x": 10.42,
+            "x": 10.16,
             "y": 7.88,
             "z": 0.3
         },
@@ -740,9 +740,9 @@ registerLevel("Rainbow Woods", [
     {
         "id": "wall_49",
         "model": "wall",
-        "x": -32.73,
+        "x": -33.15,
         "y": 1.79,
-        "z": 0.73,
+        "z": 1.61,
         "bottomY": -0.65,
         "scale": {
             "x": 4,
@@ -1124,7 +1124,7 @@ registerLevel("Rainbow Woods", [
         "z": 20.31,
         "bottomY": -0.49,
         "scale": {
-            "x": 50,
+            "x": 50.08,
             "y": 19.8,
             "z": 0.3
         },
@@ -1818,9 +1818,9 @@ registerLevel("Rainbow Woods", [
     {
         "id": "rock_107",
         "model": "rock",
-        "x": -39.29,
+        "x": -39.4,
         "y": -0.01,
-        "z": 7.83,
+        "z": -0.7,
         "bottomY": -0.01,
         "scale": {
             "x": 2.61,
@@ -2340,10 +2340,10 @@ registerLevel("Rainbow Woods", [
     {
         "id": "door_2",
         "model": "door",
-        "x": -3.41,
-        "y": 0,
-        "z": 8.62,
-        "bottomY": -1.48,
+        "x": -13.13,
+        "y": 18.37,
+        "z": 21.79,
+        "bottomY": 16.89,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2351,7 +2351,7 @@ registerLevel("Rainbow Woods", [
         },
         "rotation": {
             "x": 0,
-            "y": 0,
+            "y": -86.2,
             "z": 0
         },
         "exitDoor": true
@@ -2359,10 +2359,10 @@ registerLevel("Rainbow Woods", [
     {
         "id": "door_3",
         "model": "door",
-        "x": 10,
-        "y": 0,
-        "z": 22,
-        "bottomY": -1.48,
+        "x": -54.62,
+        "y": 12.81,
+        "z": 9.72,
+        "bottomY": 11.33,
         "scale": {
             "x": 1,
             "y": 1,
@@ -2707,9 +2707,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_148",
         "model": "cube",
         "x": 0.9,
-        "y": 1.18,
+        "y": 0.84,
         "z": 1.49,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -2726,9 +2726,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_149",
         "model": "cube",
         "x": 14.67,
-        "y": 1.18,
+        "y": 0.84,
         "z": 22.8,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -2745,9 +2745,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_150",
         "model": "cube",
         "x": 13.74,
-        "y": 1.18,
+        "y": 0.84,
         "z": 20.57,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -2764,9 +2764,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_151",
         "model": "cube",
         "x": 36.62,
-        "y": 1.18,
+        "y": 0.84,
         "z": 31.13,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -2783,9 +2783,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_152",
         "model": "cube",
         "x": -19.21,
-        "y": 1.18,
+        "y": 0.84,
         "z": -3.38,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -2802,9 +2802,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_153",
         "model": "cube",
         "x": -12.54,
-        "y": 1.18,
+        "y": 0.84,
         "z": 37.86,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -2820,10 +2820,10 @@ registerLevel("Rainbow Woods", [
     {
         "id": "cube_154",
         "model": "cube",
-        "x": -39.23,
-        "y": 1.18,
-        "z": 5.35,
-        "bottomY": 0.33,
+        "x": -33.73,
+        "y": 0.84,
+        "z": 4.58,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -3164,9 +3164,9 @@ registerLevel("Rainbow Woods", [
         "id": "cube_173",
         "model": "cube",
         "x": -28.85,
-        "y": 1.18,
+        "y": 0.84,
         "z": 11.71,
-        "bottomY": 0.33,
+        "bottomY": -0.01,
         "scale": {
             "x": 1.7,
             "y": 1.7,
@@ -3178,5 +3178,100 @@ registerLevel("Rainbow Woods", [
             "z": 0
         },
         "texture": "crate.png"
+    },
+    {
+        "id": "cube_173",
+        "model": "cube",
+        "x": 21.1,
+        "y": 8.47,
+        "z": 40.44,
+        "bottomY": 7.62,
+        "scale": {
+            "x": 1.7,
+            "y": 1.7,
+            "z": 1.7
+        },
+        "rotation": {
+            "x": 0,
+            "y": 30.1,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "door_174",
+        "model": "door",
+        "x": 38.59,
+        "y": 13.89,
+        "z": 41.11,
+        "bottomY": 12.41,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": -86.2,
+            "z": 0
+        },
+        "exitDoor": true
+    },
+    {
+        "id": "wall_175",
+        "model": "wall",
+        "x": -54.7,
+        "y": 10.45,
+        "z": 14.17,
+        "bottomY": 10.26,
+        "scale": {
+            "x": 4,
+            "y": 0.38,
+            "z": 10.16
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "wall_176",
+        "model": "wall",
+        "x": -46.77,
+        "y": 7.75,
+        "z": 10.78,
+        "bottomY": 7.56,
+        "scale": {
+            "x": 4,
+            "y": 0.38,
+            "z": 9.48
+        },
+        "rotation": {
+            "x": 180,
+            "y": -89,
+            "z": 180
+        },
+        "texture": "crate.png"
+    },
+    {
+        "id": "spawn_177",
+        "model": "spawn",
+        "x": -19.03,
+        "y": 5.52,
+        "z": 7.65,
+        "bottomY": 4.52,
+        "scale": {
+            "x": 1,
+            "y": 1,
+            "z": 1
+        },
+        "rotation": {
+            "x": 0,
+            "y": 0,
+            "z": 0
+        },
+        "spawnPoint": true
     }
 ]);
